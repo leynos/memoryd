@@ -72,6 +72,9 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
 - Define a standard conversation ingestion port that supports structured
   Corbusier and Axinite sources, filesystem-backed Codex and Claude workers,
   and manual imports through source-specific adapters.
+- Provide an early minimum useful deployment that can deliver curated memory
+  and flat recall before graph promotion, themes, or hierarchical recall are
+  active.
 - Model source health, stable claim identity, interpretive claim kind, typed
   support edges, projection activity lineage, and optional durable recall
   audits as pre-1.0 substrate capabilities.
@@ -92,6 +95,48 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
   central compliance reporting, or tenant lifecycle administration in this
   design. Tenant isolation for Corbusier-compatible callers is in scope; a
   hosted control plane is not.
+
+### 2.3 Minimum useful deployment
+
+The first public value milestone is release 0.1: a local daemon, SQLite
+evidence store, Qdrant serving index, Ollama embedding provider, curated memory
+writes, `flat_v1` recall, session browsing, health, redaction, tenant scoping,
+and purge safeguards. This deployment requires only:
+
+- `memoryd`;
+- `memoryd-mcp`;
+- the SQLite evidence store;
+- Qdrant;
+- Ollama.
+
+`memoryd-collector` becomes part of release 0.1 when Codex and Claude observe
+mode is enabled. Oxigraph and Chutoro remain part of the target v1 capability
+set, but release 0.1 may run without them by limiting itself to curated memory,
+evidence-backed manual records, flat vector recall, retraction, explanation,
+and rebuildable Qdrant projections. In that mode, `memoryd` must not claim
+graph-backed facts, contradiction handling, profile promotion, theme recall, or
+hierarchical recall are available.
+
+This is a deployment profile, not a different architecture. Qdrant remains a
+serving index, not memory truth. The evidence inbox remains authoritative for
+curated memory and projection repair. When Oxigraph is later enabled, graph
+facts and provenance are built from stored evidence and projection activity
+rather than imported from Qdrant payloads.
+
+### 2.4 Alternatives considered
+
+The strongest simpler alternative is an enriched Dear Diary shape: one Rust MCP
+binary backed by SQLite and Qdrant, plus redaction and evidence-reference
+payloads. It would ship faster and prove whether transcript-derived memory is
+useful. It would not preserve Axinite-compatible provenance, graph-backed
+contradiction and retraction semantics, tenant-aware projection repair,
+Chutoro-backed theme navigation, or the post-1.0 epistemic-health substrate.
+
+The selected design keeps the richer daemon architecture because Axinite and
+Corbusier compatibility require more than direct vector storage. The roadmap
+therefore borrows the alternative's useful constraint: phase 3 is a release 0.1
+checkpoint that must provide Dear Diary-equivalent value through the daemon
+before the graph and theme layers become blocking.
 
 ## 3. Research summary
 
@@ -191,6 +236,15 @@ _Figure 1: Standalone `memoryd` process and storage topology._
 redaction before ingest. It does not project memory and does not talk to
 Qdrant, Oxigraph, Ollama, or Chutoro.
 
+The collector lifecycle is long-running sidecar by default. It maintains source
+cursors, watches or polls configured provider roots, accepts fast Claude hook
+wake-ups, batches discovered deltas, and submits them to the daemon over the
+ingest RPC. Periodic one-shot mode is permitted for debugging, explicit
+imports, and constrained systems, but it is not the default user-facing model.
+Command hooks are doorbells only: they record provider metadata, wake the
+sidecar, and exit without projection, summarization, Qdrant writes, or graph
+work.
+
 `memoryd` owns durable evidence storage, jobs, projection, reconciliation,
 security policy, Qdrant updates, Oxigraph graph writes, Ollama calls, Chutoro
 theme operations, and recall.
@@ -243,6 +297,14 @@ identifier generation, and policy stores. Driving adapters include CLI
 commands, MCP tools, provider collector loops, collector hook commands,
 file-watch wake-ups, scheduled jobs, and debug loopback HTTP handlers.
 
+Port definitions follow a port-budget discipline. A port graduates into a
+public domain crate API only when it serves at least two distinct adapters, two
+distinct use cases, or one use case with a clear second adapter scheduled in
+the roadmap. A boundary that only separates one adapter from one use case may
+begin as an internal module until the second pressure arrives. This discipline
+keeps the dependency rule without turning early implementation into interface
+theatre.
+
 Adapters never call one another directly. For example, the Claude Code adapter
 does not write Qdrant; it emits evidence through the ingest use case. The MCP
 adapter does not read Oxigraph or Qdrant; it calls recall or read use cases.
@@ -275,6 +337,13 @@ Workspace identity is scoped by tenant. The normative identity boundary is
 authoritative without the tenant that owns it. Local single-user mode uses a
 stable default local tenant, so local-first deployments exercise the same
 tenant-aware code paths as Corbusier mode.
+
+Repository workspaces derive from the normalized Git origin URL, a hash of the
+local repository root path, and an optional configured profile name. Non-Git
+workspaces derive from a hash of the canonical configured root path and profile
+name. Operators may define explicit workspace aliases or overrides in
+configuration. If derivation detects a collision inside one tenant, ingestion
+must fail with an auditable collision diagnostic rather than merging evidence.
 
 Driven adapters enforce tenant context using the strongest mechanism available
 for their store:
@@ -317,29 +386,50 @@ _Figure 2: Adapter boundary between provider records and memory projection._
 
 ### 6.1 Standard conversation ingestion ports
 
-Conversation ingestion has one canonical daemon-facing use case and one
-standard source-reader contract.
+Conversation ingestion has one canonical delta type, two daemon-facing
+application commands, and one standard source-reader contract.
 
-`ConversationIngestPort` is the driving port into the daemon application layer.
-It accepts a tenant-scoped `RequestContext` and a `CanonicalConversationDelta`.
-All conversation producers use this path, including Corbusier, Axinite, the
-collector worker, and manual import tools. The ingest use case is responsible
-for redaction checks, source-session materialization, raw event and span
-writes, idempotency keys, cursor updates, projection jobs, and audit records.
+`IngestConversationPush` is the authenticated push command. Corbusier, Axinite
+transactional outboxes, and MCP/manual import surfaces use it when the caller
+already owns a trustworthy request context and can submit one logical
+conversation delta. It requires a capability token with `memory.ingest` and
+uses caller-supplied request, correlation, causation, and workspace context.
+
+`SubmitCollectedConversationBatch` is the worker-originated command. The
+collector sidecar uses it after discovering, tailing, redacting, and
+normalizing Codex, Claude, Axinite pull-mode, or other source records. It
+requires a collector token with `memory.ingest`, accepts one or more
+`CanonicalConversationDelta` values plus source cursor updates, and records
+worker provenance and batch sequencing.
+
+Both commands write the same evidence inbox records and use the same canonical
+delta. The trust, capability, sequencing, cursor, and idempotency checks differ
+at the application-command boundary instead of being hidden inside one
+polymorphic function body. The ingest application layer remains responsible for
+redaction checks, source-session materialization, raw event and span writes,
+idempotency keys, cursor updates, projection jobs, and audit records.
 
 `ConversationSourcePort` is the source-reader contract implemented by adapters
 when `memoryd-collector` must discover, tail, page, or replay source material.
 It supports pull and tail sources such as Codex rollout files, Claude
 transcripts, Axinite pull mode, and future filesystem or database imports.
-Push-mode producers, such as Corbusier or an Axinite transactional outbox, may
-call `ConversationIngestPort` directly but must emit the same canonical delta.
+Push-mode producers, such as Corbusier or an Axinite transactional outbox, call
+`IngestConversationPush` directly but must emit the same canonical delta.
 
 ```rust
-trait ConversationIngestPort {
-    async fn ingest_conversation_delta(
+trait ConversationPushIngestPort {
+    async fn ingest_conversation_push(
         &self,
         ctx: &RequestContext,
         delta: CanonicalConversationDelta,
+    ) -> Result<IngestReport, IngestError>;
+}
+
+trait CollectedConversationIngestPort {
+    async fn submit_collected_conversation_batch(
+        &self,
+        ctx: &RequestContext,
+        batch: CollectedConversationBatch,
     ) -> Result<IngestReport, IngestError>;
 }
 
@@ -370,7 +460,8 @@ trait ConversationSourcePort {
 ```
 
 _Listing 1: Normative port shape. Concrete Rust names may change, but the
-boundary and data flow are design requirements._
+separate push, collected-batch, and source-reader boundaries are design
+requirements._
 
 A canonical conversation delta contains:
 
@@ -394,10 +485,22 @@ The first content-part set is `text`, `tool_call`, `tool_result`,
  `provider_metadata`. Provider-specific payload remains in redacted JSON
 metadata unless the domain needs a new event kind with distinct behaviour.
 
+Required fields depend on the producer kind:
+
+| Producer kind        | Required fields                                                                                                                                  | Optional or best-effort fields                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Corbusier push       | tenant, principal or service identity, conversation ID, message sequence, role, content part, timestamp, source fingerprint, and workspace scope | repository metadata, model, tool metadata, file edits, and parent conversation                                  |
+| Axinite push         | tenant, conversation ID, message role, content, timestamp, channel or thread where present, source fingerprint, and workspace scope              | outbox ID, workspace document revision, model, branch, repository metadata, and projection sink hints           |
+| Codex worker source  | tenant, source path, line or byte offset, line hash, rollout item kind, ordinal, actor or role, timestamp where present, and redaction state     | git branch, Git SHA, origin URL, model provider, CLI version, tool metadata, file edits, and compaction context |
+| Claude worker source | tenant, transcript path, transcript offset, hook event or transcript line identity, actor or role, timestamp where present, and redaction state  | model, cwd, stop reason, compaction summary, tool metadata, and subagent metadata                               |
+| Manual import        | tenant, configured import root, source path, import request ID, content hash, timestamp, workspace scope, and redaction state                    | provider-specific metadata, model, branch, and explicit provenance notes                                        |
+
+_Table 4: Minimum viable canonical delta fields by producer kind._
+
 The collector worker is an adapter orchestrator. It loads configured
 `ConversationSourcePort` implementations, persists cursors through the daemon,
-and calls `ConversationIngestPort` with canonical deltas. The daemon does not
-scrape `~/.codex`, `~/.claude`, or provider databases directly.
+and calls `SubmitCollectedConversationBatch` with canonical deltas. The daemon
+does not scrape `~/.codex`, `~/.claude`, or provider databases directly.
 
 ```mermaid
 flowchart LR
@@ -408,16 +511,18 @@ flowchart LR
 
     SourcePort[ConversationSourcePort adapters]
     Worker[memoryd-collector worker]
-    Ingest[ConversationIngestPort]
+    Push[IngestConversationPush]
+    Batch[SubmitCollectedConversationBatch]
     Inbox[(Evidence inbox)]
 
-    Corbusier -->|push canonical delta| Ingest
-    Axinite -->|push canonical delta| Ingest
+    Corbusier -->|push canonical delta| Push
+    Axinite -->|push canonical delta| Push
     Codex --> SourcePort
     Claude --> SourcePort
     SourcePort --> Worker
-    Worker -->|canonical delta| Ingest
-    Ingest --> Inbox
+    Worker -->|collected batch| Batch
+    Push --> Inbox
+    Batch --> Inbox
 ```
 
 _Figure 3: Standard conversation ingestion paths._
@@ -431,7 +536,7 @@ _Figure 3: Standard conversation ingestion paths._
 | Axinite projection sink        | Optional curated/profile/fact projection writes back to Axinite workspace documents                       | Require policy gating and provenance metadata to prevent self-reinforcing write-back loops.                                       |
 | Manual import adapter          | Operator-supplied transcript or rollout paths                                                             | Read only explicitly supplied files under configured roots and record import actor and request ID.                                |
 
-_Table 4: Provider adapters and their source boundaries._
+_Table 5: Provider adapters and their source boundaries._
 
 ## 7. Canonical evidence model
 
@@ -692,7 +797,7 @@ _Figure 4: Projection pipeline from evidence to recall-serving artefacts._
 | Qdrant              | Vector indexes and denormalized serving payloads for episodes, summaries, semantic carriers, themes, and profiles | Truth, provenance, or retraction authority                               |
 | Chutoro checkpoints | Rebuildable clustering acceleration state                                                                         | Durable memory identity or theme membership authority                    |
 
-_Table 5: Store authority boundaries._
+_Table 6: Store authority boundaries._
 
 Every store boundary is tenant-aware. Evidence rows carry `tenant_id`; Oxigraph
 named graphs include tenant and workspace; Qdrant payloads and collection names
@@ -751,6 +856,13 @@ theme assignment, projection repair, and recall-audit capture produce
 and configuration digest. These records support v1 debugging and post-1.0
 validity recomputation.
 
+Ollama work is not uniformly on the request path. Query embedding for recall is
+synchronous because retrieval needs a query vector. Evidence embedding, episode
+summarization, structured extraction, support validation that requires a model,
+and theme summary refresh run as background projection jobs. Judge-model recall
+gating is optional; latency-sensitive deployments should prefer `cheap_v2` or
+`flat_v1` instead of `evidence_v2`.
+
 ### 8.4 Qdrant layout
 
 Qdrant uses collection-per-tenant-workspace by default in local mode to
@@ -767,12 +879,27 @@ Default collections:
 - `memoryd_{tenant}_{workspace}_themes`
 - `memoryd_{tenant}_{workspace}_profiles`
 
+Typical local use across one to five workspaces therefore creates five to 25
+collections. A developer with 20 active repositories may create about 100
+collections. Collection creation is lazy: the adapter creates a collection only
+when the first projection for that class and tenant workspace is written. A
+workspace registration or source-health record must not pre-create all five
+collections.
+
 Payloads must include projection class, epistemic status, tenant ID, workspace
 ID, provider, source session, repository origin, observed and valid time,
 confidence, retraction state, support count, evidence references, and optional
 theme ID. Shared-collection deployments must also create a tenant keyword
 payload index and treat absence of a tenant filter as a programming error, not
 as an unfiltered query.
+
+Each collection stores embedding model name, model digest when available,
+vector dimension, distance metric, and vector-schema version in collection
+metadata. Each projection payload also records the embedding model identity and
+dimension used for that vector. On startup and before recall, the Qdrant
+adapter compares configured embedding identity with stored metadata. A mismatch
+disables recall for the affected projection class or schedules re-embedding; it
+must not return silently mixed-vector results.
 
 ## 9. Theme management
 
@@ -801,7 +928,7 @@ The default policy starts in shadow mode:
 | `split_cooldown`          | `1h`    | Prevents repeated churn in the same dense region.          |
 | `merge_cooldown`          | `1h`    | Prevents repeated merge oscillation.                       |
 
-_Table 6: Initial theme-management policy._
+_Table 7: Initial theme-management policy._
 
 ## 10. Recall
 
@@ -818,7 +945,7 @@ Required recall profiles:
 | `hierarchical_v2` | Default top-down theme, semantic-carrier, and episode retrieval.                             |
 | `evidence_v2`     | Hierarchical recall with optional model-assisted expansion gating.                           |
 
-_Table 7: Recall profiles._
+_Table 8: Recall profiles._
 
 The daemon returns context blocks, selected theme IDs, selected semantic IDs,
 selected episode IDs, provenance references, fallback reasons, and a selection
@@ -850,7 +977,7 @@ semantics differ: tools call `memoryd`, not Qdrant.
 | `memory_profile`        | Read/write | Read or update stable profile material.                                   |
 | `memory_health`         | Read       | Report daemon, dependency, collector, and theme state.                    |
 
-_Table 8: MCP tool surface._
+_Table 9: MCP tool surface._
 
 Read-only mode disables `memory_store`, `memory_retract`,
 `memory_import_session`, and profile updates. The daemon also enforces
@@ -871,24 +998,15 @@ default. HTTP loopback is a debug or container mode and requires bearer or
 capability tokens. Every RPC envelope carries or derives a `RequestContext`
 before it reaches an application use case.
 
-Internal methods:
+Internal methods are grouped by envelope kind:
 
-- `IngestSourceEvent`
-- `IngestTranscriptLine`
-- `FinalizeSession`
-- `Recall`
-- `ReadFacts`
-- `ReadEpisode`
-- `ReadTheme`
-- `StoreCuratedMemory`
-- `Retract`
-- `Reinforce`
-- `ScheduleConsolidation`
-- `ImportTranscript`
-- `ListSessions`
-- `Health`
-- `PurgeWorkspace`
-- `PurgeTenant`
+- Commands: `IngestConversationPush`, `SubmitCollectedConversationBatch`,
+  `FinalizeSession`, `StoreCuratedMemory`, `Retract`, `Reinforce`,
+  `ImportTranscript`, `PurgeWorkspace`, and `PurgeTenant`.
+- Queries: `Recall`, `ReadFacts`, `ReadEpisode`, `ReadTheme`,
+  `ListSessions`, `ExplainMemory`, and `Health`.
+- Schedules: `ScheduleConsolidation`, `ScheduleProjectionRepair`,
+  `ScheduleReembedding`, and `ScheduleThemeRefresh`.
 
 Capability scopes:
 
@@ -908,6 +1026,67 @@ configured, allowed workspace IDs. `PurgeWorkspace` requires both a
 high-privilege token and an explicit confirmation string for the tenant
 workspace. `PurgeTenant` is an administrative operation and remains disabled in
 local mode unless explicitly configured for migration or offboarding tests.
+
+### 12.1 Contract evolution
+
+MCP tool schemas follow additive-only evolution rules. Existing fields never
+change meaning or type. New response fields are optional, request fields gain
+defaults, and enum additions require clients to tolerate unknown values. A
+breaking change requires a new tool name or an explicit versioned request field.
+
+Internal RPC uses a versioned envelope. The initial envelope version is `1` and
+contains request ID, envelope kind (`command`, `query`, or `schedule`), method
+name, schema version, capability scope, request context, idempotency key where
+required, and accepted feature flags. Clients must perform a `Health` or
+handshake call before using optional methods. The daemon may add optional
+methods and fields without changing the envelope version, but it must reject
+unknown required features with a structured compatibility error.
+
+The envelope kind is normative. Commands require audit decisions and, where
+applicable, idempotency keys. Queries may be audited by policy but do not
+change memory state. Schedules enqueue bounded background work and report job
+identity rather than completing all work synchronously.
+
+### 12.2 Startup reconciliation and degraded dependencies
+
+On startup, the daemon reconciles durable job state before accepting active
+projection work. It scans `ingest_job`, `projection_state`, and
+`ProjectionActivity` records for in-progress jobs whose worker lease expired,
+marks them retryable or failed according to retry policy, validates Qdrant
+collection metadata against configured embedding identity, and reports
+projection backlog, stale source health, and dependency state through `Health`.
+
+Dependency failures degrade by use case:
+
+- Ollama down during ingest: evidence capture and source health updates
+  continue, but projection jobs that need embeddings, summarization, or
+  structured extraction remain queued.
+- Ollama down during recall: recall may use stored vectors when the query
+  embedding can be supplied by another configured provider; otherwise it fails
+  with a clear model-unavailable diagnostic. It must not pretend fresh semantic
+  recall was performed.
+- Ollama model missing or dimension mismatch: startup and recall diagnostics
+  name the configured model and expected dimension. Affected projection classes
+  require re-embedding before recall resumes.
+- Qdrant down during ingest: evidence capture, audit, source health, and
+  projection scheduling continue. Serving-index writes remain queued.
+- Qdrant down during recall: recall fails gracefully with a Qdrant-unavailable
+  fallback reason unless a graph-only or evidence-only debug path is explicitly
+  requested.
+- Qdrant down during health: `Health` reports dependency state, queue depth,
+  and last successful index operation without blocking on repair.
+
+Projection catch-up is bounded. Active mode uses configurable maximum
+concurrent projection jobs, maximum catch-up batch size, and pause intervals
+between batches. If backlog exceeds the configured threshold, the daemon
+reports lag and drains work in bounded batches instead of trying to process the
+entire queue synchronously.
+
+Oxigraph graph state is rebuildable from evidence, projection activities, and
+accepted semantic carriers. The operator repair path replays tenant-scoped
+projection activities into fresh named graphs, validates support references
+again, and reports any carriers that cannot be reconstructed. Rebuild never
+uses Qdrant payloads as authoritative graph input.
 
 ## 13. Security and privacy
 
@@ -939,6 +1118,14 @@ tenant-owned tables. SQLite deployments still carry tenant IDs and enforce
 tenant predicates in adapter contract tests, but they do not claim
 database-enforced isolation.
 
+Purge is irreversible by default. `PurgeWorkspace` and `PurgeTenant` delete
+evidence rows, projection state, graph namespaces, Qdrant serving collections
+or payload partitions, Chutoro checkpoints, source-health records, and recall
+audits within the requested scope. Before purge, operator documentation must
+recommend backing up the evidence store and graph directory, and the command
+must display the tenant and workspace or tenant scope it will remove. There is
+no implicit undo window unless a later backup feature is explicitly implemented.
+
 ## 14. Configuration
 
 The configuration file is TOML. This shape is normative for field names even if
@@ -965,6 +1152,7 @@ url = "http://127.0.0.1:6334"
 api_key_env = "QDRANT_API_KEY"
 collection_prefix = "memoryd"
 collection_strategy = "per_tenant_workspace"
+lazy_collection_creation = true
 
 [ollama]
 base_url = "http://127.0.0.1:11434"
@@ -976,6 +1164,13 @@ strict_local = true
 [graph]
 driver = "oxigraph"
 path = "~/.local/share/memoryd/graph"
+required_for_release_0_1 = false
+
+[projection]
+max_concurrent_jobs = 2
+catchup_batch_size = 25
+catchup_pause_ms = 250
+backlog_warning_threshold = 250
 
 [chutoro]
 bootstrap_min_semantics = 24
@@ -1023,7 +1218,7 @@ verification beyond ordinary unit and behavioural tests.
 | Workspace purge completeness | End-to-end fixture that creates evidence, graph edges, Qdrant payloads, Chutoro checkpoints, then purges | Evidence inbox, Oxigraph namespaces, Qdrant collections, and checkpoint files |
 | Tenant isolation             | Two-tenant fixtures and adapter contract tests for read, write, recall, repair, and purge paths          | Request context, persistence, Qdrant, Oxigraph, Chutoro, MCP, and RPC         |
 
-_Table 9: Design-level verification targets._
+_Table 10: Design-level verification targets._
 
 The integration surface is combinatorial: provider (`codex`, `claude_code`,
 `axinite`, `manual`) × daemon mode (`observe`, `project_shadow`,
@@ -1051,7 +1246,9 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
    normalization, session listing, and health checks.
 2. **Dear Diary parity through the daemon.** Add curated writes, flat recall,
    durable recall audit modes, retraction, Qdrant indexing, and audit records
-   without exposing collection names through MCP.
+   without exposing collection names through MCP. This is the release 0.1
+   checkpoint and must have its own quick start, operator notes, and feedback
+   loop before later graph and theme work becomes blocking.
 3. **Episodes and semantic projection.** Add episode finalization, summaries,
    embeddings, structured extraction, stable claim IDs, typed support edges,
    projection activity lineage, and support-reference validation.
@@ -1067,8 +1264,6 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 - Choose the default evidence-store engine and migration format.
 - Accept or revise the tenant-isolation strategy for local, Corbusier, and
   hosted-ready modes.
-- Decide whether a graph-shaped relational fallback is allowed when Oxigraph is
-  disabled.
 - Define exact Axinite projection write-back policy.
 - Define the redaction detector set and encrypted raw-text mode.
 - Define the Chutoro checkpoint format and acceptable theme-ID churn during
@@ -1076,6 +1271,7 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 - Define source-health freshness defaults for each provider.
 - Define recall-audit retention defaults and whether redacted query text is
   ever stored by default.
+- Define the operator backup format used before irreversible purge.
 
 ## References
 

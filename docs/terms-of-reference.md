@@ -280,8 +280,10 @@ retrieve, corrupt, or delete another tenant's memory.
   session evidence to build useful memory. If this assumption fails, the first
   product slice must add stronger explicit import or hook capture.
 - Users will accept local infrastructure dependencies when they receive better
-  provenance and privacy than a hosted memory service. If they do not, a
-  smaller single-binary mode or dependency-light profile becomes necessary.
+  provenance and privacy than a hosted memory service. The first public value
+  slice should therefore support a minimum useful deployment with the daemon,
+  SQLite, Qdrant, Ollama, curated memory, and flat recall before Oxigraph and
+  Chutoro become active requirements.
 - Local embedding and extraction models through Ollama can provide adequate
   quality for summaries, semantic extraction, and optional recall gating. If
   they cannot, the product must keep encoder-only and flat-recall fallbacks.
@@ -289,9 +291,10 @@ retrieve, corrupt, or delete another tenant's memory.
   metadata to avoid provider-specific logic in the core pipeline. If they
   cannot, the canonical model needs explicit extension points before design
   work continues.
-- Workspace identity can usually derive from repository origin, repository
-  root, and optional profile name. If this proves unstable, purge and recall
-  isolation become unsafe.
+- Workspace identity derives from normalized repository origin, a hash of the
+  local repository root path, and optional profile name. Non-Git workspaces use
+  the canonical configured root path hash and profile name. Collisions inside a
+  tenant require an auditable operator override rather than automatic merge.
 - Tenant identity is available from authenticated callers, capability tokens,
   or a configured local default. If tenant context is missing in Corbusier
   mode, the request must fail before application use cases run.
@@ -318,17 +321,15 @@ retrieve, corrupt, or delete another tenant's memory.
 
 ## 9. Open questions
 
-| Question                                                                                                     | Why it matters                                                                           | Criteria for resolution                                                              | Suggested path                     |
-| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------- |
-| Which local store should back the standalone evidence inbox: SQLite, libSQL, PostgreSQL, or a supported set? | It affects installation complexity, transactional guarantees, and Axinite compatibility  | A selected default plus documented migration and backup rules                        | Technical design decision          |
-| Is Oxigraph mandatory for v1, or may an MVP use graph-shaped relational tables?                              | Dropping Oxigraph reduces dependencies but weakens the planned graph source of truth     | A decision that states which Axinite capabilities are deferred if Oxigraph is absent | Architecture Decision Record (ADR) |
-| What is the exact canonical evidence schema for Codex, Claude, Axinite, and manual imports?                  | The schema gates adapters, idempotency, redaction, projection, and tests                 | Provider examples round-trip through normalization with stable evidence references   | Implementation spike               |
-| How should workspace identity be derived when repository origin, path, branch, or profile changes?           | Incorrect identity risks cross-project recall or incomplete purge                        | A deterministic rule with collision handling and operator override                   | Technical design decision          |
-| What redaction policy is sufficient for the first release?                                                   | Redaction governs whether transcripts can be stored and embedded safely                  | A documented default deny list, secret detector set, and override model              | Security review                    |
-| Should Axinite projection write-back be manual, approved, or automatic by default?                           | Write-back can duplicate or strengthen derived facts if loops are not controlled         | A policy that prevents self-reinforcing projection loops                             | ADR                                |
-| Which MCP tools are required in the first public slice?                                                      | The MCP surface affects immediate usefulness and implementation order                    | A minimum useful set tied to evidence capture and flat recall                        | Roadmap                            |
-| What recall quality signals will decide whether hierarchical recall is better than flat recall?              | Without evaluation signals, theme and episode expansion can add complexity without value | A shadow-mode evaluation set with traceable disagreement and token-cost metrics      | Evaluation plan                    |
-| Which tenant storage strategy should each supported deployment use?                                          | SQLite, PostgreSQL, Qdrant, Oxigraph, and Chutoro enforce isolation differently          | A selected local default, Corbusier mode, and hosted-ready extension point           | ADR                                |
+| Question                                                                                                     | Why it matters                                                                           | Criteria for resolution                                                            | Suggested path            |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------- |
+| Which local store should back the standalone evidence inbox: SQLite, libSQL, PostgreSQL, or a supported set? | It affects installation complexity, transactional guarantees, and Axinite compatibility  | A selected default plus documented migration and backup rules                      | Technical design decision |
+| What is the exact canonical evidence schema for Codex, Claude, Axinite, and manual imports?                  | The schema gates adapters, idempotency, redaction, projection, and tests                 | Provider examples round-trip through normalization with stable evidence references | Implementation spike      |
+| What redaction policy is sufficient for the first release?                                                   | Redaction governs whether transcripts can be stored and embedded safely                  | A documented default deny list, secret detector set, and override model            | Security review           |
+| Should Axinite projection write-back be manual, approved, or automatic by default?                           | Write-back can duplicate or strengthen derived facts if loops are not controlled         | A policy that prevents self-reinforcing projection loops                           | ADR                       |
+| Which MCP tools are required in the first public slice?                                                      | The MCP surface affects immediate usefulness and implementation order                    | A minimum useful set tied to evidence capture and flat recall                      | Roadmap                   |
+| What recall quality signals will decide whether hierarchical recall is better than flat recall?              | Without evaluation signals, theme and episode expansion can add complexity without value | A shadow-mode evaluation set with traceable disagreement and token-cost metrics    | Evaluation plan           |
+| Which tenant storage strategy should each supported deployment use?                                          | SQLite, PostgreSQL, Qdrant, Oxigraph, and Chutoro enforce isolation differently          | A selected local default, Corbusier mode, and hosted-ready extension point         | ADR                       |
 
 _Table 3: Open questions for the next design iteration._
 
@@ -362,10 +363,8 @@ there when the project creates a ubiquitous language document:
 
 ### Appendix B. ADR candidates
 
-- Decide whether Oxigraph is mandatory in v1 or whether a relational prototype
-  is acceptable.
-- Decide workspace identity derivation and collision behaviour.
-- Decide tenant isolation and Corbusier request-context compatibility.
+- Record release 0.1 graph-disabled capability limits and the full v1
+  Oxigraph authority boundary.
 - Decide Axinite projection write-back policy and loop prevention.
 - Decide redaction guarantees and whether encrypted raw-text storage is in
   scope.

@@ -25,6 +25,14 @@ claim identity, typed support edges, projection activity lineage, and durable
 recall audit modes. RFC 0006 records the post-1.0 direction for Axinite v1.2
 epistemic health, empiricism, falsification, and semiring-shaped provenance.
 
+The first public value checkpoint is release 0.1 at the end of phase 3:
+daemon-mediated curated memory, `flat_v1` recall, retraction, explanation,
+health, source sessions, tenant scoping, and rebuildable Qdrant projection.
+Release 0.1 is the Dear Diary-equivalent proof point for Memoryd. Oxigraph
+facts, Chutoro themes, hierarchical recall, Axinite write-back, and post-1.0
+epistemic-health features remain in later phases and must not block the first
+useful local deployment.
+
 ## 1. Foundational contracts and build spine
 
 Idea: if Memoryd settles the contracts that would otherwise reshape storage,
@@ -55,22 +63,24 @@ and RFC 0006.
     backup expectations, and first-slice test matrix for the evidence inbox.
 - [ ] 1.1.2. Record local safety defaults for workspace, redaction, and purge.
   - Requires 1.1.1.
-  - Define repository-origin normalization, path hashing, collision handling,
-    first redaction detectors, deny-pattern behaviour, raw-text storage mode,
-    and purge confirmation defaults.
+  - Define repository-origin normalization, repository-root path hashing,
+    non-Git workspace hashing, collision handling, operator overrides, first
+    redaction detectors, deny-pattern behaviour, raw-text storage mode, purge
+    confirmation defaults, and pre-purge backup expectations.
   - See terms-of-reference.md §§7-9, memoryd-design.md §§8.4 and 13, and RFC
     0001 §§3 and 7.
   - Success: provider adapters can ingest safely without waiting for graph,
     theme, or Axinite write-back decisions.
 - [ ] 1.1.3. Accept or revise the hexagonal, tenant, and ingestion boundaries.
   - Requires 1.1.1 and 1.1.2.
-  - Confirm the dependency rule, request-context propagation,
-    `ConversationIngestPort`, `ConversationSourcePort`, canonical conversation
-    deltas, cursor semantics, and adapter conformance fixtures.
+  - Confirm the dependency rule, request-context propagation, port-budget
+    discipline, `ConversationPushIngestPort`,
+    `CollectedConversationIngestPort`, `ConversationSourcePort`, canonical
+    conversation deltas, cursor semantics, and adapter conformance fixtures.
   - See memoryd-design.md §§5.3-6.1 and ADRs 005-007.
   - Success: Corbusier, Axinite, Codex, Claude, and manual import adapters can
-    target one daemon-owned ingestion contract without sharing implementation
-    details.
+    target one canonical delta while push and worker-batch use cases keep
+    their trust and idempotency invariants separate.
 - [ ] 1.1.4. Confirm the minimum public MCP tool set for the first public
   value slice.
   - Requires 1.1.1-1.1.3.
@@ -111,10 +121,13 @@ memoryd-design.md §§5, 12, and 14.
   - Requires 1.1.1-1.1.5.
   - Cover the minimum spine for first value: tenants, request context,
     workspaces, evidence, canonical conversation deltas, conversation source
-    ports, conversation ingestion ports, source health, curated memory, flat
-    recall context packs, audit decisions, clocks, identifier generation,
-    evidence repositories, vector indexes, embedding providers, and audit
-    sinks.
+    ports, push ingest ports, collected-batch ingest ports, source health,
+    curated memory, flat recall context packs, audit decisions, clocks,
+    identifier generation, evidence repositories, vector indexes, embedding
+    providers, and audit sinks.
+  - Apply the port-budget discipline from memoryd-design.md §5.3: keep a
+    boundary internal unless it serves at least two adapters, two use cases, or
+    one use case with a scheduled second adapter.
   - Leave claims, support edges, graph facts, profiles, themes, projection
     activities, and durable recall audits to the slices that implement them.
   - See memoryd-design.md §§4-6.1 and ADRs 005-008.
@@ -144,21 +157,25 @@ memoryd-design.md §§5, 12, and 14.
 - [ ] 1.2.4. Implement process startup, shutdown, and structured diagnostics
   for all binaries.
   - Requires 1.2.2 and 1.2.3.
-  - Add tracing spans, health-oriented state fields, and graceful shutdown
-    handling for foreground and daemon modes.
+  - Add tracing spans, health-oriented state fields, graceful shutdown
+    handling for foreground and daemon modes, collector sidecar lifecycle
+    state, and startup reconciliation of expired in-flight jobs.
   - See memoryd-design.md §§5.1, 12, and 15.
-  - Success: each binary reports startup configuration, dependency mode, and
-    shutdown reason without using unstructured standard output in library code.
+  - Success: each binary reports startup configuration, dependency mode,
+    collector lifecycle mode, recovered job counts, and shutdown reason
+    without using unstructured standard output in library code.
 - [ ] 1.2.5. Implement the internal RPC envelope and capability-token driving
   adapter.
   - Requires 1.2.2 and 1.2.3.
   - Define UDS defaults, loopback debug mode, bearer or capability token
     parsing, tenant ID, allowed workspace IDs, principal, session,
-    correlation, request IDs, and error envelopes.
+    correlation, request IDs, command/query/schedule envelope kinds, schema
+    version, feature negotiation, idempotency keys, and error envelopes.
   - See memoryd-design.md §§5.2-5.4 and 12 and RFC 0001 §5.
   - Success: collector and MCP callers can authenticate to a test daemon with
-    scoped capabilities, and unauthorized methods are rejected before
-    application use cases run.
+    scoped capabilities, incompatible schema features fail with structured
+    errors, and unauthorized methods are rejected before application use cases
+    run.
 - [ ] 1.2.6. Add the shared contract fixture harness.
   - Requires 1.2.1-1.2.5.
   - Store provider input examples, canonical conversation deltas, normalized
@@ -311,12 +328,16 @@ projection pipeline and compatibility story. See memoryd-design.md §6 and RFC
     Qdrant, Oxigraph, Ollama, or Chutoro adapters directly.
 - [ ] 2.2.2. Implement the daemon-side conversation ingestion use case.
   - Requires 1.1.3, 2.1.1, and 2.1.2.
-  - Implement `ConversationIngestPort` for canonical conversation deltas,
+  - Implement `ConversationPushIngestPort` and
+    `CollectedConversationIngestPort` for canonical conversation deltas,
     source-session materialization, ordered raw events, raw spans, cursor
-    updates, idempotency records, redaction state, and audit records.
+    updates, idempotency records, redaction state, worker batch provenance,
+    and audit records.
   - See memoryd-design.md §6.1, ADR 007, and RFC 0001 §6.
   - Success: Corbusier, Axinite, Codex, Claude, and manual fixtures can all
-    enter the evidence inbox through one daemon-facing port.
+    enter the evidence inbox through one canonical delta, while push fixtures
+    and worker-batch fixtures exercise different capability and idempotency
+    paths.
 - [ ] 2.2.3. Implement the redaction pipeline before storage and embedding.
   - Requires 1.1.2 and 2.2.2.
   - Detect configured secret classes, deny patterns, high-entropy blobs, and
@@ -358,11 +379,13 @@ memoryd-design.md §§6-7 and RFC 0001.
 - [ ] 2.3.2. Implement Claude Code hook intake and transcript tailing.
   - Requires 2.2.1-2.2.4.
   - Keep hook handling as a fast wake-up path and tail transcript content
-    asynchronously through `ConversationSourcePort`.
+    asynchronously through the long-running collector sidecar and
+    `ConversationSourcePort`.
   - See terms-of-reference.md §8.1, memoryd-design.md §§6-6.1 and 13, and RFC
     0001 §§6 and 9.
   - Success: hook fixtures for session start, prompt, compaction, stop, and
-    session end enqueue ingest without running projection in the hook command.
+    session end wake the sidecar and enqueue ingest without running projection
+    in the hook command.
 - [ ] 2.3.3. Implement provider lag, cursor, and parse diagnostics.
   - Requires 2.1.5, 2.3.1, and 2.3.2.
   - Surface unreadable files, parse errors, stale cursors, last offsets,
@@ -420,18 +443,21 @@ ADR 001 and memoryd-design.md §§8.1 and 8.4.
 - [ ] 3.1.1. Implement the Qdrant client port and collection manager.
   - Requires 1.1.2, 1.1.3, 1.2.3, and 2.1.1.
   - Support per-tenant-workspace collections, named vectors, payload schemas,
-    mandatory tenant and workspace payload filters, optional
-    payload-partitioned strategy, and rebuildable projection writes.
+    lazy collection creation, expected collection-count reporting, mandatory
+    tenant and workspace payload filters, optional payload-partitioned
+    strategy, collection embedding metadata, and rebuildable projection writes.
   - See memoryd-design.md §§5.4, 8.1, and 8.4 and ADRs 001 and 006.
   - Success: projection writes can be replayed after collection deletion
-    without losing evidence, tenant scope, or audit state.
+    without losing evidence, tenant scope, model identity, or audit state.
 - [ ] 3.1.2. Implement the Ollama embedding provider and embedding-model
   contract.
   - Requires 1.2.3.
-  - Validate vector dimensions and record model identity with projections.
+  - Validate vector dimensions, record model identity with projections, detect
+    Qdrant collection metadata mismatches, and report missing Ollama models
+    with clear diagnostics.
   - See memoryd-design.md §§8.3, 8.4, and 14.
   - Success: ingestion and query paths reject mismatched embedding models
-    before corrupting Qdrant collections.
+    before corrupting Qdrant collections or returning mixed-vector recall.
 - [ ] 3.1.3. Implement `StoreCuratedMemory` with evidence-backed manual
   records.
   - Requires 2.1.4, 3.1.1, and 3.1.2.
@@ -497,7 +523,8 @@ RFC 0002 and memoryd-design.md §§8 and 13.
     visible only when explicitly requested by a privileged caller.
 - [ ] 3.3.2. Implement Qdrant projection repair and reconciliation reporting.
   - Requires 3.1.1 and 3.3.1.
-  - Retry failed writes, rebuild missing collections, and surface projection
+  - Retry failed writes, rebuild missing collections, detect model metadata
+    mismatches, schedule re-embedding where needed, and surface projection
     failures in health output.
   - See ADR 001 and RFC 0002 §10.
   - Success: deleting a workspace collection and running repair restores
@@ -509,6 +536,16 @@ RFC 0002 and memoryd-design.md §§8 and 13.
   - See memoryd-design.md §15 and RFC 0005 §§5-7.
   - Success: the suite proves the first public memory loop works without
     episodes, Oxigraph facts, or themes.
+
+- [ ] 3.3.4. Prepare the release 0.1 operator checkpoint.
+  - Requires 3.3.3.
+  - Document the minimum useful deployment, dependency-light capability limits,
+    Qdrant collection expectations, Ollama degraded modes, purge backup
+    warning, and feedback channels for transcript usefulness.
+  - See memoryd-design.md §§2.3, 8.4, 11-13, and 16.
+  - Success: a local operator can install the release 0.1 profile, store and
+    recall curated memory through MCP, understand which graph and theme
+    features are absent, and report whether the first memory loop is useful.
 
 ## 4. Vertical slice 3: Episodes and semantic projection
 
@@ -788,9 +825,10 @@ core evidence model. See terms-of-reference.md §§7-8, memoryd-design.md §§6,
     sequence numbers, roles, content parts, and message metadata into
     canonical conversation deltas.
   - See memoryd-design.md §6.1 and ADR 007.
-  - Success: Corbusier fixtures ingest through the same `ConversationIngestPort`
-    as Axinite, Codex, Claude, and manual imports, while preserving tenant and
-    sequence boundaries.
+  - Success: Corbusier fixtures ingest through
+    `ConversationPushIngestPort`, share the same canonical delta as Axinite,
+    Codex, Claude, and manual imports, and preserve tenant and sequence
+    boundaries.
 
 ## 6. Vertical slice 5: Themes and hierarchical recall
 
@@ -922,15 +960,21 @@ default configuration. See memoryd-design.md §§14-16.
 - [ ] 7.1.2. Implement background job scheduling, backpressure, and retry
   limits.
   - Requires 7.1.1.
-  - Cover ingest, finalization, extraction, projection repair, theme refresh,
-    Chutoro compaction, and consolidation jobs.
+  - Cover ingest, finalization, extraction, projection repair, re-embedding,
+    theme refresh, Chutoro compaction, and consolidation jobs.
+  - Enforce maximum concurrent projection jobs, maximum catch-up batch size,
+    pause intervals between catch-up batches, retry limits, and backlog
+    health thresholds before `active` mode can be the default.
   - See memoryd-design.md §§8, 9, 12, and 15.
-  - Success: active mode can fall behind, recover, and report lag without
-    unbounded task growth.
+  - Success: active mode can fall behind during an Ollama or Qdrant outage,
+    recover in bounded batches, and report lag without unbounded task growth
+    or synchronous queue draining.
 - [ ] 7.1.3. Implement operator-visible repair commands.
   - Requires 7.1.2.
   - Provide commands to replay evidence, rebuild Qdrant collections, rebuild
-    graph projections where safe, compact themes, and inspect failed jobs.
+    graph projections from evidence and projection activities where safe,
+    compact themes, inspect failed jobs, and reconcile orphaned projection
+    state after restart.
   - See memoryd-design.md §§8.1, 9, 12, and 15.
   - Success: common projection failures can be repaired without direct store
     manipulation.

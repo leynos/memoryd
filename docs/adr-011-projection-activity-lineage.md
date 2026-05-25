@@ -26,8 +26,8 @@ models, extractors, or source-health state changes.
 
 - Projection work should be replayable and explainable.
 - Activity lineage is not the same as user-facing audit logs.
-- Model, extractor, validator, and configuration identity must be captured
-  without leaking infrastructure types into the domain.
+- Model, vector dimension, extractor, validator, and configuration identity
+  must be captured without leaking infrastructure types into the domain.
 - Lineage records must be tenant-scoped.
 - The design should support post-1.0 validity recomputation without requiring
   every v1 projection to be rewritten.
@@ -54,6 +54,7 @@ The domain model will include:
 - `ProjectionActivityOutput`;
 - `ProjectionActivityStatus`;
 - `ProducerIdentity`;
+- `EmbeddingModelIdentity`;
 - `ConfigurationDigest`;
 - `DiagnosticRef`.
 
@@ -71,15 +72,18 @@ The first activity kinds are:
 - `recall_audit_capture`.
 
 Activity records link input artefacts to output artefacts. They record
-extractor, model, validator, and configuration identities as domain strings or
-digests, not SDK objects. They do not replace audit logs: audit logs explain
-access and decisions; activity lineage explains derivation.
+extractor, model, embedding vector dimension, validator, and configuration
+identities as domain strings or digests, not SDK objects. They do not replace
+audit logs: audit logs explain access and decisions; activity lineage explains
+derivation.
 
 ## Consequences
 
 - Operators can inspect which activity created or rejected a semantic carrier.
 - Reprojection and repair can target artefacts affected by a model,
   configuration, or validator change.
+- Recall can detect embedding model or dimension mismatches before returning
+  mixed-vector results from Qdrant.
 - Post-1.0 claim-validity recomputation can start from existing derivation
   activities.
 - The evidence store will need additional lineage tables, and graph projection

@@ -88,6 +88,13 @@ Workspace identity becomes tenant-scoped. The normative identity boundary is
 uses a stable default local tenant so the existing local-first workflow remains
 simple while exercising the same code paths as Corbusier mode.
 
+Repository-derived workspace IDs combine normalized Git origin URL, a hash of
+the local repository root path, and optional configured profile name. Non-Git
+workspaces combine the canonical configured root path hash and optional profile
+name. Operators may provide explicit aliases or overrides. If two derived
+workspaces collide inside one tenant, ingestion fails with an auditable
+collision diagnostic instead of merging evidence.
+
 Persistence adapters enforce the boundary as follows:
 
 - SQLite or libSQL uses tenant columns, composite keys, application-level

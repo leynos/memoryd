@@ -69,20 +69,26 @@ Provider adapters convert native records into canonical evidence:
 
 ### Standard conversation ingestion ports
 
-Conversation ingestion has two standard ports.
+Conversation ingestion has one canonical delta, two daemon-facing ingest
+commands, and one source-reader port.
 
-`ConversationIngestPort` is the daemon-facing driving port. It accepts a
-tenant-scoped request context and a canonical conversation delta. Corbusier,
-Axinite, the collector worker, and manual import tools all use this port when
-they want conversation material to become evidence inbox records.
+`ConversationPushIngestPort` is the authenticated push command. Corbusier,
+Axinite transactional outboxes, and MCP/manual import tools use this command
+when they already own a trustworthy request context and submit one logical
+canonical conversation delta.
+
+`CollectedConversationIngestPort` is the worker-originated batch command. The
+collector sidecar uses this command after discovering, tailing, redacting, and
+normalizing Codex, Claude, Axinite pull-mode, or other worker-read sources. It
+submits canonical deltas plus cursor updates and worker provenance.
 
 `ConversationSourcePort` is the source-reader contract implemented by adapters
 that the worker must discover, tail, page, or replay. Codex rollout scraping,
 Claude transcript scraping, Axinite pull mode, and future filesystem or
 database imports use this port. Push-mode sources, including Corbusier service
 hooks or Axinite transactional outbox events, may bypass the source-reader port
-and call `ConversationIngestPort` directly, but they must still emit the same
-canonical conversation delta.
+and call `ConversationPushIngestPort` directly, but they must still emit the
+same canonical conversation delta.
 
 The canonical delta contains source identity, tenant request scope,
 conversation metadata, ordered events, content parts, cursor metadata,
@@ -92,8 +98,10 @@ event kind.
 
 The daemon does not scrape `~/.codex` or `~/.claude` directly. The
 `memoryd-collector` worker owns filesystem source adapters, persistent source
-cursors, and replay scheduling, then calls the daemon ingestion port with
-canonical deltas.
+cursors, and replay scheduling, then calls the worker-batch ingest command with
+canonical deltas. Both ingest commands create the same evidence inbox records;
+their trust, capability, sequencing, cursor, and idempotency checks differ at
+the application-command boundary.
 
 ### Evidence inbox tables
 

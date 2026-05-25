@@ -12,6 +12,8 @@ set.
   verification strategy.
 - [Roadmap](roadmap.md) translates the design, ADRs, and RFCs into
   GIST-aligned implementation phases and review-sized tasks.
+- [Project-design ExecPlan](execplans/project-design.md) records the live
+  remediation plan for the Logisphere design-stage review.
 - [User guide](users-guide.md) explains how to use the generated project and
   its public build and test commands.
 - [Developer guide](developers-guide.md) explains the local workflow and

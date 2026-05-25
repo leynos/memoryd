@@ -47,23 +47,32 @@ evidence model.
 
 ## Options considered
 
-| Option                                 | Consequence                                                                                                                              |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| One source-specific importer per tool  | Fast to implement, but creates divergent semantics for replay, idempotency, cursoring, redaction, and evidence references.               |
-| Direct raw-event RPC only              | Keeps the daemon simple, but forces every adapter to duplicate session, message, cursor, and lifecycle normalization.                    |
-| Canonical conversation ingestion ports | Keeps source parsing in adapters while giving the daemon one conversation-delta contract for Corbusier, Axinite, Codex, Claude, and API. |
+| Option                                       | Consequence                                                                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| One source-specific importer per tool        | Fast to implement, but creates divergent semantics for replay, idempotency, cursoring, redaction, and evidence references.            |
+| Direct raw-event RPC only                    | Keeps the daemon simple, but forces every adapter to duplicate session, message, cursor, and lifecycle normalization.                 |
+| One canonical ingestion method               | Keeps the API small, but hides different trust, sequencing, and idempotency invariants behind caller checks inside one function body. |
+| Split commands with one canonical delta      | Keeps source parsing in adapters while separating authenticated push from worker-originated collected batches.                        |
+| Separate source-specific canonical contracts | Models each producer precisely, but makes Corbusier, Axinite, Codex, Claude, and manual import drift into parallel memory pipelines.  |
 
 _Table 1: Conversation-ingestion options._
 
 ## Decision outcome / proposed direction
 
-Define two standard ports.
+Define one canonical delta and three standard ports.
 
-`ConversationIngestPort` is the daemon-facing driving port. It accepts a
-tenant-scoped request context and a canonical conversation delta. Corbusier,
-Axinite, the collector worker, and manual import surfaces all call this port.
-It is the only path that creates source sessions, raw events, raw spans, ingest
-jobs, and audit records from conversation material.
+`ConversationPushIngestPort` is the authenticated push command. Corbusier,
+Axinite transactional outboxes, and MCP/manual import surfaces use it when the
+caller already owns a trustworthy request context and submits one logical
+canonical conversation delta. It requires `memory.ingest` capability and uses
+caller-supplied request, correlation, causation, and workspace context.
+
+`CollectedConversationIngestPort` is the worker-originated batch command. The
+collector sidecar uses it after discovering, tailing, redacting, and
+normalizing Codex, Claude, Axinite pull-mode, or future worker-read sources. It
+requires a collector token with `memory.ingest`, accepts a collected batch of
+canonical deltas and cursor updates, and records worker provenance and batch
+sequencing.
 
 `ConversationSourcePort` is the worker-facing source contract. Pull, tail, and
 snapshot adapters implement it when `memoryd-collector` must discover or read
@@ -71,7 +80,13 @@ source material itself. Codex rollout tailing, Claude transcript tailing,
 Axinite pull mode, and any future filesystem or database import source use this
 port. Push-mode sources such as a Corbusier service hook or Axinite
 transactional outbox may bypass `ConversationSourcePort` and call
-`ConversationIngestPort` directly, but they still emit the same canonical delta.
+`ConversationPushIngestPort` directly, but they still emit the same canonical
+delta.
+
+Both ingest commands create source sessions, raw events, raw spans, ingest
+jobs, and audit records from conversation material. The canonical delta remains
+shared; the trust, capability, sequencing, cursor, and idempotency paths differ
+at the application-command boundary.
 
 The canonical delta contains:
 
@@ -121,12 +136,14 @@ The first implementation must provide these adapter shapes:
   worker owns filesystem discovery and tailing adapters.
 - Corbusier and Axinite can choose push mode, pull mode, or both without
   changing daemon ingestion semantics.
-- The evidence inbox can enforce one idempotency, cursor, audit, redaction, and
-  tenant-isolation contract across all conversation sources.
+- The evidence inbox can enforce one evidence, audit, redaction, and
+  tenant-isolation contract across all conversation sources while still
+  applying different idempotency and cursor checks to push and worker-batch
+  paths.
 - Adapter tests must prove that semantically equivalent Corbusier, Axinite,
   Codex, and Claude fixtures produce equivalent canonical conversation deltas
   where their source data overlaps.
-- The port must be domain-owned. Adapter implementations may depend on
+- The ports must be domain-owned. Adapter implementations may depend on
   Corbusier, Axinite, Codex rollout, Claude transcript, SQL, filesystem, or
   JSON parser types; the domain and application crates must not.
 
