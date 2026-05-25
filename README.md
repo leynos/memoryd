@@ -81,6 +81,8 @@ ______________________________________________________________________
   scope, constraints, and open questions.
 - [Memoryd design](docs/memoryd-design.md) - standalone daemon architecture and
   implementation strategy.
+- [Roadmap](docs/roadmap.md) - implementation phases, dependencies, and
+  review-sized tasks.
 - [Users' Guide](docs/users-guide.md) - generated project commands and local
   usage.
 - [Developers' Guide](docs/developers-guide.md) - contributor workflow and

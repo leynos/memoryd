@@ -10,6 +10,8 @@ set.
 - [Memoryd design](memoryd-design.md) describes the standalone daemon,
   collector, MCP front end, storage boundaries, projection pipeline, and
   verification strategy.
+- [Roadmap](roadmap.md) translates the design, ADRs, and RFCs into
+  GIST-aligned implementation phases and review-sized tasks.
 - [User guide](users-guide.md) explains how to use the generated project and
   its public build and test commands.
 - [Developer guide](developers-guide.md) explains the local workflow and
