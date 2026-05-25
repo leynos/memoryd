@@ -73,20 +73,22 @@ latency.
 - *Mitigation:* Record the collector lifecycle model as an explicit design
   decision before the first binary ships.
 
-🔴 **Conversation ingestion port scope is overloaded.**
-`ConversationIngestPort` handles push-mode Corbusier calls, push-mode Axinite
-outbox events, worker-mediated Codex deltas, worker-mediated Claude deltas,
-and MCP manual imports. All through a single `ingest_conversation_delta`
-method. The risk is not polymorphism itself but that a single method signature
-cannot enforce the distinct trust, sequencing, and idempotency invariants of
-push vs pull without implicit caller-identity checks inside the use case.
+🟢 **Conversation ingestion split has been remediated.** The original review
+finding was that a single overloaded `ConversationIngestPort` could not cleanly
+enforce the distinct trust, sequencing, and idempotency invariants of push-mode
+producers versus collected worker batches. ADR 007 now records the canonical
+ingestion-port contract and implementations should use that standard
+`ConversationIngestPort` contract where applicable:
+`ConversationPushIngestPort` handles authenticated push from Corbusier, Axinite
+transactional outboxes, and MCP/manual imports, while
+`CollectedConversationIngestPort` handles collector-submitted batches from
+Codex, Claude, Axinite pull mode, and future worker-read sources. Both ports
+share the canonical conversation delta, but their trust, sequencing, cursor,
+capability, and idempotency paths are separate.
 
-- *Mitigation:* Split into two application-layer commands: one for
-  authenticated push (Corbusier, Axinite outbox, MCP import) that requires a
-  capability token with `memory.ingest`, and one for worker-originated pull
-  (collector submitting a batch). The canonical delta type can remain shared;
-  the trust and capability paths should diverge at the use-case level rather
-  than being disambiguated inside a single function body.
+- *Closed action:* The "split port" mitigation is now addressed in ADR 007 and
+  in the design document. Reviewers should treat ADR 007 as the canonical
+  ingestion-port specification rather than the original red finding.
 
 ______________________________________________________________________
 
@@ -477,7 +479,7 @@ what it proposes but in what it defers or underspecifies.
 
 | Severity | Expert         | Finding                                                                                    |
 | -------- | -------------- | ------------------------------------------------------------------------------------------ |
-| 🔴       | 🐼 Pandalump   | Conversation ingestion port conflates push and pull trust models in a single method.       |
+| 🟢       | 🐼 Pandalump   | Conversation ingestion now splits push and collected-batch ports per ADR 007.              |
 | 🔴       | ☎️ Telefono    | No versioning strategy for internal RPC or MCP tool schemas.                               |
 | 🔴       | 🦕 Dinolump    | Cognitive load is very high; risk of never shipping without an intermediate release.       |
 | 🟡       | 🐼 Pandalump   | Port proliferation risk (~20 driven ports before first adapter).                           |
@@ -530,7 +532,9 @@ curated-memory-plus-flat-recall as a self-contained release.
 4. Add a "degraded mode" section to the design document for Ollama and Qdrant
    unavailability.
 5. Add additive-only contract evolution rules to the RPC and MCP sections.
-6. Consider splitting `ConversationIngestPort` into push and pull use cases.
+6. Treat the split-ingest work as closed and use ADR 007's
+   `ConversationPushIngestPort` and `CollectedConversationIngestPort` as the
+   canonical implementation target.
 7. Declare phase 3 as "release 0.1" with its own documentation and user
    feedback loop.
 8. Define projection backpressure limits before active mode is enabled.
