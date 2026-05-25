@@ -32,137 +32,72 @@ process boundaries, provider adapters, and safety policy before feature work
 starts, later slices can converge on one coherent v1 architecture instead of
 reworking the same interfaces.
 
-This phase is deliberately foundational. It turns the design documents into
-ratified implementation contracts, crate boundaries, configuration surfaces,
-fixtures, and local development gates before the first user-facing slice lands.
+This phase is deliberately narrow. It turns only the decisions that would block
+evidence capture and a Dear Diary-style flat memory loop into implementation
+contracts. Decisions that belong to graph promotion, themes, Axinite
+write-back, claim graphs, and post-1.0 epistemic health move to the slices that
+first use them. That keeps phase 1 small enough for a solo implementer to cross
+before the project delivers visible value.
 
-### 1.1. Ratify the v1 decisions that gate implementation
+### 1.1. Ratify only the decisions that gate first value
 
-This step answers which unsettled design choices must be fixed before storage,
-adapters, projection, and recall can be implemented safely. Its outcome informs
-the crate layout, migrations, configuration, and first public MCP surface. See
-terms-of-reference.md §§8-9 and memoryd-design.md §§16-17.
+This step answers which unsettled decisions must be fixed before the repository
+can ingest evidence, browse sessions, and run a small flat recall loop. It
+deliberately postpones decisions whose first irreversible consequence appears
+in later slices. See terms-of-reference.md §§8-9, memoryd-design.md §§16-17,
+and RFC 0006.
 
-- [ ] 1.1.1. Record the evidence-store engine and migration policy as an ADR.
+- [ ] 1.1.1. Record the evidence-store engine and migration policy.
   - Decide whether v1 defaults to SQLite, libSQL, PostgreSQL, or a supported
     set.
   - See terms-of-reference.md §9, memoryd-design.md §7, and RFC 0001 §7.
   - Success: one accepted ADR defines the default store, migration format,
-    backup expectations, and test matrix for the evidence inbox.
-- [ ] 1.1.2. Record the workspace identity and purge-isolation policy as an
-  ADR.
+    backup expectations, and first-slice test matrix for the evidence inbox.
+- [ ] 1.1.2. Record local safety defaults for workspace, redaction, and purge.
   - Requires 1.1.1.
-  - Define repository-origin normalization, path hashing, profile overrides,
-    collision handling, and operator-visible identifiers.
-  - See terms-of-reference.md §§7-9 and memoryd-design.md §§8.4 and 13.
-  - Success: workspace IDs can be derived deterministically and used in
-    evidence, Qdrant, Oxigraph, Chutoro, and purge tests.
-- [ ] 1.1.3. Record the redaction and raw-text retention policy as an ADR.
-  - Requires 1.1.1.
-  - Decide the first detector set, deny-pattern behaviour, encrypted raw-text
-    mode, and what may be embedded.
-  - See terms-of-reference.md §§7.2 and 9, memoryd-design.md §13, and RFC
+  - Define repository-origin normalization, path hashing, collision handling,
+    first redaction detectors, deny-pattern behaviour, raw-text storage mode,
+    and purge confirmation defaults.
+  - See terms-of-reference.md §§7-9, memoryd-design.md §§8.4 and 13, and RFC
     0001 §§3 and 7.
-  - Success: redaction guarantees are explicit enough to implement provider
-    adapters and security-sensitive regression fixtures.
-- [ ] 1.1.4. Record the Oxigraph requirement and fallback policy as an ADR.
-  - Requires 1.1.1.
-  - Decide whether v1 requires Oxigraph or permits graph-shaped relational
-    tables in a constrained mode.
-  - See terms-of-reference.md §§8.3-9, memoryd-design.md §§8.1 and 17, and
-    ADR 001.
-  - Success: later graph, fact, retraction, and purge tasks know whether they
-    target one graph implementation or a capability-limited fallback.
-- [ ] 1.1.5. Record the Axinite write-back policy and loop-prevention contract
-  as an ADR.
-  - Requires 1.1.2 and 1.1.4.
-  - Choose manual, approved, or automatic write-back defaults, and define
-    projection metadata that prevents self-reinforcing memory loops.
-  - See terms-of-reference.md §§5 and 9, memoryd-design.md §§6 and 16, and RFC
-    0001 §8.
-  - Success: Axinite can be planned as a provider and optional projection sink
-    without weakening provenance or duplication controls.
-- [ ] 1.1.6. Record the Chutoro checkpoint and theme-ID churn policy.
-  - Requires 1.1.2.
-  - Decide checkpoint ownership, rebuild behaviour, acceptable theme churn, and
-    when shadow proposals can become active changes.
-  - See memoryd-design.md §§9 and 17, ADR 003, and RFC 0004 §§4-5.
-  - Success: theme implementation can separate rebuildable Chutoro state from
-    durable `memoryd` theme identity.
-- [ ] 1.1.7. Confirm the minimum public MCP tool set for the first public
-  slice.
-  - Requires 1.1.1-1.1.4.
+  - Success: provider adapters can ingest safely without waiting for graph,
+    theme, or Axinite write-back decisions.
+- [ ] 1.1.3. Accept or revise the hexagonal, tenant, and ingestion boundaries.
+  - Requires 1.1.1 and 1.1.2.
+  - Confirm the dependency rule, request-context propagation,
+    `ConversationIngestPort`, `ConversationSourcePort`, canonical conversation
+    deltas, cursor semantics, and adapter conformance fixtures.
+  - See memoryd-design.md §§5.3-6.1 and ADRs 005-007.
+  - Success: Corbusier, Axinite, Codex, Claude, and manual import adapters can
+    target one daemon-owned ingestion contract without sharing implementation
+    details.
+- [ ] 1.1.4. Confirm the minimum public MCP tool set for the first public
+  value slice.
+  - Requires 1.1.1-1.1.3.
   - Choose which of `memory_store`, `memory_recall`, `memory_retract`,
     `memory_sessions`, `memory_import_session`, `memory_profile`,
-    `memory_explain`, and `memory_health` must ship before broader projection.
+    `memory_explain`, and `memory_health` must ship before graph promotion,
+    themes, or post-1.0 epistemic-health features.
   - See terms-of-reference.md §§6-7, memoryd-design.md §11, and RFC 0005 §5.
   - Success: the MCP crate can reject out-of-scope tools deliberately rather
     than accidentally omitting required v1 behaviour.
-- [ ] 1.1.8. Accept or revise the hexagonal architecture boundary ADR.
-  - Requires 1.1.1-1.1.7.
-  - Confirm bounded context scope, port ownership, adapter isolation, error
-    strategy, event handling, and query model before implementation begins.
-  - See memoryd-design.md §5.3 and ADR 005.
-  - Success: all later crate, port, adapter, and test tasks can cite one
-    accepted dependency rule.
-- [ ] 1.1.9. Accept or revise the tenant isolation and Corbusier request
-  context ADR.
-  - Requires 1.1.1, 1.1.2, and 1.1.8.
-  - Confirm `TenantId`, request-context propagation, local default tenant,
-    Corbusier mode, PostgreSQL RLS expectations, Qdrant tenant filtering,
-    Oxigraph named graphs, Chutoro checkpoint scoping, and audit behaviour.
-  - See memoryd-design.md §5.4 and ADR 006.
-  - Success: all tenant-owned use cases, stores, indexes, graph namespaces,
-    checkpoints, and purge paths can cite one accepted isolation contract.
-- [ ] 1.1.10. Accept or revise the standard conversation ingestion port ADR.
-  - Requires 1.1.8 and 1.1.9.
-  - Confirm `ConversationIngestPort`, `ConversationSourcePort`, canonical
-    conversation deltas, source cursor semantics, content parts, tombstones,
-    push-mode producers, pull-mode worker sources, and adapter conformance
-    fixtures.
-  - See memoryd-design.md §6.1, RFC 0001 §6, and ADR 007.
-  - Success: Corbusier, Axinite, Codex, Claude, and manual import adapters can
-    target one canonical ingestion contract without sharing implementation
-    details.
-- [ ] 1.1.11. Accept or revise the source-health foundation ADR.
-  - Requires 1.1.9 and 1.1.10.
+- [ ] 1.1.5. Confirm the source-health foundation needed for observe mode.
+  - Requires 1.1.3.
   - Confirm source registry entries, source-health snapshots, status values,
-    freshness defaults, tenant scoping, and health-report exposure.
+    freshness defaults, tenant scoping, and health-report exposure. Leave full
+    post-1.0 coverage expectations and omission alerts in RFC 0006.
   - See memoryd-design.md §§4, 7, and 15, RFC 0001 §6, and ADR 008.
   - Success: evidence capture can distinguish missing source observations from
     genuinely absent evidence before projection work starts.
-- [ ] 1.1.12. Accept or revise the claim identity and interpretive-kind ADR.
-  - Requires 1.1.8 and 1.1.11.
-  - Confirm `ClaimId`, `ClaimKind`, validity state, lifecycle state, and how
-    claim identity relates to semantic carriers, facts, profiles, retractions,
-    and future claim graphs.
-  - See memoryd-design.md §§4 and 8.2, RFC 0002 §§5-8, ADR 009, and RFC 0006.
-  - Success: claim-bearing memory has stable identifiers without adopting the
-    full post-1.0 claim graph.
-- [ ] 1.1.13. Accept or revise the typed support-edge ADR.
-  - Requires 1.1.12.
-  - Confirm support roles, validation states, lifecycle states, source-health
-    joins, Qdrant denormalization limits, and Oxigraph provenance projection.
-  - See memoryd-design.md §§8.1-8.3 and 15, RFC 0002 §6, ADR 010, and RFC
-    0006.
-  - Success: explanations can show how evidence supports or contests a claim,
-    not merely that an evidence reference exists.
-- [ ] 1.1.14. Accept or revise the projection-activity lineage ADR.
-  - Requires 1.1.12 and 1.1.13.
-  - Confirm activity kinds, input and output reference shape, producer identity,
-    configuration digests, diagnostic references, and replay boundaries.
-  - See memoryd-design.md §§7, 8.3, and 15, RFCs 0001 and 0003, ADR 011, and
-    RFC 0006.
-  - Success: extraction, validation, embedding, promotion, repair, and recall
-    audit capture can be replayed or explained by activity records.
-- [ ] 1.1.15. Accept or revise the durable recall-audit ADR.
-  - Requires 1.1.11 and 1.1.12.
-  - Confirm audit modes, retention defaults, query-hash and redacted-query
-    policy, selected and rejected candidate traces, source-health summaries,
-    and purge requirements.
-  - See memoryd-design.md §§10 and 15, RFC 0005 §5, ADR 012, and RFC 0006.
-  - Success: decision-relevant recall can be reviewed later without requiring
-    raw prompt retention by default.
+- [ ] 1.1.6. Record the postponed decision ledger.
+  - Requires 1.1.1-1.1.5.
+  - Explicitly move Oxigraph fallback policy to 5.1, Axinite write-back policy
+    to 5.3, Chutoro checkpoint policy to 6.1, durable recall-audit policy to
+    3.2, and claim identity, support-edge, and projection-activity detail to
+    4.2.
+  - See memoryd-design.md §§8-10 and 16-17, ADRs 009-012, and RFC 0006.
+  - Success: phase 1 ends with a documented deferral map instead of forcing all
+    future memory semantics through a pre-value ratification gate.
 
 ### 1.2. Establish the process, crate, and configuration spine
 
@@ -173,15 +108,16 @@ memoryd-design.md §§5, 12, and 14.
 
 - [ ] 1.2.1. Define the domain model and domain-owned port traits before any
   infrastructure adapter is implemented.
-  - Requires 1.1.8-1.1.15.
-  - Cover tenants, request context, workspaces, evidence, episodes, semantic
-    carriers, canonical conversation deltas, conversation source ports,
-    conversation ingestion ports, source health, claims, support edges, facts,
-    profiles, themes, projection activities, retractions, recall context packs,
-    recall audits, audit decisions, clocks, identifier generation, evidence
-    repositories, graph repositories, vector indexes, embedding providers,
-    extraction providers, clustering providers, and audit sinks.
-  - See memoryd-design.md §§4-6.1 and ADRs 005-012.
+  - Requires 1.1.1-1.1.5.
+  - Cover the minimum spine for first value: tenants, request context,
+    workspaces, evidence, canonical conversation deltas, conversation source
+    ports, conversation ingestion ports, source health, curated memory, flat
+    recall context packs, audit decisions, clocks, identifier generation,
+    evidence repositories, vector indexes, embedding providers, and audit
+    sinks.
+  - Leave claims, support edges, graph facts, profiles, themes, projection
+    activities, and durable recall audits to the slices that implement them.
+  - See memoryd-design.md §§4-6.1 and ADRs 005-008.
   - Success: domain tests compile and run without database, filesystem,
     Qdrant, Oxigraph, Ollama, Chutoro, UDS, HTTP, or MCP dependencies.
 - [ ] 1.2.2. Split the scaffold into reviewable crates for domain contracts,
@@ -198,9 +134,10 @@ memoryd-design.md §§5, 12, and 14.
 - [ ] 1.2.3. Implement the initial TOML configuration model and validation
   errors.
   - Requires 1.2.2.
-  - Cover daemon, store, tenant, Qdrant, Ollama, graph, Chutoro, provider,
-    source-health, recall-audit, and privacy sections.
-  - See memoryd-design.md §§5.3-5.4, 10, and 14 and ADRs 008 and 012.
+  - Cover daemon, store, tenant, Qdrant, Ollama, provider, source-health, and
+    privacy sections. Add graph, Chutoro, and recall-audit configuration in
+    their implementation slices.
+  - See memoryd-design.md §§5.3-5.4 and 14 and ADR 008.
   - Success: invalid configurations fail with semantic errors and valid
     minimal configurations can be composed into adapter selections at the
     binary edge.
@@ -226,12 +163,12 @@ memoryd-design.md §§5, 12, and 14.
   - Requires 1.2.1-1.2.5.
   - Store provider input examples, canonical conversation deltas, normalized
     evidence JSON, redaction examples, two-tenant isolation examples, recall
-    request examples, source-health examples, claim and support-edge examples,
-    projection-activity examples, recall-audit examples, and projection
-    examples as stable fixtures.
+    request examples, source-health examples, and projection examples as stable
+    fixtures. Add claim, support-edge, projection-activity, and recall-audit
+    fixtures in their delivery slices.
   - Include port contract tests that fakes and real adapters must satisfy.
-  - See memoryd-design.md §§5.3-6.1, 6-8, and 15, ADRs 005-012, and RFCs
-    0001-0006.
+  - See memoryd-design.md §§5.3-6.1, 6-8, and 15, ADRs 005-008, and RFCs
+    0001-0005.
   - Success: each later slice can add fixture-backed behaviour and adapter
     conformance tests without inventing a parallel test format.
 - [ ] 1.2.7. Add architecture fitness checks for the dependency rule.
@@ -252,7 +189,7 @@ memoryd-design.md §§5, 12, and 14.
     composition-root examples pass.
 - [ ] 1.2.8. Add tenant-isolation fitness checks for request context and
   adapter enforcement.
-  - Requires 1.1.9, 1.2.5, and 1.2.6.
+  - Requires 1.1.3, 1.2.5, and 1.2.6.
   - Add fixtures proving every tenant-owned use case requires a request
     context, every capability token resolves to one tenant, and every fake or
     real persistence, Qdrant, Oxigraph, and Chutoro adapter rejects
@@ -314,13 +251,13 @@ adapter and replay path. See memoryd-design.md §7 and RFC 0001.
   - Requires 1.1.1, 1.2.6, 1.2.7, and 1.2.8.
   - Cover `source_session`, `source_cursor`, `raw_event`, `raw_span`,
     `source_registry`, `source_health_snapshot`, `ingest_job`,
-    `projection_state`, `projection_activity`, `recall_audit`, and
-    `audit_log`.
+    `projection_state`, and `audit_log`. Add `projection_activity` and
+    `recall_audit` migrations in the projection and recall slices that first
+    use them.
   - Include `tenant_id` on tenant-owned rows and tenant-scoped uniqueness for
     idempotency keys, source sessions, workspace-owned names, and audit
     records.
-  - See memoryd-design.md §§5.4 and 7, RFC 0001 §§6-7, ADR 008, ADR 011, and
-    ADR 012.
+  - See memoryd-design.md §§5.4 and 7, RFC 0001 §§6-7, and ADR 008.
   - Success: fixture data can be inserted, replayed, and queried through
     port-backed APIs without exposing SQL details to domain or application
     code.
@@ -364,7 +301,7 @@ projection pipeline and compatibility story. See memoryd-design.md §6 and RFC
 
 - [ ] 2.2.1. Implement the collector-side provider adapter trait and adapter
   registry.
-  - Requires 1.1.10 and 2.1.2.
+  - Requires 1.1.3 and 2.1.2.
   - Implement `ConversationSourcePort` for worker-driven discovery, event
     reads, evidence-span reads, cursor persistence, tenant binding, replay,
     tombstones, and capability checks.
@@ -373,7 +310,7 @@ projection pipeline and compatibility story. See memoryd-design.md §6 and RFC
     application use case as real adapters without calling persistence,
     Qdrant, Oxigraph, Ollama, or Chutoro adapters directly.
 - [ ] 2.2.2. Implement the daemon-side conversation ingestion use case.
-  - Requires 1.1.10, 2.1.1, and 2.1.2.
+  - Requires 1.1.3, 2.1.1, and 2.1.2.
   - Implement `ConversationIngestPort` for canonical conversation deltas,
     source-session materialization, ordered raw events, raw spans, cursor
     updates, idempotency records, redaction state, and audit records.
@@ -381,14 +318,14 @@ projection pipeline and compatibility story. See memoryd-design.md §6 and RFC
   - Success: Corbusier, Axinite, Codex, Claude, and manual fixtures can all
     enter the evidence inbox through one daemon-facing port.
 - [ ] 2.2.3. Implement the redaction pipeline before storage and embedding.
-  - Requires 1.1.3 and 2.2.2.
+  - Requires 1.1.2 and 2.2.2.
   - Detect configured secret classes, deny patterns, high-entropy blobs, and
     raw-text storage mode.
   - See memoryd-design.md §13 and terms-of-reference.md §§7.2 and 8.1.
   - Success: redaction fixtures prove that sensitive text is replaced before
     evidence rows or future embedding payloads are written.
 - [ ] 2.2.4. Implement workspace derivation for provider evidence.
-  - Requires 1.1.2, 1.1.9, and 2.2.1.
+  - Requires 1.1.2, 1.1.3, and 2.2.1.
   - Derive workspace IDs inside the authenticated tenant context from
     repository origin, root path hash, and optional profile name, with
     configured overrides.
@@ -449,7 +386,7 @@ recall tools. See memoryd-design.md §§11-12.
   - Success: operators can browse captured sessions without reading raw
     transcript files or crossing tenant boundaries.
 - [ ] 2.4.2. Implement `memory_sessions` and `memory_health` MCP tools.
-  - Requires 1.1.7, 1.2.5, 2.1.5, and 2.4.1.
+  - Requires 1.1.4, 1.2.5, 2.1.5, and 2.4.1.
   - Preserve read-only mode, capability enforcement, source-health summaries,
     and tenant-scoped provider status.
   - See memoryd-design.md §§7 and 11-12 and ADR 008.
@@ -481,7 +418,7 @@ of truth. It informs projection-state repair and later episode indexing. See
 ADR 001 and memoryd-design.md §§8.1 and 8.4.
 
 - [ ] 3.1.1. Implement the Qdrant client port and collection manager.
-  - Requires 1.1.2, 1.1.9, 1.2.3, and 2.1.1.
+  - Requires 1.1.2, 1.1.3, 1.2.3, and 2.1.1.
   - Support per-tenant-workspace collections, named vectors, payload schemas,
     mandatory tenant and workspace payload filters, optional
     payload-partitioned strategy, and rebuildable projection writes.
@@ -519,7 +456,7 @@ memoryd-design.md §10 and RFC 0005.
   - Success: recall returns projection class, status, confidence, token
     estimate, evidence references, and fallback reason fields.
 - [ ] 3.2.2. Implement `memory_recall` and `memory_store` MCP tools.
-  - Requires 1.1.7, 3.1.3, and 3.2.1.
+  - Requires 1.1.4, 3.1.3, and 3.2.1.
   - Keep tool request types stable, hide Qdrant collection names, and enforce
     read-only gates and tenant context.
   - See memoryd-design.md §§5.4 and 11 and ADRs 001 and 006.
@@ -535,11 +472,12 @@ memoryd-design.md §10 and RFC 0005.
   - Success: each recalled curated memory can be traced back to stored evidence
     and its Qdrant projection state.
 - [ ] 3.2.4. Implement durable recall audit modes for `flat_v1`.
-  - Requires 1.1.15, 2.1.1, 3.2.1, and 3.2.3.
-  - Support `none`, `errors_only`, `decision_relevant`, `sampled`, and `all`
-    modes with query hashing, optional redacted query text, selected and
-    rejected candidate traces, filters, fallback reasons, source-health
-    summaries, and purge-ready tenant scoping.
+  - Requires 2.1.1, 3.2.1, and 3.2.3.
+  - Confirm ADR 012 as the entry decision for this slice, then support `none`,
+    `errors_only`, `decision_relevant`, `sampled`, and `all` modes with query
+    hashing, optional redacted query text, selected and rejected candidate
+    traces, filters, fallback reasons, source-health summaries, and purge-ready
+    tenant scoping.
   - See memoryd-design.md §§10 and 15, RFC 0005 §5, ADR 012, and RFC 0006.
   - Success: policy can require durable traces for decision-relevant recall
     without raw query text being stored by default.
@@ -648,18 +586,20 @@ ADR 002, memoryd-design.md §8.3, and RFC 0003 §6.
   - Success: only validated semantic carriers can enter Qdrant, Oxigraph, or
     theme management.
 - [ ] 4.2.5. Implement stable claim identity and interpretive kind.
-  - Requires 1.1.12 and 4.2.4.
-  - Assign `ClaimId`, `ClaimKind`, validity state, and lifecycle state to every
+  - Requires 4.2.4.
+  - Confirm ADR 009 as the entry decision for this slice, then assign
+    `ClaimId`, `ClaimKind`, validity state, and lifecycle state to every
     claim-bearing semantic carrier candidate before indexing or graph
     promotion.
   - See memoryd-design.md §§4 and 8.2, RFC 0002 §§5-7, ADR 009, and RFC 0006.
   - Success: extracted claims can be referenced consistently across rejection,
     acceptance, explanation, retraction, and future claim-graph backfill.
 - [ ] 4.2.6. Implement typed support-edge records.
-  - Requires 1.1.13, 2.1.5, 4.2.4, and 4.2.5.
-  - Persist support roles, validation state, validation reason, lifecycle
-    state, evidence reference, source freshness, source-health summary, and
-    related claim or activity IDs.
+  - Requires 2.1.5, 4.2.4, and 4.2.5.
+  - Confirm ADR 010 as the entry decision for this slice, then persist support
+    roles, validation state, validation reason, lifecycle state, evidence
+    reference, source freshness, source-health summary, and related claim or
+    activity IDs.
   - See memoryd-design.md §§8.2-8.3 and 15, RFC 0002 §6, ADR 010, and RFC
     0006.
   - Success: direct, weak, corroborating, contradictory, superseding, and
@@ -667,10 +607,11 @@ ADR 002, memoryd-design.md §8.3, and RFC 0003 §6.
     contribute to promotion.
 - [ ] 4.2.7. Implement projection activity lineage for extraction and
   validation.
-  - Requires 1.1.14, 4.2.5, and 4.2.6.
-  - Record activity inputs, outputs, producer identity, configuration digest,
-    status, and diagnostics for episode finalization, summaries, semantic
-    extraction, support validation, embedding, and projection repair.
+  - Requires 4.2.5 and 4.2.6.
+  - Confirm ADR 011 as the entry decision for this slice, then record activity
+    inputs, outputs, producer identity, configuration digest, status, and
+    diagnostics for episode finalization, summaries, semantic extraction,
+    support validation, embedding, and projection repair.
   - See memoryd-design.md §§7 and 8.3, RFC 0001 §6, RFC 0003 §6, ADR 011, and
     RFC 0006.
   - Success: an operator can determine which extractor, validator, model, or
@@ -729,9 +670,10 @@ into Qdrant payload conventions. See memoryd-design.md §8.1, ADR 001, and RFC
 0002.
 
 - [ ] 5.1.1. Implement the graph repository and named-graph workspace layout.
-  - Requires 1.1.4, 1.1.2, 1.1.9, and 4.2.4.
-  - Create tenant-and-workspace graph namespaces for facts, provenance,
-    retractions, themes, and temporal edges.
+  - Requires 1.1.1, 1.1.2, 1.1.3, and 4.2.4.
+  - Confirm the Oxigraph requirement and fallback policy as the entry decision
+    for this slice, then create tenant-and-workspace graph namespaces for
+    facts, provenance, retractions, themes, and temporal edges.
   - See memoryd-design.md §§5.4 and 8.1 and ADRs 001 and 006.
   - Success: graph writes and reads are scoped by tenant workspace and never
     require clients to address Oxigraph directly.
@@ -806,7 +748,7 @@ core evidence model. See terms-of-reference.md §§7-8, memoryd-design.md §§6,
   - Success: purge removes raw evidence, graph namespaces, Qdrant collections,
     and future checkpoint state for the target tenant workspace.
 - [ ] 5.3.2. Implement Axinite conversation and workspace source adapters.
-  - Requires 1.1.10, 2.2.2, 5.1.2, and 5.2.1.
+  - Requires 1.1.3, 2.2.2, 5.1.2, and 5.2.1.
   - Map Axinite conversations to canonical conversation deltas, messages to
     ordered events, and workspace documents or revisions to document-revision
     evidence.
@@ -815,9 +757,10 @@ core evidence model. See terms-of-reference.md §§7-8, memoryd-design.md §§6,
   - Success: Axinite fixtures ingest without pretending to be Codex or Claude
     records.
 - [ ] 5.3.3. Implement policy-gated Axinite projection sink in shadow mode.
-  - Requires 1.1.5, 5.2.3, and 5.3.2.
-  - Write no Axinite document by default; emit proposed write-back records with
-    provenance and loop-prevention metadata.
+  - Requires 5.2.3 and 5.3.2.
+  - Confirm the Axinite write-back policy and loop-prevention contract as the
+    entry decision for this slice. Write no Axinite document by default; emit
+    proposed write-back records with provenance and loop-prevention metadata.
   - See memoryd-design.md §§6 and 16 and RFC 0001 §6.
   - Success: operators can inspect proposed Axinite write-back without
     triggering self-reinforcing projection loops.
@@ -840,7 +783,7 @@ core evidence model. See terms-of-reference.md §§7-8, memoryd-design.md §§6,
     cases as MCP, collector, and repair paths.
 - [ ] 5.3.6. Implement the Corbusier conversation adapter in push and fixture
   modes.
-  - Requires 1.1.10, 2.2.2, and 5.3.5.
+  - Requires 1.1.3, 2.2.2, and 5.3.5.
   - Map Corbusier `RequestContext`, conversations, immutable messages,
     sequence numbers, roles, content parts, and message metadata into
     canonical conversation deltas.
@@ -867,9 +810,10 @@ memoryd-design.md §9, ADR 003, and RFC 0004.
 
 - [ ] 6.1.1. Implement the `ThemeManager` domain service and durable theme
   records.
-  - Requires 1.1.6, 4.3.1, and 5.1.1.
-  - Store stable theme IDs, membership edges, lineage, summary state, and
-    tenant workspace scope.
+  - Requires 4.3.1 and 5.1.1.
+  - Confirm the Chutoro checkpoint and theme-ID churn policy as the entry
+    decision for this slice, then store stable theme IDs, membership edges,
+    lineage, summary state, and tenant workspace scope.
   - See memoryd-design.md §§5.4 and 9, ADRs 003 and 006, and RFC 0004 §§4-5.
   - Success: theme state remains browseable and purgeable even if Chutoro
     checkpoints are missing.
