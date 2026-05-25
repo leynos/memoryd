@@ -137,6 +137,11 @@ and phase 3 is labelled as release 0.1.
 Fifth, update `docs/contents.md` to include this execplan if project
 documentation indexes execution plans.
 
+Sixth, update `docs/developers-guide.md` with the developer-facing interface
+conventions implied by the remediation: structured errors, bounded pagination,
+capability-derived request context, tenant-aware authorization, and port
+boundary expectations.
+
 Finally, run the documentation gates sequentially through `tee`, inspect the
 diff, commit with a file-based message, push, update the existing draft pull
 request, and check remote status.
@@ -165,6 +170,9 @@ request, and check remote status.
   remote-check step. The actual commit SHA and remote status are reported in
   the chat transcript because recording them here would require a follow-up
   commit.
+- [x] 2026-05-25: Added the missing developer-guide documentation alignment
+  for structured errors, pagination, authentication, authorization, tenant
+  context, and port-boundary conventions.
 
 ## Surprises & Discoveries
 

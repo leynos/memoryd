@@ -18,3 +18,91 @@ LLVM-compatible linker behaviour.
 
 Install `clang`, `lld`, and `mold` before running the full generated workflow
 locally on Linux.
+
+## Interface Conventions
+
+Application services expose domain use cases through port traits. Keep those
+traits in `memoryd` language: request context, tenant, workspace, evidence,
+source session, recall, projection, and health types belong in the core;
+Qdrant, Ollama, Oxigraph, Chutoro, filesystem, transport, and MCP software
+development kit (SDK) types belong in adapters.
+
+Driving adapters are responsible for translating external requests into domain
+commands. Driven adapters are responsible for translating domain port calls
+into infrastructure operations. Neither adapter family should make
+memory-policy decisions that belong in the domain or application layer.
+
+## Error Contracts
+
+Use semantic error types inside libraries and convert them to structured
+transport errors at the boundary. Do not expose `eyre::Report`, raw provider
+errors, SQL errors, Qdrant errors, Ollama errors, filesystem paths, or
+unredacted payload snippets through public MCP or RPC responses.
+
+MCP and internal RPC responses should use a stable error envelope containing:
+
+- a machine-readable error code;
+- a human-readable summary safe for logs and clients;
+- the request ID and correlation ID where available;
+- whether the caller may retry the operation;
+- the envelope kind, method, tenant, and workspace scope when safe to expose;
+- optional redacted details for validation, compatibility, or dependency
+  failures.
+
+Prefer specific error codes over string matching. The first implementation
+should distinguish at least validation errors, unauthenticated requests,
+unauthorized capability use, tenant or workspace scope violations, not found
+results, conflicts, idempotency replays, incompatible schema features,
+dependency unavailable states, and internal errors.
+
+Authorization and tenant-scope failures must be audited with the authenticated
+tenant context when one exists. Missing authentication must not be converted
+into a default tenant unless the caller is explicitly running through the local
+single-user configuration path.
+
+## Pagination Contracts
+
+All list, browse, and transcript-like reads must be bounded. Do not add
+unbounded `list_all` style methods to ports, RPC, or MCP tools. Session
+listing, source-event browsing, source-health history, recall audit browsing,
+and future claim or projection browsing should use cursor-based pagination.
+
+Pagination requests should include a caller-supplied limit subject to a
+server-side maximum. Pagination responses should include the returned items, an
+opaque next cursor when more data exists, and enough stable ordering metadata
+for tests to prove deterministic replay.
+
+Cursors are tenant-scoped capabilities, not trusted query predicates. They must
+be derived from domain state or adapter state, validated before use, and
+intersected with the authenticated request context. A cursor from one tenant,
+workspace, provider, or filter set must not page through another tenant's data.
+
+Adapters may keep provider-specific cursor material such as file offsets, line
+numbers, source hashes, or database watermarks. That material stays behind the
+`ConversationSourcePort` or persistence adapter boundary unless the domain
+needs it as redacted evidence metadata.
+
+## Authentication and Authorization
+
+Every tenant-owned command, query, and scheduled operation must carry or derive
+a `RequestContext` before application logic runs. The context is established
+from an authenticated capability token, Corbusier request context, scheduled
+job record, or configured local default. Tenant or workspace identifiers found
+inside provider logs, MCP request bodies, or import files may narrow a request,
+but they must not establish authority by themselves.
+
+Capability checks happen at the driving-adapter boundary and are preserved in
+the application command. Internal RPC envelopes carry the required capability
+scope, envelope kind, method, schema version, request context, accepted
+features, and idempotency key where the method mutates state. Unknown required
+features fail with a compatibility error before the method runs.
+
+Workspace filters supplied by callers are always intersected with the allowed
+workspace set from the authenticated context. Read-only mode disables write
+tools at the MCP layer, but daemon-side capability checks remain authoritative.
+`memory.purge` requires a high-privilege tenant-bound token and an explicit
+confirmation string for the target tenant workspace.
+
+Tests for new ports or adapters should include negative fixtures for missing
+context, mismatched tenant and workspace, insufficient capability, reused
+cursor from another scope, and cross-tenant read or write attempts.
