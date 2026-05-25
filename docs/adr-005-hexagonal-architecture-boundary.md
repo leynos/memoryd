@@ -80,8 +80,19 @@ transport-specific responses.
 - Adapter tests verify port conformance against real or fixture-backed
   infrastructure.
 - End-to-end tests verify wiring across the composition root.
-- Architecture fitness checks should prevent domain and application modules
-  from importing adapter crates or infrastructure SDK types.
+- Architecture fitness checks should prevent domain and application crates from
+  importing adapter crates or infrastructure software development kit (SDK)
+  types.
+- The first architecture fitness check should be a repo-local Rust tool, not a
+  general-purpose prose convention. It should be modelled on existing local
+  Rust prior art: Wildside's `tools/architecture-lint` source-path and `syn`
+  -based guardrail, plus Corbusier's domain-oriented module convention where
+  each bounded context exposes domain, ports, services, and adapters
+  deliberately.
+- In a multi-crate Memoryd workspace, the lint should combine Cargo metadata
+  dependency-graph checks with source-path checks. Cargo metadata catches
+  forbidden crate edges; source-path checks catch intra-crate module leaks and
+  direct infrastructure SDK imports while crates are still being extracted.
 
 ## References
 

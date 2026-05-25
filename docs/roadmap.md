@@ -162,12 +162,20 @@ memoryd-design.md §§5, 12, and 14.
     conformance tests without inventing a parallel test format.
 - [ ] 1.2.7. Add architecture fitness checks for the dependency rule.
   - Requires 1.2.2.
-  - Fail the build when domain or application crates import adapter crates or
-    infrastructure SDK types, and document the allow-list for composition-root
-    code.
+  - Add a repo-local Rust architecture-lint tool modelled on the sibling Rust
+    prior art: Wildside's `tools/architecture-lint` executable guardrail and
+    Corbusier's domain, ports, services, and adapters module convention.
+  - Use Cargo metadata to fail forbidden crate dependency edges, and use
+    source-path scanning for direct infrastructure software development kit
+    (SDK) imports or intra-crate adapter leaks while the workspace is still
+    being split.
+  - Wire the lint into `make lint` or `make all`, document the composition-root
+    allow-list, and include negative fixtures for domain-to-adapter,
+    application-to-SDK, inbound-to-outbound, and outbound-to-inbound imports.
   - See memoryd-design.md §§5.3 and 15 and ADR 005.
-  - Success: a deliberate adapter import in domain or application code fails
-    the check before review.
+  - Success: deliberate dependency-rule violations fail with deterministic
+    diagnostics before review, and valid domain, application, adapter, and
+    composition-root examples pass.
 
 ### 1.3. Build the day-one operator surface
 

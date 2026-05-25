@@ -180,8 +180,9 @@ projection state.
 `memoryd` follows hexagonal architecture. The domain and application layers own
 the memory language and the port traits. Adapters implement those ports or
 translate external calls into application commands. Dependencies point inward:
-domain code must not import provider parser types, storage clients, model SDKs,
-clustering SDKs, UDS transport types, HTTP types, or MCP runtime types.
+domain code must not import provider parser types, storage clients, model
+software development kits (SDKs), clustering SDKs, UDS transport types, HTTP
+types, or MCP runtime types.
 
 The intended module boundary is:
 
@@ -206,6 +207,16 @@ does not write Qdrant; it emits evidence through the ingest use case. The MCP
 adapter does not read Oxigraph or Qdrant; it calls recall or read use cases.
 The theme adapter around Chutoro never decides durable theme identity; the
 domain `ThemeManager` does.
+
+The dependency rule must be enforced by a Rust-native architecture lint once
+the crate spine exists. The intended shape follows existing local Rust prior
+art: Wildside uses a repo-local `tools/architecture-lint` crate, `syn` path
+collection, and behaviour scenarios to reject wrong-layer imports; Corbusier
+uses domain-oriented modules where bounded contexts expose domain, ports,
+services, and adapters deliberately. Memoryd should combine both ideas:
+Cargo-metadata graph checks for forbidden crate dependencies, and source-path
+checks for direct infrastructure SDK imports or intra-crate module leaks during
+incremental extraction.
 
 ## 6. Provider adapters
 
@@ -646,7 +657,12 @@ Hexagonal conformance is a fourth correctness surface. Domain tests must run
 without infrastructure. Application tests use fake or mocked ports. Adapter
 tests verify concrete implementations against port contracts. End-to-end tests
 exercise the composition root. Static architecture checks should fail if domain
-or application crates import adapter crates or infrastructure SDK types.
+or application crates import adapter crates or infrastructure SDK types. The
+check should live in the repository, run from `make lint` or `make all`, report
+all violations found in one pass, and keep the composition-root allow-list
+explicit. The first implementation should include negative fixtures proving
+that a domain-to-adapter import, application-to-SDK import, inbound-to-outbound
+adapter import, and outbound-to-inbound adapter import all fail before review.
 
 ## 16. Rollout sequence
 
