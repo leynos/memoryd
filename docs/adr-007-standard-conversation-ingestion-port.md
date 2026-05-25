@@ -106,10 +106,10 @@ The canonical delta contains:
   events, and provider-side compaction.
 
 Content parts are canonical and extensible. The first set is `text`,
-`tool_call`, `tool_result`, `file_reference`, `file_edit`, `compaction_summary`,
- `attachment_reference`, and `provider_metadata`. Unknown provider-specific
-payload remains in redacted JSON metadata and does not become a new event kind
-unless the domain needs different behaviour.
+`tool_call`, `tool_result`, `file_reference`, `file_edit`,
+`compaction_summary`, `attachment_reference`, and `provider_metadata`. Unknown
+provider-specific payload remains in redacted JSON metadata and does not become
+a new event kind unless the domain needs different behaviour.
 
 ## Required adapters
 

@@ -71,11 +71,11 @@ The first activity kinds are:
 - `projection_repair`;
 - `recall_audit_capture`.
 
-Activity records link input artefacts to output artefacts. They record
-extractor, model, embedding vector dimension, validator, and configuration
-identities as domain strings or digests, not SDK objects. They do not replace
-audit logs: audit logs explain access and decisions; activity lineage explains
-derivation.
+Activity records link input artefacts to output artefacts. They record the
+captured identity types as domain strings or digests rather than SDK objects:
+extractor, model, embedding vector dimension, validator, and configuration.
+They do not replace audit logs: audit logs explain access and decisions;
+activity lineage explains derivation.
 
 ## Consequences
 

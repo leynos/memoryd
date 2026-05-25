@@ -210,7 +210,7 @@ A `CoverageExpectation` contains:
 - expected source IDs;
 - expected source classes;
 - expected claim classes;
-- freshness service level objectives;
+- freshness service-level objectives;
 - required and optional sources;
 - policy for blocked or inaccessible sources;
 - severity thresholds.

@@ -20,7 +20,7 @@ Axinite can publish memory events from inside its own database transactions.
 Codex CLI and Claude Code are external producers. They expose rollout files,
 transcripts, hooks, and metadata, not a shared PostgreSQL transaction. A
 standalone service therefore needs durable cursors, idempotency keys, raw event
-storage, redaction, audit records, and retryable projection state that do not
+storage, redaction, audit records, and retryable projection state that does not
 depend on one host application.
 
 ## Current state
@@ -162,7 +162,7 @@ Axinite remains compatible in two modes:
 - pull mode, where `memoryd` reads Axinite conversations and workspace
   documents through adapters.
 
-Push mode gives stronger consistency. Pull mode is easier to retrofit but must
+Push mode gives stronger consistency. Pull mode is easier to retrofit, but must
 track watermarks and tombstones carefully.
 
 ## Open questions

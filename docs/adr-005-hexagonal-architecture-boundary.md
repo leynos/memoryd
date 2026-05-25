@@ -37,11 +37,11 @@ rules hard to test without running infrastructure.
 
 ## Options considered
 
-| Option                              | Consequence                                                                                               |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Infrastructure-first layering       | Speeds early adapter work but couples memory rules to storage and transport choices.                      |
-| Hexagonal architecture              | Keeps domain and application services independent from provider, storage, model, clustering, and MCP I/O. |
-| Framework-owned application service | Simplifies one entrypoint but weakens support for multiple binaries, MCP, scheduled jobs, and adapters.   |
+| Option                              | Consequence                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Infrastructure-first layering       | Speeds early adapter development but couples memory rules to storage and transport choices.             |
+| Hexagonal architecture              | Keeps domain and application services independent of provider, storage, model, clustering, and MCP I/O. |
+| Framework-owned application service | Simplifies one entrypoint but weakens support for multiple binaries, MCP, scheduled jobs, and adapters. |
 
 _Table 1: Architecture boundary options._
 
