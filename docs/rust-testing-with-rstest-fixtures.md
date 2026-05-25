@@ -716,7 +716,7 @@ async fn async_data_fetcher() -> String {
 
 The example above uses `async_std::task::sleep` purely as a convenient
 stand-in; the fixture may call into whichever runtime the project adopts because
-`rstest` simply awaits the returned future.
+ `rstest` simply awaits the returned future.
 
 ### B. Writing asynchronous tests (`async fn` with `#[rstest]`)
 
@@ -765,8 +765,8 @@ To improve the ergonomics of working with async fixtures and values in tests,
   signature, removing the `impl Future` boilerplate. However, the value still
   needs to be `.await`ed explicitly within the test body or by using `#[awt]`.
 - `#[awt]` (or `#[future(awt)]`): This attribute, when applied to the entire
-  test function (`#[awt]`) or a specific `#[future]` argument
-  (`#[future(awt)]`), tells `rstest` to automatically insert `.await` calls for
+  test function (`#[awt]`) or a specific `#[future]` argument (
+  `#[future(awt)]`), tells `rstest` to automatically insert `.await` calls for
   those futures.
 
 ```rust,no_run

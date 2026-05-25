@@ -1,7 +1,6 @@
 # Developer Guide
 
-This guide explains the contributor workflow for the generated
-Memoryd project.
+This guide explains the contributor workflow for the generated Memoryd project.
 
 ## Local Workflow
 

@@ -215,7 +215,6 @@ project:
 
 ### Testing
 
-
 - Use `rstest` fixtures for shared setup.
 - Replace duplicated tests with `#[rstest(...)]` parameterized cases.
 - Prefer `mockall` for ad hoc mocks/stubs.
@@ -228,15 +227,15 @@ project:
 ### Dependency Management
 
 - **Mandate caret requirements for all dependencies.** All crate versions
-  specified in `Cargo.toml` must use SemVer-compatible caret requirements
-  (e.g., `some-crate = "1.2.3"`). This is Cargo's default and allows for safe,
+  specified in `Cargo.toml` must use SemVer-compatible caret requirements (e.g.,
+   `some-crate = "1.2.3"`). This is Cargo's default and allows for safe,
   non-breaking updates to minor and patch versions while preventing breaking
   changes from new major versions. This approach is critical for ensuring build
   stability and reproducibility.
 - **Prohibit unstable version specifiers.** The use of wildcard (`*`) or
   open-ended inequality (`>=`) version requirements is strictly forbidden as
-  they introduce unacceptable risk and unpredictability. Tilde requirements
-  (`~`) should only be used where a dependency must be locked to patch-level
+  they introduce unacceptable risk and unpredictability. Tilde requirements (
+  `~`) should only be used where a dependency must be locked to patch-level
   updates for a specific, documented reason.
 
 ### Error Handling
@@ -265,10 +264,10 @@ project:
 ### Observability
 
 - Use `tracing` for logging and diagnostics. Prefer structured
-  `tracing::{trace, debug, info, warn, error}` events and spans over
-  `println!`, `eprintln!`, or direct `log` macros. Add fields for identifiers,
-  state, and error context so downstream subscribers can filter and correlate
-  events without parsing message text.
+  `tracing::{trace, debug, info, warn, error}` events and spans over `println!`,
+   `eprintln!`, or direct `log` macros. Add fields for identifiers, state, and
+  error context so downstream subscribers can filter and correlate events
+  without parsing message text.
 - Use `#[tracing::instrument]` or explicit spans around request handling,
   command execution, retries, background jobs, and other meaningful units of
   work. Do not hold `Span::enter()` guards across `.await`; use
@@ -309,7 +308,6 @@ Update `docs/users-guide.md` for any change to application behaviour or user
 interface that a user should know about. Document internally facing interfaces
 or practices in the relevant component architecture document. Document
 internally facing conventions or practices in `docs/developers-guide.md`.
-
 
 ## Additional tooling
 

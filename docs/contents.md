@@ -1,10 +1,12 @@
 # Documentation contents
 
-[Documentation contents](contents.md) is the index for Memoryd's
-documentation set.
+[Documentation contents](contents.md) is the index for Memoryd's documentation
+set.
 
 ## Project guides
 
+- [Terms of reference](terms-of-reference.md) records the problem space,
+  users, scope boundaries, constraints, and open questions for Memoryd.
 - [User guide](users-guide.md) explains how to use the generated project and
   its public build and test commands.
 - [Developer guide](developers-guide.md) explains the local workflow and

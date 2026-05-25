@@ -1,7 +1,7 @@
 # User Guide
 
-This guide explains how to use the generated Memoryd project after
-rendering it from the template.
+This guide explains how to use the generated Memoryd project after rendering it
+from the template.
 
 ## Generated Tooling
 
