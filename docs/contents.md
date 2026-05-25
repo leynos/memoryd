@@ -53,6 +53,9 @@ set.
   records the proxy and model-assisted recall expansion strategy.
 - [ADR 005: Hexagonal architecture boundary](adr-005-hexagonal-architecture-boundary.md)
   records the dependency rule, port ownership, and adapter boundaries.
+- [ADR 006: Tenant isolation and Corbusier context](adr-006-tenant-isolation-and-corbusier-context.md)
+  records the tenant-scoped request context, storage, index, graph, and theme
+  isolation boundary.
 
 ## Requests for comments
 

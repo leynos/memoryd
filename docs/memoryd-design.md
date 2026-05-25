@@ -13,10 +13,11 @@
   `docs/rfcs/0004-theme-detection-and-rebalancing.md`,
   `docs/rfcs/0005-hierarchical-recall.md`,
   `docs/adr-001-qdrant-is-a-serving-index.md`,
-  `docs/adr-002-dual-path-semantic-extraction.md`, and
+  `docs/adr-002-dual-path-semantic-extraction.md`,
   `docs/adr-003-memoryd-owns-theme-management.md`,
-  `docs/adr-004-dual-mode-recall-gating.md`, and
-  `docs/adr-005-hexagonal-architecture-boundary.md`.
+  `docs/adr-004-dual-mode-recall-gating.md`,
+  `docs/adr-005-hexagonal-architecture-boundary.md`, and
+  `docs/adr-006-tenant-isolation-and-corbusier-context.md`.
 - **Last substantive revision:** 2026-05-25.
 
 ## 1. Problem statement
@@ -57,6 +58,10 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
 - Expose an MCP front end shaped like Dear Diary’s ergonomic server, but route
   every operation through `memoryd` instead of exposing Qdrant directly.[^6]
 - Keep Axinite usable as a first-class provider and optional projection sink.
+- Support Corbusier-compatible tenant isolation through authenticated request
+  context, tenant-scoped workspaces, tenant-aware storage, tenant-scoped
+  serving indexes, tenant-scoped graph namespaces, and tenant-scoped Chutoro
+  checkpoints.
 
 ### 2.2 Non-goals
 
@@ -67,22 +72,29 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
   default.
 - `memoryd` does not expose arbitrary file reads through MCP.
 - `memoryd` does not make Chutoro cluster labels durable theme IDs.
-- `memoryd` does not attempt hosted, organization-wide analytics in this
-  design.
+- `memoryd` does not attempt hosted, organization-wide analytics, billing,
+  central compliance reporting, or tenant lifecycle administration in this
+  design. Tenant isolation for Corbusier-compatible callers is in scope; a
+  hosted control plane is not.
 
 ## 3. Research summary
 
-| Source                     | Finding                                                                                                                                                        | Design consequence                                                                                                            |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Axinite RFC 0007           | The original sidecar uses local Rust, UDS RPC, capability scopes, Ollama, Qdrant, Oxigraph, and a transactional outbox.                                        | Preserve the processing and trust model, but replace the producer boundary with provider adapters and a local evidence inbox. |
-| Axinite RFC 0014           | Trustworthy recall needs projection classes, epistemic status, observer/subject scope, promotion, contradiction handling, and reconciliation metadata.         | Keep these semantics as the standalone memory contract.                                                                       |
-| Axinite RFC 0015           | Raw evidence, episodes, semantic carriers, and themes are separate hierarchy levels; themes are not truth claims.                                              | Build an additive projection pipeline with support-reference validation before recall.                                        |
-| Axinite RFCs 0016 and 0017 | Chutoro-backed themes and hierarchical recall improve navigation only if provenance and projection classes remain visible.                                     | Add theme management and recall profiles after evidence capture and flat recall work.                                         |
-| Axinite ADRs 003-005       | Theme identity belongs in `memoryd`; semantic extraction needs dual paths; recall expansion needs proxy and optional model-assisted gating.                    | Import these decisions as standalone ADRs with provider-adapter wording.                                                      |
-| Dear Diary                 | A small Rust MCP server can expose simple store, find, and deprecate tools over Qdrant with read-only gates.                                                   | Reuse the ergonomic MCP shape, but replace direct Qdrant operations with `memoryd` RPC calls.                                 |
-| Chutoro                    | Chutoro implements FISHDBC with HNSW, arbitrary `DataSource` metrics, sessions, and snapshots.                                                                 | Use Chutoro as a cluster proposal engine over semantic-carrier vectors, not as memory policy.                                 |
-| Claude Code hooks          | Hooks provide lifecycle events, command hooks receive JSON on standard input, async hooks cannot block, and command hooks run with the user's permissions.[^7] | Treat hooks as wake-up signals and source metadata, not as trusted long-running ingestion workers.                            |
-| MCP specification          | MCP uses JSON-RPC 2.0, server tools/resources/prompts, capability negotiation, and explicit security guidance around consent and data access.[^8]              | Keep MCP tools narrow, read-only mode explicit, and write or purge operations capability-gated.                               |
+| Source                     | Finding                                                                                                                                                                      | Design consequence                                                                                                            |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Axinite RFC 0007           | The original sidecar uses local Rust, UDS RPC, capability scopes, Ollama, Qdrant, Oxigraph, and a transactional outbox.                                                      | Preserve the processing and trust model, but replace the producer boundary with provider adapters and a local evidence inbox. |
+| Axinite RFC 0014           | Trustworthy recall needs projection classes, epistemic status, observer/subject scope, promotion, contradiction handling, and reconciliation metadata.                       | Keep these semantics as the standalone memory contract.                                                                       |
+| Axinite RFC 0015           | Raw evidence, episodes, semantic carriers, and themes are separate hierarchy levels; themes are not truth claims.                                                            | Build an additive projection pipeline with support-reference validation before recall.                                        |
+| Axinite RFCs 0016 and 0017 | Chutoro-backed themes and hierarchical recall improve navigation only if provenance and projection classes remain visible.                                                   | Add theme management and recall profiles after evidence capture and flat recall work.                                         |
+| Axinite ADRs 003-005       | Theme identity belongs in `memoryd`; semantic extraction needs dual paths; recall expansion needs proxy and optional model-assisted gating.                                  | Import these decisions as standalone ADRs with provider-adapter wording.                                                      |
+| Dear Diary                 | A small Rust MCP server can expose simple store, find, and deprecate tools over Qdrant with read-only gates.                                                                 | Reuse the ergonomic MCP shape, but replace direct Qdrant operations with `memoryd` RPC calls.                                 |
+| Chutoro                    | Chutoro implements FISHDBC with HNSW, arbitrary `DataSource` metrics, sessions, and snapshots.                                                                               | Use Chutoro as a cluster proposal engine over semantic-carrier vectors, not as memory policy.                                 |
+| Corbusier tenant context   | Corbusier carries tenant, correlation, causation, user, and session identifiers in `RequestContext`, and plans PostgreSQL RLS through transaction-local tenant settings.[^9] | Make tenant context part of every tenant-owned use case and port, rather than optional metadata.                              |
+| PostgreSQL RLS             | Row security policies restrict rows returned or modified, default to deny without policies, and can use session or transaction settings for tenant identity.[^10][^11]       | PostgreSQL adapters should combine application scoping with database-enforced tenant policies.                                |
+| Qdrant multitenancy        | Qdrant recommends shared collections with tenant payload filters and tenant keyword indexes for high-cardinality multitenancy.[^12]                                          | Support payload-partitioned collections as a hosted strategy, while keeping mandatory daemon-injected tenant filters.         |
+| OWASP multitenancy         | Tenant context should be established early, bound to authenticated identity, propagated through layers, and audited with tenant-aware resource checks.[^13]                  | Derive tenant context before application use cases run and audit all tenant-owned access decisions.                           |
+| RDF named graphs           | RDF datasets contain named graphs that can keep graph contents separately addressable.[^14]                                                                                  | Scope Oxigraph graph names by tenant and workspace.                                                                           |
+| Claude Code hooks          | Hooks provide lifecycle events, command hooks receive JSON on standard input, async hooks cannot block, and command hooks run with the user's permissions.[^7]               | Treat hooks as wake-up signals and source metadata, not as trusted long-running ingestion workers.                            |
+| MCP specification          | MCP uses JSON-RPC 2.0, server tools/resources/prompts, capability negotiation, and explicit security guidance around consent and data access.[^8]                            | Keep MCP tools narrow, read-only mode explicit, and write or purge operations capability-gated.                               |
 
 _Table 1: Research findings that shape the standalone design._
 
@@ -99,6 +111,8 @@ _Table 1: Research findings that shape the standalone design._
 | Projection          | Derived artefact or serving record written from evidence, such as an episode summary, fact, graph edge, Qdrant payload, or theme.         |
 | Theme               | Durable navigation grouping over accepted semantic carriers. A theme is not evidence and is not a fact.                                   |
 | Recall context pack | Bounded response containing context blocks, projection classes, epistemic status, confidence, evidence references, and selection trace.   |
+| Tenant              | Authority boundary for evidence, projections, recall, graph state, vector indexes, themes, audit records, and purge.                      |
+| Request context     | Authenticated invocation context carrying tenant, principal, session, correlation, and optional causation identifiers.                    |
 | Driving adapter     | Edge component that invokes a use case, such as CLI, MCP, provider collector, scheduled job, hook handler, or debug HTTP.                 |
 | Driven adapter      | Edge component that implements a domain-owned port, such as persistence, Qdrant, Ollama, Oxigraph, Chutoro, clock, or audit output.       |
 | Port                | Domain-owned trait that describes a capability the application needs, using domain types rather than infrastructure types.                |
@@ -218,6 +232,41 @@ Cargo-metadata graph checks for forbidden crate dependencies, and source-path
 checks for direct infrastructure SDK imports or intra-crate module leaks during
 incremental extraction.
 
+### 5.4 Tenant isolation boundary
+
+Tenant isolation is part of the domain and application contract, not an adapter
+afterthought. Every tenant-owned use case receives a `RequestContext` carrying
+`TenantId`, principal or user ID, session ID, correlation ID, and optional
+causation ID. Driving adapters derive that context from authenticated daemon
+capability tokens, Corbusier request context, MCP configuration, scheduled-job
+state, or the configured local default before invoking application services.
+Untrusted request fields may narrow filters, but they do not establish tenant
+identity.
+
+Workspace identity is scoped by tenant. The normative identity boundary is
+`(tenant_id, workspace_id)`. A repository-derived workspace ID is not globally
+authoritative without the tenant that owns it. Local single-user mode uses a
+stable default local tenant, so local-first deployments exercise the same
+tenant-aware code paths as Corbusier mode.
+
+Driven adapters enforce tenant context using the strongest mechanism available
+for their store:
+
+- persistence adapters carry `tenant_id` in tenant-owned rows and composite
+  keys;
+- PostgreSQL adapters set a transaction-local tenant setting and enable RLS for
+  tenant-owned tables;
+- Qdrant adapters inject tenant and workspace filters on every upsert, search,
+  delete, and repair operation;
+- Oxigraph adapters address only tenant-and-workspace named graphs;
+- Chutoro adapters load only tenant-and-workspace sessions and checkpoints.
+
+The same boundary applies to observability and error handling. Audit records
+carry tenant context. Metrics labels must avoid unbounded tenant names or raw
+IDs unless explicitly approved. Cross-tenant read attempts should fail as
+denied or not found without revealing whether the target object exists in a
+different tenant.
+
 ## 6. Provider adapters
 
 Provider adapters are driving adapters into the ingest use case. They sit above
@@ -260,6 +309,7 @@ The authoritative relational tables are:
 ```sql
 CREATE TABLE source_session (
   id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
   provider TEXT NOT NULL,
   provider_session_id TEXT NOT NULL,
   workspace_id TEXT NOT NULL,
@@ -277,6 +327,7 @@ CREATE TABLE source_session (
 );
 
 CREATE TABLE source_cursor (
+  tenant_id TEXT NOT NULL,
   provider TEXT NOT NULL,
   path TEXT NOT NULL,
   device TEXT,
@@ -287,11 +338,12 @@ CREATE TABLE source_cursor (
   file_fingerprint TEXT,
   status TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  PRIMARY KEY (provider, path)
+  PRIMARY KEY (tenant_id, provider, path)
 );
 
 CREATE TABLE raw_event (
   event_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
   source_session_id TEXT NOT NULL,
   provider_event_id TEXT,
   ordinal INTEGER NOT NULL,
@@ -306,6 +358,7 @@ CREATE TABLE raw_event (
 
 CREATE TABLE raw_span (
   span_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
   event_id TEXT NOT NULL,
   role TEXT NOT NULL,
   text_redacted TEXT,
@@ -318,18 +371,21 @@ CREATE TABLE raw_span (
 
 CREATE TABLE ingest_job (
   job_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
   kind TEXT NOT NULL,
   workspace_id TEXT NOT NULL,
   status TEXT NOT NULL,
-  idempotency_key TEXT NOT NULL UNIQUE,
+  idempotency_key TEXT NOT NULL,
   retry_count INTEGER NOT NULL,
   last_error TEXT,
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  UNIQUE (tenant_id, idempotency_key)
 );
 
 CREATE TABLE projection_state (
   projection_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
   raw_event_id TEXT NOT NULL,
   target TEXT NOT NULL,
   status TEXT NOT NULL,
@@ -338,6 +394,19 @@ CREATE TABLE projection_state (
   last_synced_at TEXT,
   deleted_soft INTEGER NOT NULL,
   deleted_hard INTEGER NOT NULL
+);
+
+CREATE TABLE audit_log (
+  audit_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  method TEXT NOT NULL,
+  workspace_id TEXT,
+  target_kind TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  decision TEXT NOT NULL,
+  reason TEXT,
+  at TEXT NOT NULL
 );
 ```
 
@@ -352,6 +421,12 @@ Idempotency keys are provider-specific:
   `claude-hook:{session_id}:{hook_event}:{monotonic_or_hash}`.
 - Axinite outbox: `axinite:{outbox_id}:{event_id}`.
 - MCP/manual write: `mcp:{client_id}:{request_id}`.
+
+The effective idempotency key is tenant-scoped. The same provider path, manual
+request ID, or Axinite outbox identifier may exist for different tenants
+without collision. Source-session and projection uniqueness rules follow the
+same pattern: tenant identity is part of the logical key even when surrogate
+IDs are globally unique.
 
 ## 8. Projection and storage model
 
@@ -392,6 +467,11 @@ _Figure 3: Projection pipeline from evidence to recall-serving artefacts._
 
 _Table 5: Store authority boundaries._
 
+Every store boundary is tenant-aware. Evidence rows carry `tenant_id`; Oxigraph
+named graphs include tenant and workspace; Qdrant payloads and collection names
+carry tenant scope; Chutoro checkpoint paths include a tenant-and-workspace
+prefix. `memoryd` never treats workspace ID alone as an authorization boundary.
+
 ### 8.2 Projection classes and epistemic status
 
 The standalone service keeps Axinite’s projection classes: `episode`, `summary`,
@@ -421,35 +501,39 @@ management.
 
 ### 8.4 Qdrant layout
 
-Qdrant uses collection-per-workspace by default to simplify purge and reduce
-filter-isolation risk. A shared-collection strategy remains a future
-operational mode only if it carries equivalent filter enforcement and deletion
-tests.
+Qdrant uses collection-per-tenant-workspace by default in local mode to
+simplify purge and reduce filter-isolation risk. A shared-collection strategy
+is permitted only for hosted or high-cardinality deployments where the adapter
+injects mandatory tenant and workspace filters on every upsert, search, delete,
+repair, and scroll operation.
 
 Default collections:
 
-- `memoryd_{workspace}_episodes`
-- `memoryd_{workspace}_summaries`
-- `memoryd_{workspace}_semantic_carriers`
-- `memoryd_{workspace}_themes`
-- `memoryd_{workspace}_profiles`
+- `memoryd_{tenant}_{workspace}_episodes`
+- `memoryd_{tenant}_{workspace}_summaries`
+- `memoryd_{tenant}_{workspace}_semantic_carriers`
+- `memoryd_{tenant}_{workspace}_themes`
+- `memoryd_{tenant}_{workspace}_profiles`
 
-Payloads must include projection class, epistemic status, workspace ID,
-provider, source session, repository origin, observed and valid time,
+Payloads must include projection class, epistemic status, tenant ID, workspace
+ID, provider, source session, repository origin, observed and valid time,
 confidence, retraction state, support count, evidence references, and optional
-theme ID.
+theme ID. Shared-collection deployments must also create a tenant keyword
+payload index and treat absence of a tenant filter as a programming error, not
+as an unfiltered query.
 
 ## 9. Theme management
 
-The `ThemeManager` is a workspace-local daemon service. It feeds accepted
-semantic-carrier vectors into Chutoro, maps Chutoro point indices back to
-semantic-carrier IDs, and maps cluster proposals into durable theme records.
+The `ThemeManager` is scoped to `(tenant_id, workspace_id)`. It feeds accepted
+semantic-carrier vectors for one tenant workspace into Chutoro, maps Chutoro
+point indices back to semantic-carrier IDs, and maps cluster proposals into
+durable theme records.
 
 Chutoro remains a cluster proposal engine. `memoryd` owns:
 
 - stable theme IDs;
 - lineage for attach, split, merge, retraction, and rebuild;
-- workspace purge and security boundaries;
+- tenant workspace purge and security boundaries;
 - curated-memory precedence;
 - theme summaries and refresh jobs;
 - retrieval-aware split and merge policy.
@@ -512,11 +596,19 @@ Read-only mode disables `memory_store`, `memory_retract`,
 capability scopes, so read-only mode is a convenience gate rather than the only
 authorization layer.
 
+MCP tools do not accept arbitrary tenant claims as trusted input. In Corbusier
+mode, the MCP or RPC front end maps authenticated Corbusier identity into a
+daemon `RequestContext`. In local mode, the front end uses the configured
+default tenant. Tool filters may include workspaces, providers, and time
+ranges, but the daemon intersects them with the tenant context before use cases
+run.
+
 ## 12. Internal RPC
 
 Collector and MCP components call the daemon over Unix domain socket by
 default. HTTP loopback is a debug or container mode and requires bearer or
-capability tokens.
+capability tokens. Every RPC envelope carries or derives a `RequestContext`
+before it reaches an application use case.
 
 Internal methods:
 
@@ -535,6 +627,7 @@ Internal methods:
 - `ListSessions`
 - `Health`
 - `PurgeWorkspace`
+- `PurgeTenant`
 
 Capability scopes:
 
@@ -549,8 +642,11 @@ Capability scopes:
 - `memory.purge`
 
 Collector tokens receive only `memory.ingest`. MCP clients receive read/write
-scopes based on configuration. `PurgeWorkspace` requires both a high-privilege
-token and an explicit confirmation string.
+scopes based on configuration. Tokens are bound to tenant ID and, where
+configured, allowed workspace IDs. `PurgeWorkspace` requires both a
+high-privilege token and an explicit confirmation string for the tenant
+workspace. `PurgeTenant` is an administrative operation and remains disabled in
+local mode unless explicitly configured for migration or offboarding tests.
 
 ## 13. Security and privacy
 
@@ -569,6 +665,19 @@ permissions.[^7] `memoryd` hook installation must call a narrow
 `memoryd-collector hook --provider claude-code` command rather than arbitrary
 shell pipelines.
 
+Tenant context is security-sensitive. `memoryd` establishes tenant context from
+authenticated capability tokens, Corbusier context, or a configured local
+default before any tenant-owned command runs. Provider adapters may observe
+tenant hints in source material, but those hints cannot override the
+authenticated context. Cross-tenant reads, writes, repairs, and purges are
+denied before storage adapters run.
+
+PostgreSQL deployments must use non-owner application roles without
+`BYPASSRLS`, set `memoryd.tenant_id` transaction-locally, and enable RLS for
+tenant-owned tables. SQLite deployments still carry tenant IDs and enforce
+tenant predicates in adapter contract tests, but they do not claim
+database-enforced isolation.
+
 ## 14. Configuration
 
 The configuration file is TOML. This shape is normative for field names even if
@@ -584,11 +693,17 @@ mode = "shadow" # disabled | observe | project_shadow | recall_shadow | active
 driver = "sqlite"
 sqlite_path = "~/.local/share/memoryd/memoryd.sqlite3"
 
+[tenant]
+mode = "local_single" # local_single | corbusier | hosted
+local_tenant_slug = "local"
+require_tenant_context = true
+storage_strategy = "tenant_workspace" # tenant_workspace | payload_partitioned
+
 [qdrant]
 url = "http://127.0.0.1:6334"
 api_key_env = "QDRANT_API_KEY"
 collection_prefix = "memoryd"
-collection_strategy = "per_workspace"
+collection_strategy = "per_tenant_workspace"
 
 [ollama]
 base_url = "http://127.0.0.1:11434"
@@ -642,6 +757,7 @@ verification beyond ordinary unit and behavioural tests.
 | Ingestion idempotency        | Property tests over provider paths, offsets, line hashes, hook retries, and import request IDs           | `source_cursor`, `raw_event`, `raw_span`, and `ingest_job` writes             |
 | Projection provenance        | Property tests and fixture-based replay that reject semantic carriers with unresolved support references | Extractor outputs, validator, Qdrant writes, and Oxigraph writes              |
 | Workspace purge completeness | End-to-end fixture that creates evidence, graph edges, Qdrant payloads, Chutoro checkpoints, then purges | Evidence inbox, Oxigraph namespaces, Qdrant collections, and checkpoint files |
+| Tenant isolation             | Two-tenant fixtures and adapter contract tests for read, write, recall, repair, and purge paths          | Request context, persistence, Qdrant, Oxigraph, Chutoro, MCP, and RPC         |
 
 _Table 9: Design-level verification targets._
 
@@ -653,7 +769,7 @@ must include each provider in `observe`, one provider in full active recall,
 read-only MCP denial of each write tool, and one purge path with projected
 Qdrant, Oxigraph, and Chutoro artefacts.
 
-Hexagonal conformance is a fourth correctness surface. Domain tests must run
+Hexagonal conformance is another correctness surface. Domain tests must run
 without infrastructure. Application tests use fake or mocked ports. Adapter
 tests verify concrete implementations against port contracts. End-to-end tests
 exercise the composition root. Static architecture checks should fail if domain
@@ -666,8 +782,9 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 
 ## 16. Rollout sequence
 
-1. **Evidence capture.** Implement provider discovery, cursor persistence,
-   redaction, raw event normalization, session listing, and health checks.
+1. **Tenant-aware evidence capture.** Implement request context, provider
+   discovery, cursor persistence, redaction, raw event normalization, session
+   listing, and health checks.
 2. **Dear Diary parity through the daemon.** Add curated writes, flat recall,
    retraction, Qdrant indexing, and audit records without exposing collection
    names through MCP.
@@ -683,6 +800,8 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 ## 17. Open design decisions
 
 - Choose the default evidence-store engine and migration format.
+- Accept or revise the tenant-isolation strategy for local, Corbusier, and
+  hosted-ready modes.
 - Decide whether a graph-shaped relational fallback is allowed when Oxigraph is
   disabled.
 - Define exact Axinite projection write-back policy.
@@ -703,3 +822,21 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
     <https://code.claude.com/docs/en/hooks>.
 [^8]: Model Context Protocol latest specification, accessed 2026-05-25:
     <https://modelcontextprotocol.io/specification/latest>.
+[^9]: Corbusier tenant context references:
+    `../corbusier/src/context/request_context.rs`,
+    `../corbusier/src/context/ids.rs`,
+    `../corbusier/src/message/adapters/postgres/tenant_tx.rs`,
+    `../corbusier/docs/roadmap.md`, and
+    `../corbusier/docs/users-guide.md`.
+[^10]: PostgreSQL row security policies, accessed 2026-05-25:
+    <https://www.postgresql.org/docs/current/ddl-rowsecurity.html>.
+[^11]: AWS Database Blog, "Multi-tenant data isolation with PostgreSQL row
+    level security", accessed 2026-05-25:
+    <https://aws.amazon.com/blogs/database/multi-tenant-data-isolation-with-postgresql-row-level-security/>.
+[^12]: Qdrant documentation, "Multitenancy", accessed 2026-05-25:
+    <https://qdrant.tech/documentation/manage-data/multitenancy/>.
+[^13]: OWASP Cheat Sheet Series, "Multi Tenant Security Cheat Sheet", accessed
+    2026-05-25:
+    <https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html>.
+[^14]: W3C RDF 1.1 Concepts and Abstract Syntax, accessed 2026-05-25:
+    <https://www.w3.org/TR/rdf11-concepts/>.

@@ -78,6 +78,13 @@ theme-management ADR already places memory-specific theme identity, lineage,
 workspace isolation, and balancing policy in `memoryd`, with Chutoro serving as
 the clustering substrate.[^6]
 
+Corbusier is the tenant-isolation prior art inside the project set. It carries
+tenant identity through a request context alongside correlation, causation,
+user, and session identifiers, and its PostgreSQL adapter work plans to set a
+transaction-local tenant value for row-level security (RLS). Standalone
+`memoryd` must therefore treat tenant context as a first-class boundary when
+Corbusier supplies or consumes memory.[^7]
+
 ## 3. Market context
 
 The project competes against existing ways developers and agent operators try
@@ -107,6 +114,7 @@ motivates the standalone service.
 | Primary user: agent-tool maintainer       | Builds integrations, adapters, and local services for agent workflows                     | Clear provider boundaries, idempotent ingestion, inspectable recall, and testable contracts          | Provider-specific core models or hard-coded assumptions about one CLI                             | Custom import scripts and per-tool storage             |
 | Secondary user: reviewer or teammate      | Reads summaries, context packs, and audit trails produced by the system                   | Traceability from memory to evidence and clear status labels                                         | Unverifiable claims and unbounded transcript dumps                                                | Asking the original operator or reading raw logs       |
 | Stakeholder: Axinite maintainer           | Wants Axinite's planned memory capabilities to remain usable through a standalone service | Adapter compatibility, optional projection write-back, and preservation of existing memory semantics | A standalone model that forces Axinite to impersonate Codex or Claude                             | Axinite-only sidecar design                            |
+| Stakeholder: Corbusier maintainer         | Wants Corbusier tenants to use `memoryd` without cross-tenant memory leakage              | Request-context compatibility, tenant-scoped recall, auditability, and storage enforcement           | Treating tenant IDs as optional metadata or relying on workspace IDs alone                        | Corbusier-local memory or tenant-specific silos        |
 | Stakeholder: security-conscious operator  | Runs agents on private repositories or sensitive workspaces                               | Local-only defaults, redaction, purge semantics, and least-privilege interfaces                      | Network-first storage, broad file access, and unreviewed hook commands                            | Disabling memory or using manual notes                 |
 | Non-user: hosted analytics buyer          | Wants cloud dashboards over all organizational agent activity                             | Fleet analytics, central administration, and business reporting                                      | Local-first per-workspace operation                                                               | Commercial observability or data platform products     |
 
@@ -133,6 +141,11 @@ remain a first-class producer and optional projection consumer so Axinite's
 conversation, workspace, episode, and fact semantics remain compatible with the
 standalone service.
 
+When a Corbusier maintainer adopts standalone `memoryd`, they want every
+evidence, projection, recall, graph, vector, clustering, audit, and purge path
+to be scoped by Corbusier-compatible tenant context so one tenant cannot infer,
+retrieve, corrupt, or delete another tenant's memory.
+
 ## 6. Scope
 
 ### 6.1 Goals
@@ -150,6 +163,9 @@ standalone service.
   status, confidence, selected evidence, and explanation data.
 - Keep Axinite compatibility through adapters that supply evidence and may
   receive optional, policy-gated projections.
+- Support Corbusier-style tenant-scoped operation through a request context,
+  tenant-aware storage keys, tenant-scoped indexes, tenant-scoped graph
+  namespaces, and tenant-scoped clustering checkpoints.
 - Use Qdrant, Ollama, Oxigraph, and Chutoro in roles compatible with the
   Axinite memory RFCs and ADRs.
 - Default to local-first operation with conservative redaction before storage
@@ -173,7 +189,9 @@ standalone service.
   Chutoro proposes cluster structure; `memoryd` owns memory theme identity and
   lineage.
 - `memoryd` will not solve organization-wide hosted analytics, central
-  compliance reporting, or multi-tenant cloud administration in v1.
+  compliance reporting, or tenant lifecycle administration in v1. Tenant
+  isolation for Corbusier-compatible callers is in scope; a hosted control
+  plane is not.
 
 ## 7. Success criteria
 
@@ -188,6 +206,8 @@ standalone service.
   evidence supports it, and whether it has been retracted or superseded.
 - Axinite can use the standalone service through adapters without treating
   Axinite conversations as Codex or Claude transcripts.
+- Corbusier can call `memoryd` with an authenticated tenant context and receive
+  only tenant-scoped sessions, recall results, explanations, and health data.
 
 ### 7.2 Operational success
 
@@ -197,6 +217,10 @@ standalone service.
   classes and deny patterns.
 - Purging a workspace removes raw evidence rows, graph namespaces, Qdrant
   collections or workspace-scoped payloads, and Chutoro checkpoints.
+- Tenant isolation is enforced in every storage-backed path: application ports
+  require tenant context, tenant-owned persistence rows carry tenant identity,
+  vector searches use tenant filters or tenant-scoped collections, graph reads
+  use tenant-scoped named graphs, and Chutoro sessions never mix tenants.
 - Recall has a flat fallback profile when hierarchical structures are absent,
   stale, or disabled.
 - Health checks report daemon state, collector lag, Qdrant, Ollama, Oxigraph,
@@ -224,9 +248,13 @@ standalone service.
 - Axinite compatibility remains in scope. The standalone service must support
   an adapter boundary for Axinite conversations, workspace documents, episodes,
   facts, and optional projection write-back.
+- Corbusier compatibility remains in scope. The standalone service must accept
+  tenant context from Corbusier-style authenticated callers and enforce that
+  context before any tenant-owned read, write, recall, projection, repair, or
+  purge operation.
 - Claude Code integration must account for hook security. Claude Code command
   hooks run with the user's permissions, and hook handlers receive JSON on
-  standard input for command hooks.[^7]
+  standard input for command hooks.[^8]
 - The default deployment posture is local-first. Network-facing service
   exposure, if added, must be an explicit mode rather than the default.
 
@@ -248,6 +276,9 @@ standalone service.
 - Workspace identity can usually derive from repository origin, repository
   root, and optional profile name. If this proves unstable, purge and recall
   isolation become unsafe.
+- Tenant identity is available from authenticated callers, capability tokens,
+  or a configured local default. If tenant context is missing in Corbusier
+  mode, the request must fail before application use cases run.
 
 ### 8.3 Dependencies
 
@@ -265,6 +296,9 @@ standalone service.
   evidence streams.
 - Axinite supplies future source and projection adapters over conversations,
   workspace documents, episodes, and facts.
+- Corbusier supplies a compatible request-context model for tenant-aware
+  invocation, and may use PostgreSQL RLS with transaction-local tenant settings
+  in deployments that need database-enforced isolation.
 
 ## 9. Open questions
 
@@ -278,6 +312,7 @@ standalone service.
 | Should Axinite projection write-back be manual, approved, or automatic by default?                           | Write-back can duplicate or strengthen derived facts if loops are not controlled         | A policy that prevents self-reinforcing projection loops                             | ADR                                |
 | Which MCP tools are required in the first public slice?                                                      | The MCP surface affects immediate usefulness and implementation order                    | A minimum useful set tied to evidence capture and flat recall                        | Roadmap                            |
 | What recall quality signals will decide whether hierarchical recall is better than flat recall?              | Without evaluation signals, theme and episode expansion can add complexity without value | A shadow-mode evaluation set with traceable disagreement and token-cost metrics      | Evaluation plan                    |
+| Which tenant storage strategy should each supported deployment use?                                          | SQLite, PostgreSQL, Qdrant, Oxigraph, and Chutoro enforce isolation differently          | A selected local default, Corbusier mode, and hosted-ready extension point           | ADR                                |
 
 _Table 3: Open questions for the next design iteration._
 
@@ -304,12 +339,17 @@ there when the project creates a ubiquitous language document:
   not evidence and is not a truth claim.
 - **Projection:** A derived memory artefact or index entry created from raw
   evidence, such as a summary, fact, Qdrant payload, or graph edge.
+- **Tenant:** The authority boundary for access to evidence, projections,
+  recall, graph state, vector indexes, themes, audit records, and purge.
+- **Request context:** Authenticated invocation context carrying tenant,
+  principal, session, correlation, and optional causation identifiers.
 
 ### Appendix B. ADR candidates
 
 - Decide whether Oxigraph is mandatory in v1 or whether a relational prototype
   is acceptable.
 - Decide workspace identity derivation and collision behaviour.
+- Decide tenant isolation and Corbusier request-context compatibility.
 - Decide Axinite projection write-back policy and loop prevention.
 - Decide redaction guarantees and whether encrypted raw-text storage is in
   scope.
@@ -325,6 +365,8 @@ The technical design should start from these constraints:
 - Keep provider adapters above raw storage and below semantic projection.
 - Keep Axinite as a first-class adapter, not as a special case baked into the
   core model.
+- Keep tenant context as part of every tenant-owned use case and port, not as
+  an optional payload field.
 
 These points are design inputs, not implementation sequence. A separate roadmap
 should decide the delivery order.
@@ -344,5 +386,11 @@ should decide the delivery order.
     Deconstructed".
 [^6]: `../axinite/docs/adr-003-theme-management-belongs-in-memoryd.md`,
     "Decision outcome / proposed direction".
-[^7]: Claude Code documentation, "Hooks reference", accessed 2026-05-25:
+[^7]: Corbusier tenant context references:
+    `../corbusier/src/context/request_context.rs`,
+    `../corbusier/src/context/ids.rs`,
+    `../corbusier/src/message/adapters/postgres/tenant_tx.rs`,
+    `../corbusier/docs/roadmap.md`, and
+    `../corbusier/docs/users-guide.md`.
+[^8]: Claude Code documentation, "Hooks reference", accessed 2026-05-25:
     <https://code.claude.com/docs/en/hooks>.
