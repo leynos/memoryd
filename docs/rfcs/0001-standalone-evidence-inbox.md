@@ -40,6 +40,8 @@ relations, UDS RPC, capability scopes, and a security-first posture.
   - Preserve Axinite compatibility through a provider adapter.
   - Keep ingestion idempotent across restarts, file rotations, hook retries,
     and manual imports.
+  - Preserve source health, projection activity, and recall audit records
+    needed by the pre-1.0 epistemic substrate.
   - Keep collector privileges narrower than daemon privileges.
 - Non-goals:
   - Define projection classes. RFC 0002 owns that.
@@ -99,10 +101,14 @@ The logical entities are:
 
 - `source_session`
 - `source_cursor`
+- `source_registry`
+- `source_health_snapshot`
 - `raw_event`
 - `raw_span`
 - `ingest_job`
 - `projection_state`
+- `projection_activity`
+- `recall_audit`
 - `audit_log`
 
 The exact SQL dialect depends on the selected store, but the logical contract

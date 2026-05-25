@@ -59,6 +59,18 @@ set.
 - [ADR 007: Standard conversation ingestion port](adr-007-standard-conversation-ingestion-port.md)
   records the canonical conversation-source and ingestion ports used by
   Corbusier, Axinite, Codex, Claude, and manual import adapters.
+- [ADR 008: Source health and coverage foundation](adr-008-source-health-and-coverage-foundation.md)
+  records the pre-1.0 source-health substrate for freshness, parse, and
+  accessibility diagnostics.
+- [ADR 009: Claim identity and interpretive kind](adr-009-claim-identity-and-interpretive-kind.md)
+  records stable claim identity and claim-kind labels for claim-bearing memory.
+- [ADR 010: Typed support edges](adr-010-typed-support-edges.md) records
+  relation-aware support links between claims and evidence.
+- [ADR 011: Projection activity lineage](adr-011-projection-activity-lineage.md)
+  records derivation activity tracking for extraction, validation, promotion,
+  repair, and future recomputation.
+- [ADR 012: Durable recall audits](adr-012-durable-recall-audits.md) records
+  configurable persistence for decision-relevant recall traces.
 
 ## Requests for comments
 
@@ -72,3 +84,6 @@ set.
   defines Chutoro-backed, `memoryd`-owned theme management.
 - [RFC 0005: Hierarchical recall](rfcs/0005-hierarchical-recall.md) defines
   recall profiles, context assembly, and fallback behaviour.
+- [RFC 0006: Epistemic health, empiricism, falsification, and semirings](rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md)
+  proposes the post-1.0 substrate for Axinite v1.2 claim validity, omission
+  observability, hypotheses, experiments, and outcome learning.

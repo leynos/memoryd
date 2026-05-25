@@ -169,6 +169,9 @@ retrieve, corrupt, or delete another tenant's memory.
 - Support Corbusier-style tenant-scoped operation through a request context,
   tenant-aware storage keys, tenant-scoped indexes, tenant-scoped graph
   namespaces, and tenant-scoped clustering checkpoints.
+- Preserve pre-1.0 epistemic substrate records for source health, stable claim
+  identity, interpretive claim kind, typed support edges, projection activity
+  lineage, and optional durable recall audits.
 - Use Qdrant, Ollama, Oxigraph, and Chutoro in roles compatible with the
   Axinite memory RFCs and ADRs.
 - Default to local-first operation with conservative redaction before storage
@@ -191,6 +194,9 @@ retrieve, corrupt, or delete another tenant's memory.
 - `memoryd` will not make Chutoro cluster labels durable theme identifiers.
   Chutoro proposes cluster structure; `memoryd` owns memory theme identity and
   lineage.
+- `memoryd` will not infer causality, run experiments, or model organizational
+  uptake in v1. Those post-1.0 support capabilities are proposed separately in
+  RFC 0006 as substrate records for Axinite-style agentic workflows.
 - `memoryd` will not solve organization-wide hosted analytics, central
   compliance reporting, or tenant lifecycle administration in v1. Tenant
   isolation for Corbusier-compatible callers is in scope; a hosted control
@@ -206,7 +212,10 @@ retrieve, corrupt, or delete another tenant's memory.
 - An operator can browse ingested sessions by provider, repository,
   workspace, branch, model, and time range.
 - A recalled claim can be explained: the system can show why it exists, which
-  evidence supports it, and whether it has been retracted or superseded.
+  evidence supports it, which typed support edges validate it, which source
+  health affected that support, and whether it has been retracted or superseded.
+- Decision-relevant recall can be audited through bounded, tenant-scoped recall
+  records without storing raw query text by default.
 - Axinite can use the standalone service through adapters without treating
   Axinite conversations as Codex or Claude transcripts.
 - Corbusier can call `memoryd` with an authenticated tenant context and receive
@@ -230,7 +239,8 @@ retrieve, corrupt, or delete another tenant's memory.
 - Recall has a flat fallback profile when hierarchical structures are absent,
   stale, or disabled.
 - Health checks report daemon state, collector lag, Qdrant, Ollama, Oxigraph,
-  Chutoro theme state, and adapter status.
+  Chutoro theme state, adapter status, source freshness, parse failures, and
+  inaccessible configured sources.
 
 ### 7.3 Strategic success
 

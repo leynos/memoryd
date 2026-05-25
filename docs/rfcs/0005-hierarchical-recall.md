@@ -31,6 +31,7 @@ evidence visible.
   - Select a compact high-level skeleton before expanding evidence.
   - Expand only intact episodes or contiguous raw-message blocks.
   - Return provenance and selection diagnostics.
+  - Persist bounded recall audit records when policy requires them.
   - Fall back to flat recall when hierarchy is unavailable.
 - Non-goals:
   - Generate final answers.
@@ -85,6 +86,18 @@ The daemon orders returned context blocks as:
 
 Every block includes projection class, epistemic status where applicable,
 confidence, estimated token count, and evidence references.
+
+### Durable recall audit
+
+Recall traces can be persisted according to `RecallAuditMode`: `none`,
+`errors_only`, `decision_relevant`, `sampled`, or `all`. Durable audit records
+store tenant and workspace, query hash, optional redacted query text when
+policy allows it, recall profile, token budget, selected artefact IDs, top
+rejected candidate IDs, filter trace, fallback reason, source-health summary,
+and configuration digests.
+
+The daemon owns audit policy. A client may request stricter audit, but cannot
+disable a policy-required audit.
 
 ### Fallback behaviour
 

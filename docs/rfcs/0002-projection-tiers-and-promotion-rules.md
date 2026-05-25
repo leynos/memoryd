@@ -29,6 +29,8 @@ trustworthy recall.
 - Goals:
   - Define first-class projection classes.
   - Define epistemic status for claim-bearing artefacts.
+  - Define stable claim identity and interpretive claim kind.
+  - Define typed support edges for claim-bearing artefacts.
   - Define observer and subject scope.
   - Define promotion, demotion, contradiction, and reconciliation rules.
 - Non-goals:
@@ -66,6 +68,31 @@ _Table 2: Epistemic status values._
 Episodes and summaries are evidence or evidence summaries. They do not carry
 epistemic status as truth claims. Concepts inherit the strongest supporting
 status.
+
+### Claim identity and kind
+
+Every claim-bearing semantic carrier, fact, and profile candidate receives a
+stable `ClaimId`. The claim ID is independent of Qdrant point IDs, projection
+retry IDs, and graph edge IDs.
+
+Each claim also carries `ClaimKind`. The first set is `observation`,
+`user_assertion`, `assistant_inference`, `decision`, `preference`,
+`instruction`, `hypothesis`, `causal_candidate`, `profile_trait`,
+`recommendation_support`, and `unknown`.
+
+`ClaimKind` describes the interpretive role of a claim. Epistemic status
+describes trust state.
+
+### Support edges
+
+Claim-bearing artefacts use typed support edges rather than only flat evidence
+reference arrays. The first `SupportRole` set is `direct_support`,
+`corroborates`, `weak_support`, `derived_from`, `context`, `contradicts`,
+`supersedes`, and `refutes`.
+
+Support edges carry validation state, validation reason, lifecycle state,
+freshness, and source-health data where available. Only validated support edges
+can contribute to promotion or graph-backed trust.
 
 ### Scope
 

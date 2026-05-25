@@ -16,9 +16,15 @@
   `docs/adr-002-dual-path-semantic-extraction.md`,
   `docs/adr-003-memoryd-owns-theme-management.md`,
   `docs/adr-004-dual-mode-recall-gating.md`,
-  `docs/adr-005-hexagonal-architecture-boundary.md`, and
-  `docs/adr-006-tenant-isolation-and-corbusier-context.md`, and
-  `docs/adr-007-standard-conversation-ingestion-port.md`.
+  `docs/adr-005-hexagonal-architecture-boundary.md`,
+  `docs/adr-006-tenant-isolation-and-corbusier-context.md`,
+  `docs/adr-007-standard-conversation-ingestion-port.md`,
+  `docs/adr-008-source-health-and-coverage-foundation.md`,
+  `docs/adr-009-claim-identity-and-interpretive-kind.md`,
+  `docs/adr-010-typed-support-edges.md`,
+  `docs/adr-011-projection-activity-lineage.md`,
+  `docs/adr-012-durable-recall-audits.md`, and
+  `docs/rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md`.
 - **Last substantive revision:** 2026-05-25.
 
 ## 1. Problem statement
@@ -66,6 +72,9 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
 - Define a standard conversation ingestion port that supports structured
   Corbusier and Axinite sources, filesystem-backed Codex and Claude workers,
   and manual imports through source-specific adapters.
+- Model source health, stable claim identity, interpretive claim kind, typed
+  support edges, projection activity lineage, and optional durable recall
+  audits as pre-1.0 substrate capabilities.
 
 ### 2.2 Non-goals
 
@@ -76,6 +85,9 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
   default.
 - `memoryd` does not expose arbitrary file reads through MCP.
 - `memoryd` does not make Chutoro cluster labels durable theme IDs.
+- `memoryd` does not infer causality, run experiments, or model organizational
+  uptake in the v1 design. RFC 0006 defines the post-1.0 substrate for those
+  Axinite v1.2 experiments.
 - `memoryd` does not attempt hosted, organization-wide analytics, billing,
   central compliance reporting, or tenant lifecycle administration in this
   design. Tenant isolation for Corbusier-compatible callers is in scope; a
@@ -83,24 +95,25 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
 
 ## 3. Research summary
 
-| Source                     | Finding                                                                                                                                                                      | Design consequence                                                                                                             |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Axinite RFC 0007           | The original sidecar uses local Rust, UDS RPC, capability scopes, Ollama, Qdrant, Oxigraph, and a transactional outbox.                                                      | Preserve the processing and trust model, but replace the producer boundary with provider adapters and a local evidence inbox.  |
-| Axinite RFC 0014           | Trustworthy recall needs projection classes, epistemic status, observer/subject scope, promotion, contradiction handling, and reconciliation metadata.                       | Keep these semantics as the standalone memory contract.                                                                        |
-| Axinite RFC 0015           | Raw evidence, episodes, semantic carriers, and themes are separate hierarchy levels; themes are not truth claims.                                                            | Build an additive projection pipeline with support-reference validation before recall.                                         |
-| Axinite RFCs 0016 and 0017 | Chutoro-backed themes and hierarchical recall improve navigation only if provenance and projection classes remain visible.                                                   | Add theme management and recall profiles after evidence capture and flat recall work.                                          |
-| Axinite ADRs 003-005       | Theme identity belongs in `memoryd`; semantic extraction needs dual paths; recall expansion needs proxy and optional model-assisted gating.                                  | Import these decisions as standalone ADRs with provider-adapter wording.                                                       |
-| Dear Diary                 | A small Rust MCP server can expose simple store, find, and deprecate tools over Qdrant with read-only gates.                                                                 | Reuse the ergonomic MCP shape, but replace direct Qdrant operations with `memoryd` RPC calls.                                  |
-| Chutoro                    | Chutoro implements FISHDBC with HNSW, arbitrary `DataSource` metrics, sessions, and snapshots.                                                                               | Use Chutoro as a cluster proposal engine over semantic-carrier vectors, not as memory policy.                                  |
-| Corbusier tenant context   | Corbusier carries tenant, correlation, causation, user, and session identifiers in `RequestContext`, and plans PostgreSQL RLS through transaction-local tenant settings.[^9] | Make tenant context part of every tenant-owned use case and port, rather than optional metadata.                               |
-| Corbusier conversations    | Corbusier stores conversations as append-only message sequences behind request-context-aware repositories.[^15]                                                              | Map Corbusier messages into canonical conversation deltas without losing tenant, sequence, role, content, or message metadata. |
-| Axinite conversations      | Axinite stores conversations with channel, user, thread, metadata, message role, content, and timestamps.[^16]                                                               | Map Axinite conversations through a dedicated adapter rather than making Axinite impersonate Codex or Claude.                  |
-| PostgreSQL RLS             | Row security policies restrict rows returned or modified, default to deny without policies, and can use session or transaction settings for tenant identity.[^10][^11]       | PostgreSQL adapters should combine application scoping with database-enforced tenant policies.                                 |
-| Qdrant multitenancy        | Qdrant recommends shared collections with tenant payload filters and tenant keyword indexes for high-cardinality multitenancy.[^12]                                          | Support payload-partitioned collections as a hosted strategy, while keeping mandatory daemon-injected tenant filters.          |
-| OWASP multitenancy         | Tenant context should be established early, bound to authenticated identity, propagated through layers, and audited with tenant-aware resource checks.[^13]                  | Derive tenant context before application use cases run and audit all tenant-owned access decisions.                            |
-| RDF named graphs           | RDF datasets contain named graphs that can keep graph contents separately addressable.[^14]                                                                                  | Scope Oxigraph graph names by tenant and workspace.                                                                            |
-| Claude Code hooks          | Hooks provide lifecycle events, command hooks receive JSON on standard input, async hooks cannot block, and command hooks run with the user's permissions.[^7]               | Treat hooks as wake-up signals and source metadata, not as trusted long-running ingestion workers.                             |
-| MCP specification          | MCP uses JSON-RPC 2.0, server tools/resources/prompts, capability negotiation, and explicit security guidance around consent and data access.[^8]                            | Keep MCP tools narrow, read-only mode explicit, and write or purge operations capability-gated.                                |
+| Source                           | Finding                                                                                                                                                                      | Design consequence                                                                                                                                  |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Axinite RFC 0007                 | The original sidecar uses local Rust, UDS RPC, capability scopes, Ollama, Qdrant, Oxigraph, and a transactional outbox.                                                      | Preserve the processing and trust model, but replace the producer boundary with provider adapters and a local evidence inbox.                       |
+| Axinite RFC 0014                 | Trustworthy recall needs projection classes, epistemic status, observer/subject scope, promotion, contradiction handling, and reconciliation metadata.                       | Keep these semantics as the standalone memory contract.                                                                                             |
+| Axinite RFC 0015                 | Raw evidence, episodes, semantic carriers, and themes are separate hierarchy levels; themes are not truth claims.                                                            | Build an additive projection pipeline with support-reference validation before recall.                                                              |
+| Axinite RFCs 0016 and 0017       | Chutoro-backed themes and hierarchical recall improve navigation only if provenance and projection classes remain visible.                                                   | Add theme management and recall profiles after evidence capture and flat recall work.                                                               |
+| Axinite ADRs 003-005             | Theme identity belongs in `memoryd`; semantic extraction needs dual paths; recall expansion needs proxy and optional model-assisted gating.                                  | Import these decisions as standalone ADRs with provider-adapter wording.                                                                            |
+| Dear Diary                       | A small Rust MCP server can expose simple store, find, and deprecate tools over Qdrant with read-only gates.                                                                 | Reuse the ergonomic MCP shape, but replace direct Qdrant operations with `memoryd` RPC calls.                                                       |
+| Chutoro                          | Chutoro implements FISHDBC with HNSW, arbitrary `DataSource` metrics, sessions, and snapshots.                                                                               | Use Chutoro as a cluster proposal engine over semantic-carrier vectors, not as memory policy.                                                       |
+| Axinite v1.2 epistemic proposals | Claim validity, omission observability, causal hypotheses, and outcome learning need a memory substrate, but not agentic judgement inside `memoryd`.                         | Add source health, claim identity, support edges, projection activity, and recall audits before v1; defer claim graphs and experiments to RFC 0006. |
+| Corbusier tenant context         | Corbusier carries tenant, correlation, causation, user, and session identifiers in `RequestContext`, and plans PostgreSQL RLS through transaction-local tenant settings.[^9] | Make tenant context part of every tenant-owned use case and port, rather than optional metadata.                                                    |
+| Corbusier conversations          | Corbusier stores conversations as append-only message sequences behind request-context-aware repositories.[^15]                                                              | Map Corbusier messages into canonical conversation deltas without losing tenant, sequence, role, content, or message metadata.                      |
+| Axinite conversations            | Axinite stores conversations with channel, user, thread, metadata, message role, content, and timestamps.[^16]                                                               | Map Axinite conversations through a dedicated adapter rather than making Axinite impersonate Codex or Claude.                                       |
+| PostgreSQL RLS                   | Row security policies restrict rows returned or modified, default to deny without policies, and can use session or transaction settings for tenant identity.[^10][^11]       | PostgreSQL adapters should combine application scoping with database-enforced tenant policies.                                                      |
+| Qdrant multitenancy              | Qdrant recommends shared collections with tenant payload filters and tenant keyword indexes for high-cardinality multitenancy.[^12]                                          | Support payload-partitioned collections as a hosted strategy, while keeping mandatory daemon-injected tenant filters.                               |
+| OWASP multitenancy               | Tenant context should be established early, bound to authenticated identity, propagated through layers, and audited with tenant-aware resource checks.[^13]                  | Derive tenant context before application use cases run and audit all tenant-owned access decisions.                                                 |
+| RDF named graphs                 | RDF datasets contain named graphs that can keep graph contents separately addressable.[^14]                                                                                  | Scope Oxigraph graph names by tenant and workspace.                                                                                                 |
+| Claude Code hooks                | Hooks provide lifecycle events, command hooks receive JSON on standard input, async hooks cannot block, and command hooks run with the user's permissions.[^7]               | Treat hooks as wake-up signals and source metadata, not as trusted long-running ingestion workers.                                                  |
+| MCP specification                | MCP uses JSON-RPC 2.0, server tools/resources/prompts, capability negotiation, and explicit security guidance around consent and data access.[^8]                            | Keep MCP tools narrow, read-only mode explicit, and write or purge operations capability-gated.                                                     |
 
 _Table 1: Research findings that shape the standalone design._
 
@@ -112,11 +125,17 @@ _Table 1: Research findings that shape the standalone design._
 | Evidence inbox      | Durable local store for source sessions, cursors, raw events, raw spans, ingest jobs, projection sync state, and audit history.           |
 | Evidence event      | Canonical record of an observed provider event, such as a user message, assistant message, tool call, compaction, approval, or file edit. |
 | Evidence reference  | Stable pointer to source path, line or byte range, provider session, event ordinal, and content hash.                                     |
+| Source health       | Tenant-scoped status for a configured source, including freshness, parse state, accessibility, lag, and last error.                       |
 | Episode             | Bounded chronological memory unit materialized from raw evidence.                                                                         |
 | Semantic carrier    | Validated statement distilled from one or more episodes or document spans and used to support facts, concepts, profiles, or themes.       |
+| Claim               | Stable claim-bearing memory object with a canonical statement, claim kind, epistemic status, validity state, and support edges.           |
+| Claim kind          | Interpretive role for a claim, such as observation, instruction, hypothesis, causal candidate, preference, or profile trait.              |
+| Support edge        | Typed relation between a claim and evidence, another claim, or a derivation activity, with validation and lifecycle state.                |
+| Projection activity | Derivation record linking input artefacts to output artefacts for extraction, validation, embedding, promotion, repair, or audit.         |
 | Projection          | Derived artefact or serving record written from evidence, such as an episode summary, fact, graph edge, Qdrant payload, or theme.         |
 | Theme               | Durable navigation grouping over accepted semantic carriers. A theme is not evidence and is not a fact.                                   |
 | Recall context pack | Bounded response containing context blocks, projection classes, epistemic status, confidence, evidence references, and selection trace.   |
+| Recall audit record | Optional durable, bounded record of a recall run, selected and rejected candidates, filters, fallback reason, and source-health summary.  |
 | Tenant              | Authority boundary for evidence, projections, recall, graph state, vector indexes, themes, audit records, and purge.                      |
 | Request context     | Authenticated invocation context carrying tenant, principal, session, correlation, and optional causation identifiers.                    |
 | Conversation delta  | Canonical batch of conversation metadata, ordered events, evidence references, cursor metadata, and lifecycle changes sent to ingestion.  |
@@ -207,21 +226,22 @@ types, or MCP runtime types.
 
 The intended module boundary is:
 
-| Layer       | Owns                                                                                                                                    | Must not own                                                                                   |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Domain      | Workspaces, evidence, episodes, semantic carriers, facts, profiles, themes, retractions, recall context packs, and pure domain services | Filesystem watching, SQL, Qdrant, Oxigraph, Ollama, Chutoro, MCP, UDS, HTTP, or process config |
-| Application | Use cases such as ingest, finalize, recall, read facts, store curated memory, retract, import, list sessions, health, and purge         | Concrete adapter construction or infrastructure-specific request and response types            |
-| Adapters    | Provider parsing, persistence drivers, Qdrant, Ollama, Oxigraph, Chutoro, MCP, CLI, UDS, loopback HTTP, and filesystem integration      | Memory policy, promotion rules, contradiction handling, theme identity, or recall selection    |
-| Composition | Binary entrypoints, configuration loading, dependency injection, feature wiring, and runtime lifecycle                                  | Domain decisions beyond selecting configured adapter implementations                           |
+| Layer       | Owns                                                                                                                                                                                   | Must not own                                                                                                                    |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Domain      | Workspaces, sources, evidence, claims, support edges, episodes, semantic carriers, facts, profiles, themes, retractions, recall context packs, recall audits, and pure domain services | Filesystem watching, SQL, Qdrant, Oxigraph, Ollama, Chutoro, MCP, UDS, HTTP, or process config                                  |
+| Application | Use cases such as ingest, finalize, recall, read facts, store curated memory, retract, import, list sessions, source health, durable recall audit, health, and purge                   | Concrete adapter construction or infrastructure-specific request and response types                                             |
+| Adapters    | Provider parsing, persistence drivers, Qdrant, Ollama, Oxigraph, Chutoro, MCP, CLI, UDS, loopback HTTP, and filesystem integration                                                     | Memory policy, claim validity, support validation, promotion rules, contradiction handling, theme identity, or recall selection |
+| Composition | Binary entrypoints, configuration loading, dependency injection, feature wiring, and runtime lifecycle                                                                                 | Domain decisions beyond selecting configured adapter implementations                                                            |
 
 _Table 3: Hexagonal ownership boundaries._
 
-Domain-owned driven ports include evidence repositories, graph repositories,
-vector indexes, embedding providers, extraction providers, clustering
-providers, audit sinks, clocks, identifier generation, and policy stores.
-Driving adapters include CLI commands, MCP tools, provider collector loops,
-collector hook commands, file-watch wake-ups, scheduled jobs, and debug
-loopback HTTP handlers.
+Domain-owned driven ports include evidence repositories, source-health
+repositories, claim repositories, support-edge repositories, graph
+repositories, vector indexes, embedding providers, extraction providers,
+clustering providers, recall-audit repositories, audit sinks, clocks,
+identifier generation, and policy stores. Driving adapters include CLI
+commands, MCP tools, provider collector loops, collector hook commands,
+file-watch wake-ups, scheduled jobs, and debug loopback HTTP handlers.
 
 Adapters never call one another directly. For example, the Claude Code adapter
 does not write Qdrant; it emits evidence through the ingest use case. The MCP
@@ -456,6 +476,34 @@ CREATE TABLE source_cursor (
   PRIMARY KEY (tenant_id, provider, path)
 );
 
+CREATE TABLE source_registry (
+  source_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  workspace_id TEXT,
+  provider TEXT NOT NULL,
+  source_kind TEXT NOT NULL,
+  source_uri TEXT NOT NULL,
+  expected_freshness_seconds INTEGER,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE source_health_snapshot (
+  snapshot_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  workspace_id TEXT,
+  status TEXT NOT NULL,
+  last_successful_discovery TEXT,
+  last_successful_read TEXT,
+  last_successful_parse TEXT,
+  last_cursor_update TEXT,
+  observed_lag_seconds INTEGER,
+  last_error_code TEXT,
+  captured_at TEXT NOT NULL
+);
+
 CREATE TABLE raw_event (
   event_id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
@@ -509,6 +557,68 @@ CREATE TABLE projection_state (
   last_synced_at TEXT,
   deleted_soft INTEGER NOT NULL,
   deleted_hard INTEGER NOT NULL
+);
+
+CREATE TABLE claim (
+  claim_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  workspace_id TEXT NOT NULL,
+  canonical_statement TEXT NOT NULL,
+  claim_kind TEXT NOT NULL,
+  projection_class TEXT NOT NULL,
+  epistemic_status TEXT NOT NULL,
+  validity_state TEXT NOT NULL,
+  lifecycle_state TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE support_edge (
+  support_edge_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  workspace_id TEXT NOT NULL,
+  claim_id TEXT NOT NULL,
+  support_role TEXT NOT NULL,
+  evidence_ref_json TEXT,
+  source_claim_id TEXT,
+  activity_id TEXT,
+  validation_state TEXT NOT NULL,
+  validation_reason TEXT,
+  lifecycle_state TEXT NOT NULL,
+  validated_at TEXT
+);
+
+CREATE TABLE projection_activity (
+  activity_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  workspace_id TEXT NOT NULL,
+  activity_kind TEXT NOT NULL,
+  input_refs_json TEXT NOT NULL,
+  output_refs_json TEXT NOT NULL,
+  producer_identity TEXT NOT NULL,
+  configuration_digest TEXT,
+  status TEXT NOT NULL,
+  diagnostic_ref TEXT,
+  started_at TEXT NOT NULL,
+  completed_at TEXT
+);
+
+CREATE TABLE recall_audit (
+  recall_audit_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  workspace_id TEXT,
+  principal_id TEXT,
+  audit_mode TEXT NOT NULL,
+  query_hash TEXT NOT NULL,
+  query_redacted TEXT,
+  recall_profile TEXT NOT NULL,
+  token_budget INTEGER NOT NULL,
+  selected_refs_json TEXT NOT NULL,
+  rejected_refs_json TEXT NOT NULL,
+  filter_trace_json TEXT NOT NULL,
+  fallback_reason TEXT,
+  source_health_summary_json TEXT,
+  created_at TEXT NOT NULL
 );
 
 CREATE TABLE audit_log (
@@ -602,6 +712,16 @@ writes or trusted document material. Contradiction handling follows RFC 0002:
 explicit evidence retracts weaker conflicting hypotheses automatically, while
 conflicts between explicit or curated claims require operator resolution.
 
+Every claim-bearing semantic carrier, fact, and profile candidate receives a
+stable `ClaimId` and `ClaimKind` before v1. `ClaimKind` describes interpretive
+role, not truth. The first set is `observation`, `user_assertion`,
+`assistant_inference`, `decision`, `preference`, `instruction`, `hypothesis`,
+`causal_candidate`, `profile_trait`, `recommendation_support`, and `unknown`.
+Promotion remains governed by epistemic status, support, contradiction state,
+and policy. `ClaimId` gives later claim graphs, falsification workflows, and
+outcome records a stable anchor without requiring those post-1.0 features in
+the v1 daemon.
+
 ### 8.3 Extraction
 
 `memoryd` supports two extractors behind a shared schema:
@@ -615,6 +735,21 @@ conflicts between explicit or curated claims require operator resolution.
 Both paths must pass the same support-reference validator. Unsupported semantic
 carriers remain diagnostics and never enter Qdrant, Oxigraph, or theme
 management.
+
+Accepted claim-bearing outputs create typed support edges rather than only flat
+evidence-reference arrays. Support roles include `direct_support`,
+`corroborates`, `weak_support`, `derived_from`, `context`, `contradicts`,
+`supersedes`, and `refutes`. Each edge records validation state, validation
+reason, lifecycle state, source freshness, and source health where available.
+Qdrant may carry denormalized support summaries, but Oxigraph and the evidence
+store own support truth.
+
+Projection work also records activity lineage. Episode finalization,
+summarization, semantic extraction, support validation, embedding, promotion,
+theme assignment, projection repair, and recall-audit capture produce
+`ProjectionActivity` records that link inputs to outputs with producer identity
+and configuration digest. These records support v1 debugging and post-1.0
+validity recomputation.
 
 ### 8.4 Qdrant layout
 
@@ -688,6 +823,15 @@ _Table 7: Recall profiles._
 The daemon returns context blocks, selected theme IDs, selected semantic IDs,
 selected episode IDs, provenance references, fallback reasons, and a selection
 trace. It never returns an unbounded transcript dump.
+
+Recall traces may be persisted as durable recall audit records according to
+policy. Supported audit modes are `none`, `errors_only`, `decision_relevant`,
+`sampled`, and `all`. Audit records are bounded and tenant-scoped. They store
+query hash, optional redacted query text when policy allows it, recall profile,
+token budget, selected artefact IDs, top rejected candidate IDs and reason
+codes, filter trace, fallback reason, source-health summary, and configuration
+digests. MCP clients may request stricter audit, but they cannot disable a
+policy-required audit.
 
 ## 11. MCP front end
 
@@ -872,7 +1016,10 @@ verification beyond ordinary unit and behavioural tests.
 | Property                     | Verification method                                                                                      | Scope                                                                         |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Ingestion idempotency        | Property tests over provider paths, offsets, line hashes, hook retries, and import request IDs           | `source_cursor`, `raw_event`, `raw_span`, and `ingest_job` writes             |
+| Source health                | Provider dropout, stale cursor, parse error, and inaccessible source fixtures                            | Source registry, health snapshots, collector health, and MCP health           |
 | Projection provenance        | Property tests and fixture-based replay that reject semantic carriers with unresolved support references | Extractor outputs, validator, Qdrant writes, and Oxigraph writes              |
+| Claim support edges          | Fixture replay that rejects dangling, stale, redacted, cross-tenant, and unsupported support relations   | Claims, support edges, validator, graph provenance, and explanations          |
+| Recall audits                | Mode-combination fixtures for disabled, sampled, decision-relevant, errors-only, and full audit paths    | Recall use case, policy, redaction, persistence, purge, and MCP requests      |
 | Workspace purge completeness | End-to-end fixture that creates evidence, graph edges, Qdrant payloads, Chutoro checkpoints, then purges | Evidence inbox, Oxigraph namespaces, Qdrant collections, and checkpoint files |
 | Tenant isolation             | Two-tenant fixtures and adapter contract tests for read, write, recall, repair, and purge paths          | Request context, persistence, Qdrant, Oxigraph, Chutoro, MCP, and RPC         |
 
@@ -900,13 +1047,14 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 ## 16. Rollout sequence
 
 1. **Tenant-aware evidence capture.** Implement request context, provider
-   discovery, cursor persistence, redaction, raw event normalization, session
-   listing, and health checks.
+   discovery, source health, cursor persistence, redaction, raw event
+   normalization, session listing, and health checks.
 2. **Dear Diary parity through the daemon.** Add curated writes, flat recall,
-   retraction, Qdrant indexing, and audit records without exposing collection
-   names through MCP.
+   durable recall audit modes, retraction, Qdrant indexing, and audit records
+   without exposing collection names through MCP.
 3. **Episodes and semantic projection.** Add episode finalization, summaries,
-   embeddings, structured extraction, and support-reference validation.
+   embeddings, structured extraction, stable claim IDs, typed support edges,
+   projection activity lineage, and support-reference validation.
 4. **Facts, profiles, and graph promotion.** Add Oxigraph facts,
    contradictions, profile promotion, and curated write precedence.
 5. **Themes and hierarchical recall.** Add Chutoro bootstrap, incremental
@@ -925,6 +1073,9 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 - Define the redaction detector set and encrypted raw-text mode.
 - Define the Chutoro checkpoint format and acceptable theme-ID churn during
   rebuild.
+- Define source-health freshness defaults for each provider.
+- Define recall-audit retention defaults and whether redacted query text is
+  ever stored by default.
 
 ## References
 
