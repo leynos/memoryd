@@ -74,6 +74,44 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## Architecture Overview
+
+The full architecture is defined in the
+[Memoryd design](docs/memoryd-design.md) and the supporting ADR set. The most
+important implementation boundary is recorded in
+[ADR 005: Hexagonal architecture boundary](docs/adr-005-hexagonal-architecture-boundary.md).
+Domain and application code own the memory rules, use cases, and port traits;
+adapters own provider parsing, local persistence, Qdrant, Ollama, Oxigraph,
+Chutoro, MCP, UDS, loopback HTTP, and filesystem watching.
+
+Port traits are the contract between those layers. Application services such as
+ingestion, recall, curated memory storage, retraction, session listing, and
+purge depend on domain-owned ports and domain value objects. Infrastructure
+adapters implement those ports and translate external types into canonical
+evidence, episode, projection, recall, audit, and health concepts. This keeps
+the core testable without running storage engines, model servers, vector
+indexes, graph stores, clustering runtimes, or MCP transports.
+
+Tenant isolation is a first-class part of the same boundary, as recorded in
+[ADR 006: Tenant isolation and Corbusier context](docs/adr-006-tenant-isolation-and-corbusier-context.md).
+Tenant-owned use cases carry an authenticated request context, and the
+normative memory scope is `(tenant_id, workspace_id)`. Storage rows, Qdrant
+payload filters, Oxigraph named graphs, Chutoro checkpoints, audit records, and
+purge plans all preserve that scope so local single-user deployments and
+Corbusier-style multi-tenant deployments exercise the same isolation contract.
+
+Conversation ingestion follows
+[ADR 007: Standard conversation ingestion port](docs/adr-007-standard-conversation-ingestion-port.md).
+All producers emit the same canonical conversation delta, but the application
+ports separate trust and sequencing semantics: `ConversationPushIngestPort`
+handles authenticated push producers such as Corbusier, Axinite outboxes, and
+manual MCP imports; `CollectedConversationIngestPort` handles worker-collected
+batches from filesystem or pull-mode sources; and `ConversationSourcePort` is
+the collector-facing discovery, tailing, snapshot, and replay contract for
+Codex, Claude, Axinite pull mode, and future source adapters.
+
+______________________________________________________________________
+
 ## Learn more
 
 - [Documentation contents](docs/contents.md) - the full documentation index.
