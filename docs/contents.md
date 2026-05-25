@@ -56,6 +56,9 @@ set.
 - [ADR 006: Tenant isolation and Corbusier context](adr-006-tenant-isolation-and-corbusier-context.md)
   records the tenant-scoped request context, storage, index, graph, and theme
   isolation boundary.
+- [ADR 007: Standard conversation ingestion port](adr-007-standard-conversation-ingestion-port.md)
+  records the canonical conversation-source and ingestion ports used by
+  Corbusier, Axinite, Codex, Claude, and manual import adapters.
 
 ## Requests for comments
 

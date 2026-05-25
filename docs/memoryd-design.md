@@ -17,7 +17,8 @@
   `docs/adr-003-memoryd-owns-theme-management.md`,
   `docs/adr-004-dual-mode-recall-gating.md`,
   `docs/adr-005-hexagonal-architecture-boundary.md`, and
-  `docs/adr-006-tenant-isolation-and-corbusier-context.md`.
+  `docs/adr-006-tenant-isolation-and-corbusier-context.md`, and
+  `docs/adr-007-standard-conversation-ingestion-port.md`.
 - **Last substantive revision:** 2026-05-25.
 
 ## 1. Problem statement
@@ -62,6 +63,9 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
   context, tenant-scoped workspaces, tenant-aware storage, tenant-scoped
   serving indexes, tenant-scoped graph namespaces, and tenant-scoped Chutoro
   checkpoints.
+- Define a standard conversation ingestion port that supports structured
+  Corbusier and Axinite sources, filesystem-backed Codex and Claude workers,
+  and manual imports through source-specific adapters.
 
 ### 2.2 Non-goals
 
@@ -79,22 +83,24 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
 
 ## 3. Research summary
 
-| Source                     | Finding                                                                                                                                                                      | Design consequence                                                                                                            |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Axinite RFC 0007           | The original sidecar uses local Rust, UDS RPC, capability scopes, Ollama, Qdrant, Oxigraph, and a transactional outbox.                                                      | Preserve the processing and trust model, but replace the producer boundary with provider adapters and a local evidence inbox. |
-| Axinite RFC 0014           | Trustworthy recall needs projection classes, epistemic status, observer/subject scope, promotion, contradiction handling, and reconciliation metadata.                       | Keep these semantics as the standalone memory contract.                                                                       |
-| Axinite RFC 0015           | Raw evidence, episodes, semantic carriers, and themes are separate hierarchy levels; themes are not truth claims.                                                            | Build an additive projection pipeline with support-reference validation before recall.                                        |
-| Axinite RFCs 0016 and 0017 | Chutoro-backed themes and hierarchical recall improve navigation only if provenance and projection classes remain visible.                                                   | Add theme management and recall profiles after evidence capture and flat recall work.                                         |
-| Axinite ADRs 003-005       | Theme identity belongs in `memoryd`; semantic extraction needs dual paths; recall expansion needs proxy and optional model-assisted gating.                                  | Import these decisions as standalone ADRs with provider-adapter wording.                                                      |
-| Dear Diary                 | A small Rust MCP server can expose simple store, find, and deprecate tools over Qdrant with read-only gates.                                                                 | Reuse the ergonomic MCP shape, but replace direct Qdrant operations with `memoryd` RPC calls.                                 |
-| Chutoro                    | Chutoro implements FISHDBC with HNSW, arbitrary `DataSource` metrics, sessions, and snapshots.                                                                               | Use Chutoro as a cluster proposal engine over semantic-carrier vectors, not as memory policy.                                 |
-| Corbusier tenant context   | Corbusier carries tenant, correlation, causation, user, and session identifiers in `RequestContext`, and plans PostgreSQL RLS through transaction-local tenant settings.[^9] | Make tenant context part of every tenant-owned use case and port, rather than optional metadata.                              |
-| PostgreSQL RLS             | Row security policies restrict rows returned or modified, default to deny without policies, and can use session or transaction settings for tenant identity.[^10][^11]       | PostgreSQL adapters should combine application scoping with database-enforced tenant policies.                                |
-| Qdrant multitenancy        | Qdrant recommends shared collections with tenant payload filters and tenant keyword indexes for high-cardinality multitenancy.[^12]                                          | Support payload-partitioned collections as a hosted strategy, while keeping mandatory daemon-injected tenant filters.         |
-| OWASP multitenancy         | Tenant context should be established early, bound to authenticated identity, propagated through layers, and audited with tenant-aware resource checks.[^13]                  | Derive tenant context before application use cases run and audit all tenant-owned access decisions.                           |
-| RDF named graphs           | RDF datasets contain named graphs that can keep graph contents separately addressable.[^14]                                                                                  | Scope Oxigraph graph names by tenant and workspace.                                                                           |
-| Claude Code hooks          | Hooks provide lifecycle events, command hooks receive JSON on standard input, async hooks cannot block, and command hooks run with the user's permissions.[^7]               | Treat hooks as wake-up signals and source metadata, not as trusted long-running ingestion workers.                            |
-| MCP specification          | MCP uses JSON-RPC 2.0, server tools/resources/prompts, capability negotiation, and explicit security guidance around consent and data access.[^8]                            | Keep MCP tools narrow, read-only mode explicit, and write or purge operations capability-gated.                               |
+| Source                     | Finding                                                                                                                                                                      | Design consequence                                                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Axinite RFC 0007           | The original sidecar uses local Rust, UDS RPC, capability scopes, Ollama, Qdrant, Oxigraph, and a transactional outbox.                                                      | Preserve the processing and trust model, but replace the producer boundary with provider adapters and a local evidence inbox.  |
+| Axinite RFC 0014           | Trustworthy recall needs projection classes, epistemic status, observer/subject scope, promotion, contradiction handling, and reconciliation metadata.                       | Keep these semantics as the standalone memory contract.                                                                        |
+| Axinite RFC 0015           | Raw evidence, episodes, semantic carriers, and themes are separate hierarchy levels; themes are not truth claims.                                                            | Build an additive projection pipeline with support-reference validation before recall.                                         |
+| Axinite RFCs 0016 and 0017 | Chutoro-backed themes and hierarchical recall improve navigation only if provenance and projection classes remain visible.                                                   | Add theme management and recall profiles after evidence capture and flat recall work.                                          |
+| Axinite ADRs 003-005       | Theme identity belongs in `memoryd`; semantic extraction needs dual paths; recall expansion needs proxy and optional model-assisted gating.                                  | Import these decisions as standalone ADRs with provider-adapter wording.                                                       |
+| Dear Diary                 | A small Rust MCP server can expose simple store, find, and deprecate tools over Qdrant with read-only gates.                                                                 | Reuse the ergonomic MCP shape, but replace direct Qdrant operations with `memoryd` RPC calls.                                  |
+| Chutoro                    | Chutoro implements FISHDBC with HNSW, arbitrary `DataSource` metrics, sessions, and snapshots.                                                                               | Use Chutoro as a cluster proposal engine over semantic-carrier vectors, not as memory policy.                                  |
+| Corbusier tenant context   | Corbusier carries tenant, correlation, causation, user, and session identifiers in `RequestContext`, and plans PostgreSQL RLS through transaction-local tenant settings.[^9] | Make tenant context part of every tenant-owned use case and port, rather than optional metadata.                               |
+| Corbusier conversations    | Corbusier stores conversations as append-only message sequences behind request-context-aware repositories.[^15]                                                              | Map Corbusier messages into canonical conversation deltas without losing tenant, sequence, role, content, or message metadata. |
+| Axinite conversations      | Axinite stores conversations with channel, user, thread, metadata, message role, content, and timestamps.[^16]                                                               | Map Axinite conversations through a dedicated adapter rather than making Axinite impersonate Codex or Claude.                  |
+| PostgreSQL RLS             | Row security policies restrict rows returned or modified, default to deny without policies, and can use session or transaction settings for tenant identity.[^10][^11]       | PostgreSQL adapters should combine application scoping with database-enforced tenant policies.                                 |
+| Qdrant multitenancy        | Qdrant recommends shared collections with tenant payload filters and tenant keyword indexes for high-cardinality multitenancy.[^12]                                          | Support payload-partitioned collections as a hosted strategy, while keeping mandatory daemon-injected tenant filters.          |
+| OWASP multitenancy         | Tenant context should be established early, bound to authenticated identity, propagated through layers, and audited with tenant-aware resource checks.[^13]                  | Derive tenant context before application use cases run and audit all tenant-owned access decisions.                            |
+| RDF named graphs           | RDF datasets contain named graphs that can keep graph contents separately addressable.[^14]                                                                                  | Scope Oxigraph graph names by tenant and workspace.                                                                            |
+| Claude Code hooks          | Hooks provide lifecycle events, command hooks receive JSON on standard input, async hooks cannot block, and command hooks run with the user's permissions.[^7]               | Treat hooks as wake-up signals and source metadata, not as trusted long-running ingestion workers.                             |
+| MCP specification          | MCP uses JSON-RPC 2.0, server tools/resources/prompts, capability negotiation, and explicit security guidance around consent and data access.[^8]                            | Keep MCP tools narrow, read-only mode explicit, and write or purge operations capability-gated.                                |
 
 _Table 1: Research findings that shape the standalone design._
 
@@ -113,6 +119,7 @@ _Table 1: Research findings that shape the standalone design._
 | Recall context pack | Bounded response containing context blocks, projection classes, epistemic status, confidence, evidence references, and selection trace.   |
 | Tenant              | Authority boundary for evidence, projections, recall, graph state, vector indexes, themes, audit records, and purge.                      |
 | Request context     | Authenticated invocation context carrying tenant, principal, session, correlation, and optional causation identifiers.                    |
+| Conversation delta  | Canonical batch of conversation metadata, ordered events, evidence references, cursor metadata, and lifecycle changes sent to ingestion.  |
 | Driving adapter     | Edge component that invokes a use case, such as CLI, MCP, provider collector, scheduled job, hook handler, or debug HTTP.                 |
 | Driven adapter      | Edge component that implements a domain-owned port, such as persistence, Qdrant, Ollama, Oxigraph, Chutoro, clock, or audit output.       |
 | Port                | Domain-owned trait that describes a capability the application needs, using domain types rather than infrastructure types.                |
@@ -288,13 +295,121 @@ flowchart TB
 
 _Figure 2: Adapter boundary between provider records and memory projection._
 
-| Adapter                      | Source records                                                                      | Boundary rule                                                                                                                     |
-| ---------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Codex rollout adapter        | `CODEX_HOME` rollout JSONL and archived rollout JSONL                               | Tail configured roots, persist byte offsets, and key idempotency by path, line, and line hash.                                    |
-| Claude Code adapter          | Hook JSON, transcript paths, compaction events, and transcript lines                | Treat command hooks as wake-up signals; tail transcripts asynchronously; never run long projection work inside hooks.             |
-| Axinite conversation adapter | Conversations, messages, workspace documents, outbox events, and metadata           | Map Axinite conversations to source sessions and messages to evidence events without pretending they are Codex or Claude records. |
-| Axinite projection sink      | Optional curated/profile/fact projection writes back to Axinite workspace documents | Require policy gating and provenance metadata to prevent self-reinforcing write-back loops.                                       |
-| Manual import adapter        | Operator-supplied transcript or rollout paths                                       | Read only explicitly supplied files under configured roots and record import actor and request ID.                                |
+### 6.1 Standard conversation ingestion ports
+
+Conversation ingestion has one canonical daemon-facing use case and one
+standard source-reader contract.
+
+`ConversationIngestPort` is the driving port into the daemon application layer.
+It accepts a tenant-scoped `RequestContext` and a `CanonicalConversationDelta`.
+All conversation producers use this path, including Corbusier, Axinite, the
+collector worker, and manual import tools. The ingest use case is responsible
+for redaction checks, source-session materialization, raw event and span
+writes, idempotency keys, cursor updates, projection jobs, and audit records.
+
+`ConversationSourcePort` is the source-reader contract implemented by adapters
+when `memoryd-collector` must discover, tail, page, or replay source material.
+It supports pull and tail sources such as Codex rollout files, Claude
+transcripts, Axinite pull mode, and future filesystem or database imports.
+Push-mode producers, such as Corbusier or an Axinite transactional outbox, may
+call `ConversationIngestPort` directly but must emit the same canonical delta.
+
+```rust
+trait ConversationIngestPort {
+    async fn ingest_conversation_delta(
+        &self,
+        ctx: &RequestContext,
+        delta: CanonicalConversationDelta,
+    ) -> Result<IngestReport, IngestError>;
+}
+
+trait ConversationSourcePort {
+    fn source_id(&self) -> SourceId;
+
+    async fn discover_conversations(
+        &self,
+        ctx: &RequestContext,
+        cursor: Option<SourceCursor>,
+        limit: PageLimit,
+    ) -> Result<ConversationDiscoveryPage, SourceReadError>;
+
+    async fn read_conversation_delta(
+        &self,
+        ctx: &RequestContext,
+        handle: SourceConversationHandle,
+        after: Option<SourceCursor>,
+        limit: PageLimit,
+    ) -> Result<ConversationDeltaPage, SourceReadError>;
+
+    async fn read_evidence_span(
+        &self,
+        ctx: &RequestContext,
+        evidence_ref: EvidenceRef,
+    ) -> Result<RedactedSpan, SourceReadError>;
+}
+```
+
+_Listing 1: Normative port shape. Concrete Rust names may change, but the
+boundary and data flow are design requirements._
+
+A canonical conversation delta contains:
+
+- source identity: provider, provider conversation ID, optional provider event
+  ID, source URI, source kind, source version, and source fingerprint;
+- request scope: tenant ID, principal or user ID, session ID, correlation ID,
+  optional causation ID, workspace ID, and optional allowed-workspace policy;
+- conversation metadata: title, lifecycle, parent conversation, channel,
+  thread, model, agent, repository metadata, start time, update time, and end
+  time;
+- ordered events: ordinal, role, actor, event kind, timestamp, content parts,
+  tool metadata, compaction markers, file-edit summaries, payload hash,
+  redaction state, and evidence references;
+- cursor metadata: source cursor, source offset, sequence, timestamp, provider
+  checkpoint token, and replay mode;
+- deletion and correction metadata: tombstones, source redactions, superseded
+  events, and provider-side compaction.
+
+The first content-part set is `text`, `tool_call`, `tool_result`,
+`file_reference`, `file_edit`, `compaction_summary`, `attachment_reference`, and
+ `provider_metadata`. Provider-specific payload remains in redacted JSON
+metadata unless the domain needs a new event kind with distinct behaviour.
+
+The collector worker is an adapter orchestrator. It loads configured
+`ConversationSourcePort` implementations, persists cursors through the daemon,
+and calls `ConversationIngestPort` with canonical deltas. The daemon does not
+scrape `~/.codex`, `~/.claude`, or provider databases directly.
+
+```mermaid
+flowchart LR
+    Corbusier[Corbusier service or repository]
+    Axinite[Axinite outbox or repository]
+    Codex[CODEX_HOME rollout files]
+    Claude[Claude hooks and transcripts]
+
+    SourcePort[ConversationSourcePort adapters]
+    Worker[memoryd-collector worker]
+    Ingest[ConversationIngestPort]
+    Inbox[(Evidence inbox)]
+
+    Corbusier -->|push canonical delta| Ingest
+    Axinite -->|push canonical delta| Ingest
+    Codex --> SourcePort
+    Claude --> SourcePort
+    SourcePort --> Worker
+    Worker -->|canonical delta| Ingest
+    Ingest --> Inbox
+```
+
+_Figure 3: Standard conversation ingestion paths._
+
+| Adapter                        | Source records                                                                                            | Boundary rule                                                                                                                     |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Corbusier conversation adapter | Request context, conversations, immutable messages, sequence numbers, content parts, and message metadata | Preserve tenant context and sequence order; emit canonical conversation deltas without leaking Corbusier domain types inward.     |
+| Codex rollout adapter          | `CODEX_HOME` rollout JSONL and archived rollout JSONL                                                     | Tail configured roots, persist byte offsets, and key idempotency by path, line, and line hash.                                    |
+| Claude Code adapter            | Hook JSON, transcript paths, compaction events, and transcript lines                                      | Treat command hooks as wake-up signals; tail transcripts asynchronously; never run long projection work inside hooks.             |
+| Axinite conversation adapter   | Conversations, messages, workspace documents, outbox events, and metadata                                 | Map Axinite conversations to source sessions and messages to evidence events without pretending they are Codex or Claude records. |
+| Axinite projection sink        | Optional curated/profile/fact projection writes back to Axinite workspace documents                       | Require policy gating and provenance metadata to prevent self-reinforcing write-back loops.                                       |
+| Manual import adapter          | Operator-supplied transcript or rollout paths                                                             | Read only explicitly supplied files under configured roots and record import actor and request ID.                                |
 
 _Table 4: Provider adapters and their source boundaries._
 
@@ -410,7 +525,7 @@ CREATE TABLE audit_log (
 );
 ```
 
-_Listing 1: Evidence inbox schema outline. The implementation may use SQLite,
+_Listing 2: Evidence inbox schema outline. The implementation may use SQLite,
 libSQL, or PostgreSQL, but these entities are the logical contract._
 
 Idempotency keys are provider-specific:
@@ -420,6 +535,8 @@ Idempotency keys are provider-specific:
 - Claude hook-only event:
   `claude-hook:{session_id}:{hook_event}:{monotonic_or_hash}`.
 - Axinite outbox: `axinite:{outbox_id}:{event_id}`.
+- Corbusier conversation:
+  `corbusier:{conversation_id}:{sequence_no}:{message_id}`.
 - MCP/manual write: `mcp:{client_id}:{request_id}`.
 
 The effective idempotency key is tenant-scoped. The same provider path, manual
@@ -454,7 +571,7 @@ flowchart LR
     Theme --> Recall
 ```
 
-_Figure 3: Projection pipeline from evidence to recall-serving artefacts._
+_Figure 4: Projection pipeline from evidence to recall-serving artefacts._
 
 ### 8.1 Source-of-truth boundaries
 
@@ -745,7 +862,7 @@ redact_before_embedding = true
 store_raw_text = "redacted" # none | redacted | encrypted
 ```
 
-_Listing 2: Initial configuration shape._
+_Listing 3: Initial configuration shape._
 
 ## 15. Verification strategy
 
@@ -840,3 +957,9 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
     <https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html>.
 [^14]: W3C RDF 1.1 Concepts and Abstract Syntax, accessed 2026-05-25:
     <https://www.w3.org/TR/rdf11-concepts/>.
+[^15]: Corbusier conversation references:
+    `../corbusier/src/message/ports/conversation.rs`,
+    `../corbusier/src/message/domain/conversation.rs`,
+    `../corbusier/src/message/domain/message.rs`, and
+    `../corbusier/docs/users-guide.md`.
+[^16]: `../axinite/src/history/store/conversations.rs`.

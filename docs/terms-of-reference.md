@@ -152,6 +152,9 @@ retrieve, corrupt, or delete another tenant's memory.
 
 - Capture Codex CLI, Claude Code, Axinite, and manual session evidence without
   requiring those tools to link against a shared library.
+- Provide a standardized conversation ingestion port so Corbusier, Axinite,
+  Codex, Claude, and manual import adapters can emit one canonical conversation
+  delta shape.
 - Normalize provider records into evidence objects that preserve source
   session, workspace, actor, event kind, text spans, payload hashes, and
   evidence references.
@@ -208,6 +211,9 @@ retrieve, corrupt, or delete another tenant's memory.
   Axinite conversations as Codex or Claude transcripts.
 - Corbusier can call `memoryd` with an authenticated tenant context and receive
   only tenant-scoped sessions, recall results, explanations, and health data.
+- Corbusier and Axinite conversation adapters can use the same daemon
+  ingestion port as the worker process that scrapes Codex and Claude session
+  files.
 
 ### 7.2 Operational success
 
@@ -363,6 +369,8 @@ The technical design should start from these constraints:
 - Keep Chutoro as a cluster proposal engine, not the owner of memory themes.
 - Keep Ollama outputs behind schema validation and support-reference checks.
 - Keep provider adapters above raw storage and below semantic projection.
+- Keep provider-specific conversation parsing in adapters and converge on a
+  canonical conversation delta before evidence inbox writes.
 - Keep Axinite as a first-class adapter, not as a special case baked into the
   core model.
 - Keep tenant context as part of every tenant-owned use case and port, not as

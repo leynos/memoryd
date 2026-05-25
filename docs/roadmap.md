@@ -7,7 +7,7 @@ workstream that answers a sequencing question, and each task is a review-sized
 execution unit with explicit source citations.
 
 The primary design sources are [Memoryd design](memoryd-design.md), the
-[terms of reference](terms-of-reference.md), ADRs 001-006, and RFCs 0001-0005.
+[terms of reference](terms-of-reference.md), ADRs 001-007, and RFCs 0001-0005.
 The roadmap keeps their central boundary intact: logs are evidence, Qdrant is a
 serving index, Oxigraph owns graph-shaped truth, Ollama is an extractor and
 embedding provider, Chutoro proposes clusters, and `memoryd` owns memory
@@ -16,7 +16,11 @@ own ports and use cases, while provider, storage, model, clustering, transport,
 CLI, and MCP code stay in adapters wired at the composition root. ADR 006 adds
 the tenant boundary: tenant context is part of every tenant-owned use case and
 port, while SQL, Qdrant, Oxigraph, and Chutoro adapters enforce that context
-with store-specific mechanisms.
+with store-specific mechanisms. ADR 007 adds the ingestion boundary:
+source-specific adapters emit canonical conversation deltas through a standard
+daemon ingestion port, while worker adapters discover and tail
+filesystem-backed Codex and Claude sources through a standard source-reader
+port.
 
 ## 1. Foundational contracts and build spine
 
@@ -107,6 +111,16 @@ terms-of-reference.md §§8-9 and memoryd-design.md §§16-17.
   - See memoryd-design.md §5.4 and ADR 006.
   - Success: all tenant-owned use cases, stores, indexes, graph namespaces,
     checkpoints, and purge paths can cite one accepted isolation contract.
+- [ ] 1.1.10. Accept or revise the standard conversation ingestion port ADR.
+  - Requires 1.1.8 and 1.1.9.
+  - Confirm `ConversationIngestPort`, `ConversationSourcePort`, canonical
+    conversation deltas, source cursor semantics, content parts, tombstones,
+    push-mode producers, pull-mode worker sources, and adapter conformance
+    fixtures.
+  - See memoryd-design.md §6.1, RFC 0001 §6, and ADR 007.
+  - Success: Corbusier, Axinite, Codex, Claude, and manual import adapters can
+    target one canonical ingestion contract without sharing implementation
+    details.
 
 ### 1.2. Establish the process, crate, and configuration spine
 
@@ -117,13 +131,14 @@ memoryd-design.md §§5, 12, and 14.
 
 - [ ] 1.2.1. Define the domain model and domain-owned port traits before any
   infrastructure adapter is implemented.
-  - Requires 1.1.8 and 1.1.9.
+  - Requires 1.1.8, 1.1.9, and 1.1.10.
   - Cover tenants, request context, workspaces, evidence, episodes, semantic
-    carriers, facts, profiles, themes, retractions, recall context packs,
-    audit decisions, clocks, identifier generation, evidence repositories,
-    graph repositories, vector indexes, embedding providers, extraction
-    providers, clustering providers, and audit sinks.
-  - See memoryd-design.md §§4-5.4 and ADRs 005-006.
+    carriers, canonical conversation deltas, conversation source ports,
+    conversation ingestion ports, facts, profiles, themes, retractions, recall
+    context packs, audit decisions, clocks, identifier generation, evidence
+    repositories, graph repositories, vector indexes, embedding providers,
+    extraction providers, clustering providers, and audit sinks.
+  - See memoryd-design.md §§4-6.1 and ADRs 005-007.
   - Success: domain tests compile and run without database, filesystem,
     Qdrant, Oxigraph, Ollama, Chutoro, UDS, HTTP, or MCP dependencies.
 - [ ] 1.2.2. Split the scaffold into reviewable crates for domain contracts,
@@ -166,11 +181,11 @@ memoryd-design.md §§5, 12, and 14.
     application use cases run.
 - [ ] 1.2.6. Add the shared contract fixture harness.
   - Requires 1.2.1-1.2.5.
-  - Store provider input examples, normalized evidence JSON, redaction
-    examples, two-tenant isolation examples, recall request examples, and
-    projection examples as stable fixtures.
+  - Store provider input examples, canonical conversation deltas, normalized
+    evidence JSON, redaction examples, two-tenant isolation examples, recall
+    request examples, and projection examples as stable fixtures.
   - Include port contract tests that fakes and real adapters must satisfy.
-  - See memoryd-design.md §§5.3-5.4, 6-8, and 15, ADRs 005-006, and RFCs
+  - See memoryd-design.md §§5.3-6.1, 6-8, and 15, ADRs 005-007, and RFCs
     0001-0005.
   - Success: each later slice can add fixture-backed behaviour and adapter
     conformance tests without inventing a parallel test format.
@@ -292,21 +307,30 @@ projection pipeline and compatibility story. See memoryd-design.md §6 and RFC
 
 - [ ] 2.2.1. Implement the collector-side provider adapter trait and adapter
   registry.
-  - Requires 2.1.2.
-  - Include session discovery, event reads, evidence-span reads, cursor
-    persistence, tenant binding, and capability checks.
-  - See memoryd-design.md §§5.3-5.4 and 6 and RFC 0001 §6.
+  - Requires 1.1.10 and 2.1.2.
+  - Implement `ConversationSourcePort` for worker-driven discovery, event
+    reads, evidence-span reads, cursor persistence, tenant binding, replay,
+    tombstones, and capability checks.
+  - See memoryd-design.md §§5.3-6.1 and 6 and RFC 0001 §6.
   - Success: a fixture adapter can feed canonical events through the same
     application use case as real adapters without calling persistence,
     Qdrant, Oxigraph, Ollama, or Chutoro adapters directly.
-- [ ] 2.2.2. Implement the redaction pipeline before storage and embedding.
-  - Requires 1.1.3 and 2.2.1.
+- [ ] 2.2.2. Implement the daemon-side conversation ingestion use case.
+  - Requires 1.1.10, 2.1.1, and 2.1.2.
+  - Implement `ConversationIngestPort` for canonical conversation deltas,
+    source-session materialization, ordered raw events, raw spans, cursor
+    updates, idempotency records, redaction state, and audit records.
+  - See memoryd-design.md §6.1, ADR 007, and RFC 0001 §6.
+  - Success: Corbusier, Axinite, Codex, Claude, and manual fixtures can all
+    enter the evidence inbox through one daemon-facing port.
+- [ ] 2.2.3. Implement the redaction pipeline before storage and embedding.
+  - Requires 1.1.3 and 2.2.2.
   - Detect configured secret classes, deny patterns, high-entropy blobs, and
     raw-text storage mode.
   - See memoryd-design.md §13 and terms-of-reference.md §§7.2 and 8.1.
   - Success: redaction fixtures prove that sensitive text is replaced before
     evidence rows or future embedding payloads are written.
-- [ ] 2.2.3. Implement workspace derivation for provider evidence.
+- [ ] 2.2.4. Implement workspace derivation for provider evidence.
   - Requires 1.1.2, 1.1.9, and 2.2.1.
   - Derive workspace IDs inside the authenticated tenant context from
     repository origin, root path hash, and optional profile name, with
@@ -314,9 +338,9 @@ projection pipeline and compatibility story. See memoryd-design.md §6 and RFC
   - See terms-of-reference.md §8.2 and memoryd-design.md §§5.4, 8.4, and 13.
   - Success: fixtures for Git, non-Git, moved paths, and origin aliases resolve
     to expected workspace IDs or explicit collision errors.
-- [ ] 2.2.4. Implement manual import for explicitly configured transcript and
+- [ ] 2.2.5. Implement manual import for explicitly configured transcript and
   rollout paths.
-  - Requires 2.2.1-2.2.3.
+  - Requires 2.2.1-2.2.4.
   - Enforce configured roots and reject arbitrary file reads.
   - See memoryd-design.md §§6, 11, and 13 and RFC 0001 §6.
   - Success: `memory_import_session` can import allowed files and refuses
@@ -330,17 +354,18 @@ It informs adapter abstractions before Axinite support lands. See
 memoryd-design.md §§6-7 and RFC 0001.
 
 - [ ] 2.3.1. Implement Codex rollout discovery and tailing.
-  - Requires 2.2.1-2.2.3.
+  - Requires 2.2.1-2.2.4.
   - Honour `CODEX_HOME`, discover session and archived-session JSONL roots,
-    persist byte offsets, and map rollout items to canonical events.
-  - See memoryd-design.md §6 and RFC 0001 §§6 and 9.
+    persist byte offsets, and map rollout items to canonical conversation
+    deltas.
+  - See memoryd-design.md §§6-6.1 and RFC 0001 §§6 and 9.
   - Success: representative Codex rollout fixtures ingest incrementally across
     restart without duplicated events.
 - [ ] 2.3.2. Implement Claude Code hook intake and transcript tailing.
-  - Requires 2.2.1-2.2.3.
+  - Requires 2.2.1-2.2.4.
   - Keep hook handling as a fast wake-up path and tail transcript content
-    asynchronously.
-  - See terms-of-reference.md §8.1, memoryd-design.md §§6 and 13, and RFC
+    asynchronously through `ConversationSourcePort`.
+  - See terms-of-reference.md §8.1, memoryd-design.md §§6-6.1 and 13, and RFC
     0001 §§6 and 9.
   - Success: hook fixtures for session start, prompt, compaction, stop, and
     session end enqueue ingest without running projection in the hook command.
@@ -672,10 +697,12 @@ core evidence model. See terms-of-reference.md §§7-8, memoryd-design.md §§6,
   - Success: purge removes raw evidence, graph namespaces, Qdrant collections,
     and future checkpoint state for the target tenant workspace.
 - [ ] 5.3.2. Implement Axinite conversation and workspace source adapters.
-  - Requires 2.2.1, 5.1.2, and 5.2.1.
-  - Map Axinite conversations to source sessions, messages to evidence events,
-    and workspace documents or revisions to document-revision evidence.
-  - See terms-of-reference.md §§5-6, memoryd-design.md §6, and RFC 0001 §8.
+  - Requires 1.1.10, 2.2.2, 5.1.2, and 5.2.1.
+  - Map Axinite conversations to canonical conversation deltas, messages to
+    ordered events, and workspace documents or revisions to document-revision
+    evidence.
+  - See terms-of-reference.md §§5-6, memoryd-design.md §§6-6.1, ADR 007, and
+    RFC 0001 §8.
   - Success: Axinite fixtures ingest without pretending to be Codex or Claude
     records.
 - [ ] 5.3.3. Implement policy-gated Axinite projection sink in shadow mode.
@@ -702,6 +729,16 @@ core evidence model. See terms-of-reference.md §§7-8, memoryd-design.md §§6,
   - See memoryd-design.md §5.4 and ADR 006.
   - Success: Corbusier integration examples exercise the same tenant-bound use
     cases as MCP, collector, and repair paths.
+- [ ] 5.3.6. Implement the Corbusier conversation adapter in push and fixture
+  modes.
+  - Requires 1.1.10, 2.2.2, and 5.3.5.
+  - Map Corbusier `RequestContext`, conversations, immutable messages,
+    sequence numbers, roles, content parts, and message metadata into
+    canonical conversation deltas.
+  - See memoryd-design.md §6.1 and ADR 007.
+  - Success: Corbusier fixtures ingest through the same `ConversationIngestPort`
+    as Axinite, Codex, Claude, and manual imports, while preserving tenant and
+    sequence boundaries.
 
 ## 6. Vertical slice 5: Themes and hierarchical recall
 

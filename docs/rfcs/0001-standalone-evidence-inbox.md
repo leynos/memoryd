@@ -35,6 +35,8 @@ relations, UDS RPC, capability scopes, and a security-first posture.
 - Goals:
   - Define the standalone evidence inbox entities.
   - Define provider-adapter responsibilities.
+  - Define a standard conversation ingestion port for structured application
+    sources and filesystem-backed worker sources.
   - Preserve Axinite compatibility through a provider adapter.
   - Keep ingestion idempotent across restarts, file rotations, hook retries,
     and manual imports.
@@ -51,6 +53,9 @@ relations, UDS RPC, capability scopes, and a security-first posture.
 
 Provider adapters convert native records into canonical evidence:
 
+- `CorbusierConversationAdapter` maps Corbusier request context,
+  conversations, immutable messages, sequence numbers, roles, content parts,
+  and message metadata into canonical conversation deltas.
 - `CodexRolloutAdapter` tails configured rollout JSONL roots.
 - `ClaudeCodeAdapter` handles hook wake-ups and tails transcripts.
 - `AxiniteConversationSource` reads Axinite conversations and messages.
@@ -59,6 +64,34 @@ Provider adapters convert native records into canonical evidence:
   Axinite with provenance metadata.
 - `ManualImportAdapter` imports explicitly requested files under configured
   roots.
+
+### Standard conversation ingestion ports
+
+Conversation ingestion has two standard ports.
+
+`ConversationIngestPort` is the daemon-facing driving port. It accepts a
+tenant-scoped request context and a canonical conversation delta. Corbusier,
+Axinite, the collector worker, and manual import tools all use this port when
+they want conversation material to become evidence inbox records.
+
+`ConversationSourcePort` is the source-reader contract implemented by adapters
+that the worker must discover, tail, page, or replay. Codex rollout scraping,
+Claude transcript scraping, Axinite pull mode, and future filesystem or
+database imports use this port. Push-mode sources, including Corbusier service
+hooks or Axinite transactional outbox events, may bypass the source-reader port
+and call `ConversationIngestPort` directly, but they must still emit the same
+canonical conversation delta.
+
+The canonical delta contains source identity, tenant request scope,
+conversation metadata, ordered events, content parts, cursor metadata,
+tombstones, correction metadata, and evidence references. Source-specific
+payload remains in redacted metadata unless the domain needs a new canonical
+event kind.
+
+The daemon does not scrape `~/.codex` or `~/.claude` directly. The
+`memoryd-collector` worker owns filesystem source adapters, persistent source
+cursors, and replay scheduling, then calls the daemon ingestion port with
+canonical deltas.
 
 ### Evidence inbox tables
 
@@ -103,6 +136,8 @@ Every ingest job has an idempotency key:
 - Claude hook-only event:
   `claude-hook:{session_id}:{hook_event}:{monotonic_or_hash}`.
 - Axinite outbox: `axinite:{outbox_id}:{event_id}`.
+- Corbusier conversation:
+  `corbusier:{conversation_id}:{sequence_no}:{message_id}`.
 - MCP/manual write: `mcp:{client_id}:{request_id}`.
 
 ## Compatibility and migration
@@ -124,6 +159,8 @@ track watermarks and tombstones carefully.
   Linux and native Linux?
 - Which exact Codex rollout item variants should become first-class parser
   fixtures?
+- Which Corbusier message metadata fields should become first-class canonical
+  content parts rather than redacted provider metadata?
 
 ## Recommendation
 
