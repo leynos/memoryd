@@ -14,7 +14,9 @@
   `docs/rfcs/0005-hierarchical-recall.md`,
   `docs/adr-001-qdrant-is-a-serving-index.md`,
   `docs/adr-002-dual-path-semantic-extraction.md`, and
-  `docs/adr-003-memoryd-owns-theme-management.md`.
+  `docs/adr-003-memoryd-owns-theme-management.md`,
+  `docs/adr-004-dual-mode-recall-gating.md`, and
+  `docs/adr-005-hexagonal-architecture-boundary.md`.
 - **Last substantive revision:** 2026-05-25.
 
 ## 1. Problem statement
@@ -97,6 +99,9 @@ _Table 1: Research findings that shape the standalone design._
 | Projection          | Derived artefact or serving record written from evidence, such as an episode summary, fact, graph edge, Qdrant payload, or theme.         |
 | Theme               | Durable navigation grouping over accepted semantic carriers. A theme is not evidence and is not a fact.                                   |
 | Recall context pack | Bounded response containing context blocks, projection classes, epistemic status, confidence, evidence references, and selection trace.   |
+| Driving adapter     | Edge component that invokes a use case, such as CLI, MCP, provider collector, scheduled job, hook handler, or debug HTTP.                 |
+| Driven adapter      | Edge component that implements a domain-owned port, such as persistence, Qdrant, Ollama, Oxigraph, Chutoro, clock, or audit output.       |
+| Port                | Domain-owned trait that describes a capability the application needs, using domain types rather than infrastructure types.                |
 
 _Table 2: Normative terminology._
 
@@ -170,10 +175,44 @@ loopback network ports, but Oxigraph remains embedded and private. The daemon
 is the only component allowed to write serving indexes, graph state, or
 projection state.
 
+### 5.3 Hexagonal dependency rule
+
+`memoryd` follows hexagonal architecture. The domain and application layers own
+the memory language and the port traits. Adapters implement those ports or
+translate external calls into application commands. Dependencies point inward:
+domain code must not import provider parser types, storage clients, model SDKs,
+clustering SDKs, UDS transport types, HTTP types, or MCP runtime types.
+
+The intended module boundary is:
+
+| Layer       | Owns                                                                                                                                    | Must not own                                                                                   |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Domain      | Workspaces, evidence, episodes, semantic carriers, facts, profiles, themes, retractions, recall context packs, and pure domain services | Filesystem watching, SQL, Qdrant, Oxigraph, Ollama, Chutoro, MCP, UDS, HTTP, or process config |
+| Application | Use cases such as ingest, finalize, recall, read facts, store curated memory, retract, import, list sessions, health, and purge         | Concrete adapter construction or infrastructure-specific request and response types            |
+| Adapters    | Provider parsing, persistence drivers, Qdrant, Ollama, Oxigraph, Chutoro, MCP, CLI, UDS, loopback HTTP, and filesystem integration      | Memory policy, promotion rules, contradiction handling, theme identity, or recall selection    |
+| Composition | Binary entrypoints, configuration loading, dependency injection, feature wiring, and runtime lifecycle                                  | Domain decisions beyond selecting configured adapter implementations                           |
+
+_Table 3: Hexagonal ownership boundaries._
+
+Domain-owned driven ports include evidence repositories, graph repositories,
+vector indexes, embedding providers, extraction providers, clustering
+providers, audit sinks, clocks, identifier generation, and policy stores.
+Driving adapters include CLI commands, MCP tools, provider collector loops,
+collector hook commands, file-watch wake-ups, scheduled jobs, and debug
+loopback HTTP handlers.
+
+Adapters never call one another directly. For example, the Claude Code adapter
+does not write Qdrant; it emits evidence through the ingest use case. The MCP
+adapter does not read Oxigraph or Qdrant; it calls recall or read use cases.
+The theme adapter around Chutoro never decides durable theme identity; the
+domain `ThemeManager` does.
+
 ## 6. Provider adapters
 
-Provider adapters sit above native storage and below semantic projection. They
-must not leak provider-specific event shapes into the core pipeline.
+Provider adapters are driving adapters into the ingest use case. They sit above
+native provider storage and below semantic projection. They must not leak
+provider-specific event shapes into the core pipeline or write to driven
+adapters such as persistence, Qdrant, Oxigraph, Ollama, or Chutoro directly.
 
 ```mermaid
 flowchart TB
@@ -197,7 +236,7 @@ _Figure 2: Adapter boundary between provider records and memory projection._
 | Axinite projection sink      | Optional curated/profile/fact projection writes back to Axinite workspace documents | Require policy gating and provenance metadata to prevent self-reinforcing write-back loops.                                       |
 | Manual import adapter        | Operator-supplied transcript or rollout paths                                       | Read only explicitly supplied files under configured roots and record import actor and request ID.                                |
 
-_Table 3: Provider adapters and their source boundaries._
+_Table 4: Provider adapters and their source boundaries._
 
 ## 7. Canonical evidence model
 
@@ -340,7 +379,7 @@ _Figure 3: Projection pipeline from evidence to recall-serving artefacts._
 | Qdrant              | Vector indexes and denormalized serving payloads for episodes, summaries, semantic carriers, themes, and profiles | Truth, provenance, or retraction authority                               |
 | Chutoro checkpoints | Rebuildable clustering acceleration state                                                                         | Durable memory identity or theme membership authority                    |
 
-_Table 4: Store authority boundaries._
+_Table 5: Store authority boundaries._
 
 ### 8.2 Projection classes and epistemic status
 
@@ -415,7 +454,7 @@ The default policy starts in shadow mode:
 | `split_cooldown`          | `1h`    | Prevents repeated churn in the same dense region.          |
 | `merge_cooldown`          | `1h`    | Prevents repeated merge oscillation.                       |
 
-_Table 5: Initial theme-management policy._
+_Table 6: Initial theme-management policy._
 
 ## 10. Recall
 
@@ -432,7 +471,7 @@ Required recall profiles:
 | `hierarchical_v2` | Default top-down theme, semantic-carrier, and episode retrieval.                             |
 | `evidence_v2`     | Hierarchical recall with optional model-assisted expansion gating.                           |
 
-_Table 6: Recall profiles._
+_Table 7: Recall profiles._
 
 The daemon returns context blocks, selected theme IDs, selected semantic IDs,
 selected episode IDs, provenance references, fallback reasons, and a selection
@@ -455,7 +494,7 @@ semantics differ: tools call `memoryd`, not Qdrant.
 | `memory_profile`        | Read/write | Read or update stable profile material.                                   |
 | `memory_health`         | Read       | Report daemon, dependency, collector, and theme state.                    |
 
-_Table 7: MCP tool surface._
+_Table 8: MCP tool surface._
 
 Read-only mode disables `memory_store`, `memory_retract`,
 `memory_import_session`, and profile updates. The daemon also enforces
@@ -593,7 +632,7 @@ verification beyond ordinary unit and behavioural tests.
 | Projection provenance        | Property tests and fixture-based replay that reject semantic carriers with unresolved support references | Extractor outputs, validator, Qdrant writes, and Oxigraph writes              |
 | Workspace purge completeness | End-to-end fixture that creates evidence, graph edges, Qdrant payloads, Chutoro checkpoints, then purges | Evidence inbox, Oxigraph namespaces, Qdrant collections, and checkpoint files |
 
-_Table 8: Design-level verification targets._
+_Table 9: Design-level verification targets._
 
 The integration surface is combinatorial: provider (`codex`, `claude_code`,
 `axinite`, `manual`) × daemon mode (`observe`, `project_shadow`,
@@ -602,6 +641,12 @@ The integration surface is combinatorial: provider (`codex`, `claude_code`,
 must include each provider in `observe`, one provider in full active recall,
 read-only MCP denial of each write tool, and one purge path with projected
 Qdrant, Oxigraph, and Chutoro artefacts.
+
+Hexagonal conformance is a fourth correctness surface. Domain tests must run
+without infrastructure. Application tests use fake or mocked ports. Adapter
+tests verify concrete implementations against port contracts. End-to-end tests
+exercise the composition root. Static architecture checks should fail if domain
+or application crates import adapter crates or infrastructure SDK types.
 
 ## 16. Rollout sequence
 

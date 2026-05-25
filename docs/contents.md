@@ -51,6 +51,8 @@ set.
   records the boundary between Chutoro clustering and durable themes.
 - [ADR 004: Dual-mode recall gating](adr-004-dual-mode-recall-gating.md)
   records the proxy and model-assisted recall expansion strategy.
+- [ADR 005: Hexagonal architecture boundary](adr-005-hexagonal-architecture-boundary.md)
+  records the dependency rule, port ownership, and adapter boundaries.
 
 ## Requests for comments
 

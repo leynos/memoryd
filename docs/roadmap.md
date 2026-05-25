@@ -7,10 +7,13 @@ workstream that answers a sequencing question, and each task is a review-sized
 execution unit with explicit source citations.
 
 The primary design sources are [Memoryd design](memoryd-design.md), the
-[terms of reference](terms-of-reference.md), ADRs 001-004, and RFCs 0001-0005.
+[terms of reference](terms-of-reference.md), ADRs 001-005, and RFCs 0001-0005.
 The roadmap keeps their central boundary intact: logs are evidence, Qdrant is a
 serving index, Oxigraph owns graph-shaped truth, Ollama is an extractor and
-embedding provider, Chutoro proposes clusters, and `memoryd` owns memory policy.
+embedding provider, Chutoro proposes clusters, and `memoryd` owns memory
+policy. ADR 005 adds the implementation boundary: domain and application code
+own ports and use cases, while provider, storage, model, clustering, transport,
+CLI, and MCP code stay in adapters wired at the composition root.
 
 ## 1. Foundational contracts and build spine
 
@@ -85,6 +88,13 @@ terms-of-reference.md §§8-9 and memoryd-design.md §§16-17.
   - See terms-of-reference.md §§6-7, memoryd-design.md §11, and RFC 0005 §5.
   - Success: the MCP crate can reject out-of-scope tools deliberately rather
     than accidentally omitting required v1 behaviour.
+- [ ] 1.1.8. Accept or revise the hexagonal architecture boundary ADR.
+  - Requires 1.1.1-1.1.7.
+  - Confirm bounded context scope, port ownership, adapter isolation, error
+    strategy, event handling, and query model before implementation begins.
+  - See memoryd-design.md §5.3 and ADR 005.
+  - Success: all later crate, port, adapter, and test tasks can cite one
+    accepted dependency rule.
 
 ### 1.2. Establish the process, crate, and configuration spine
 
@@ -93,46 +103,71 @@ processes and their shared contracts without leaking infrastructure details
 into domain code. Its outcome unlocks all vertical slices. See
 memoryd-design.md §§5, 12, and 14.
 
-- [ ] 1.2.1. Split the scaffold into reviewable crates for domain contracts,
-  daemon runtime, collector runtime, MCP front end, and provider adapters.
-  - Requires 1.1.1 and 1.1.7.
-  - Keep shared types in a domain crate and keep binary entrypoints thin.
-  - See memoryd-design.md §§5.1, 6, 11, and 12.
+- [ ] 1.2.1. Define the domain model and domain-owned port traits before any
+  infrastructure adapter is implemented.
+  - Requires 1.1.8.
+  - Cover workspaces, evidence, episodes, semantic carriers, facts, profiles,
+    themes, retractions, recall context packs, audit decisions, clocks,
+    identifier generation, evidence repositories, graph repositories, vector
+    indexes, embedding providers, extraction providers, clustering providers,
+    and audit sinks.
+  - See memoryd-design.md §§4-5.3 and ADR 005.
+  - Success: domain tests compile and run without database, filesystem,
+    Qdrant, Oxigraph, Ollama, Chutoro, UDS, HTTP, or MCP dependencies.
+- [ ] 1.2.2. Split the scaffold into reviewable crates for domain contracts,
+  application use cases, daemon runtime, collector runtime, MCP front end, and
+  adapters.
+  - Requires 1.2.1.
+  - Keep shared types and driven ports in the domain crate, use cases in the
+    application crate, adapter implementations at the edge, and binary
+    entrypoints thin.
+  - See memoryd-design.md §§5.1, 5.3, 6, 11, and 12 and ADR 005.
   - Success: `memoryd`, `memoryd-collector`, and `memoryd-mcp` build as
     separate binaries with no direct Qdrant, Oxigraph, Ollama, or Chutoro
-    dependency in provider-only code.
-- [ ] 1.2.2. Implement the initial TOML configuration model and validation
+    dependency in domain or application crates.
+- [ ] 1.2.3. Implement the initial TOML configuration model and validation
   errors.
-  - Requires 1.2.1.
+  - Requires 1.2.2.
   - Cover daemon, store, Qdrant, Ollama, graph, Chutoro, provider, and privacy
     sections.
-  - See memoryd-design.md §14.
+  - See memoryd-design.md §§5.3 and 14.
   - Success: invalid configurations fail with semantic errors and valid
-    minimal configurations can start in `observe` mode.
-- [ ] 1.2.3. Implement process startup, shutdown, and structured diagnostics
+    minimal configurations can be composed into adapter selections at the
+    binary edge.
+- [ ] 1.2.4. Implement process startup, shutdown, and structured diagnostics
   for all binaries.
-  - Requires 1.2.1 and 1.2.2.
+  - Requires 1.2.2 and 1.2.3.
   - Add tracing spans, health-oriented state fields, and graceful shutdown
     handling for foreground and daemon modes.
   - See memoryd-design.md §§5.1, 12, and 15.
   - Success: each binary reports startup configuration, dependency mode, and
     shutdown reason without using unstructured standard output in library code.
-- [ ] 1.2.4. Implement the internal RPC envelope and capability-token model.
-  - Requires 1.2.1 and 1.2.2.
+- [ ] 1.2.5. Implement the internal RPC envelope and capability-token driving
+  adapter.
+  - Requires 1.2.2 and 1.2.3.
   - Define UDS defaults, loopback debug mode, bearer or capability token
     parsing, request IDs, and error envelopes.
-  - See memoryd-design.md §§5.2 and 12 and RFC 0001 §5.
+  - See memoryd-design.md §§5.2, 5.3, and 12 and RFC 0001 §5.
   - Success: collector and MCP callers can authenticate to a test daemon with
-    scoped capabilities, and unauthorized methods are rejected before domain
-    handlers run.
-- [ ] 1.2.5. Add the shared contract fixture harness.
-  - Requires 1.2.1-1.2.4.
+    scoped capabilities, and unauthorized methods are rejected before
+    application use cases run.
+- [ ] 1.2.6. Add the shared contract fixture harness.
+  - Requires 1.2.1-1.2.5.
   - Store provider input examples, normalized evidence JSON, redaction
     examples, recall request examples, and projection examples as stable
     fixtures.
-  - See memoryd-design.md §§6-8 and 15 and RFCs 0001-0005.
-  - Success: each later slice can add fixture-backed behaviour without
-    inventing a parallel test format.
+  - Include port contract tests that fakes and real adapters must satisfy.
+  - See memoryd-design.md §§5.3, 6-8, and 15, ADR 005, and RFCs 0001-0005.
+  - Success: each later slice can add fixture-backed behaviour and adapter
+    conformance tests without inventing a parallel test format.
+- [ ] 1.2.7. Add architecture fitness checks for the dependency rule.
+  - Requires 1.2.2.
+  - Fail the build when domain or application crates import adapter crates or
+    infrastructure SDK types, and document the allow-list for composition-root
+    code.
+  - See memoryd-design.md §§5.3 and 15 and ADR 005.
+  - Success: a deliberate adapter import in domain or application code fails
+    the check before review.
 
 ### 1.3. Build the day-one operator surface
 
@@ -146,13 +181,13 @@ developers-guide.md, and memoryd-design.md §§12 and 15.
   - Requires steps 1.1-1.2.
   - Keep the commands local-only and safe when no external dependencies are
     running.
-  - See memoryd-design.md §§12, 14, and 15.
+  - See memoryd-design.md §§5.3, 12, 14, and 15.
   - Success: the README quick start can demonstrate a real command that
     validates configuration and reports daemon readiness.
 - [ ] 1.3.2. Add `memoryd-collector health` and `memoryd-mcp health` command
   stubs backed by the shared configuration and RPC envelope.
-  - Requires 1.2.2 and 1.2.4.
-  - See memoryd-design.md §§5.1, 11, and 12.
+  - Requires 1.2.3 and 1.2.5.
+  - See memoryd-design.md §§5.1, 5.3, 11, and 12.
   - Success: all three binaries expose a consistent operator health contract
     before provider ingestion starts.
 - [ ] 1.3.3. Update the README, users' guide, and developers' guide for the
@@ -181,12 +216,13 @@ between untrusted provider input and later memory projection. It informs every
 adapter and replay path. See memoryd-design.md §7 and RFC 0001.
 
 - [ ] 2.1.1. Implement evidence inbox migrations and repository APIs.
-  - Requires 1.1.1 and 1.2.5.
+  - Requires 1.1.1, 1.2.6, and 1.2.7.
   - Cover `source_session`, `source_cursor`, `raw_event`, `raw_span`,
     `ingest_job`, `projection_state`, and `audit_log`.
   - See memoryd-design.md §7 and RFC 0001 §§6-7.
   - Success: fixture data can be inserted, replayed, and queried through
-    typed APIs without exposing SQL details to adapters.
+    port-backed APIs without exposing SQL details to domain or application
+    code.
 - [ ] 2.1.2. Implement provider-neutral evidence, span, and evidence-reference
   domain types.
   - Requires 2.1.1.
@@ -215,13 +251,15 @@ core model Codex-shaped, Claude-shaped, or Axinite-shaped. It informs the
 projection pipeline and compatibility story. See memoryd-design.md §6 and RFC
 0001 §§6 and 8.
 
-- [ ] 2.2.1. Implement the provider adapter trait and adapter registry.
+- [ ] 2.2.1. Implement the collector-side provider adapter trait and adapter
+  registry.
   - Requires 2.1.2.
   - Include session discovery, event reads, evidence-span reads, cursor
     persistence, and capability checks.
-  - See memoryd-design.md §6 and RFC 0001 §6.
+  - See memoryd-design.md §§5.3 and 6 and RFC 0001 §6.
   - Success: a fixture adapter can feed canonical events through the same
-    daemon ingest RPC as real adapters.
+    application use case as real adapters without calling persistence,
+    Qdrant, Oxigraph, Ollama, or Chutoro adapters directly.
 - [ ] 2.2.2. Implement the redaction pipeline before storage and embedding.
   - Requires 1.1.3 and 2.2.1.
   - Detect configured secret classes, deny patterns, high-entropy blobs, and
@@ -288,7 +326,7 @@ recall tools. See memoryd-design.md §§11-12.
   - Success: operators can browse captured sessions without reading raw
     transcript files.
 - [ ] 2.4.2. Implement `memory_sessions` and `memory_health` MCP tools.
-  - Requires 1.1.7, 1.2.4, and 2.4.1.
+  - Requires 1.1.7, 1.2.5, and 2.4.1.
   - Preserve read-only mode and capability enforcement.
   - See memoryd-design.md §§11-12.
   - Success: MCP clients can inspect sessions and daemon health in read-only
@@ -319,7 +357,7 @@ of truth. It informs projection-state repair and later episode indexing. See
 ADR 001 and memoryd-design.md §§8.1 and 8.4.
 
 - [ ] 3.1.1. Implement the Qdrant client port and collection manager.
-  - Requires 1.1.2, 1.2.2, and 2.1.1.
+  - Requires 1.1.2, 1.2.3, and 2.1.1.
   - Support per-workspace collections, named vectors, payload schemas, and
     rebuildable projection writes.
   - See memoryd-design.md §§8.1 and 8.4 and ADR 001.
@@ -327,7 +365,7 @@ ADR 001 and memoryd-design.md §§8.1 and 8.4.
     without losing evidence or audit state.
 - [ ] 3.1.2. Implement the Ollama embedding provider and embedding-model
   contract.
-  - Requires 1.2.2.
+  - Requires 1.2.3.
   - Validate vector dimensions and record model identity with projections.
   - See memoryd-design.md §§8.3, 8.4, and 14.
   - Success: ingestion and query paths reject mismatched embedding models
@@ -779,10 +817,11 @@ memoryd-design.md §15.
 - [ ] 7.2.3. Update developer documentation for crate boundaries, fixtures,
   adapters, graph state, Qdrant projections, and Chutoro checkpoints.
   - Requires phases 2-6.
-  - See docs/developers-guide.md, docs/repository-layout.md, and
-    memoryd-design.md §§5-15.
-  - Success: a contributor can add a provider adapter or projection path using
-    documented contracts and fixture expectations.
+  - See docs/developers-guide.md, docs/repository-layout.md,
+    memoryd-design.md §§5.3-15, and ADR 005.
+  - Success: a contributor can add a provider adapter, driven adapter, or
+    projection path using documented port contracts, dependency rules, and
+    fixture expectations.
 - [ ] 7.2.4. Add release-readiness end-to-end validation.
   - Requires 7.2.1-7.2.3.
   - Cover local install, first-run config, observe-mode ingest, curated store,
