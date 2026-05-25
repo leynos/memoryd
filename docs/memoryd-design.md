@@ -2,8 +2,7 @@
 
 - **Status:** Draft v0.1.
 - **Scope:** Standalone local `memoryd` daemon, collector sidecar, MCP front
-  end,
-  provider adapters, evidence model, projection pipeline, recall path, and
+  end, provider adapters, evidence model, projection pipeline, recall path, and
   storage boundaries.
 - **Audience:** Implementers, design reviewers, Axinite integrators, and
   operators running local coding-agent memory infrastructure.
