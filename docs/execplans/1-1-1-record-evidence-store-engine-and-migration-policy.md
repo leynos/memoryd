@@ -5,7 +5,7 @@ This ExecPlan (execution plan) is a living document. The sections
 `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
 proceeds.
 
-Status: DRAFT
+Status: IN PROGRESS
 
 ## Purpose / big picture
 
@@ -454,8 +454,12 @@ slice test matrix:
   mxd prior art, including Diesel support for SQLite/PostgreSQL and
   `embed_migrations!`.
 - [x] 2026-05-26: Drafted this pre-implementation ExecPlan.
-- [ ] Await explicit user approval before implementing the ADR and source
-  document updates.
+- [x] 2026-05-26: Received explicit user approval to implement this ExecPlan.
+- [x] 2026-05-26: Milestone 1: wrote ADR 013, passed `make markdownlint`
+  and `make nixie`, and cleared CodeRabbit review with zero findings.
+- [ ] 2026-05-26: Milestone 2: align source documents with the ADR.
+- [ ] 2026-05-26: Milestone 3: mark roadmap item 1.1.1 done after final
+  validation.
 
 ## Surprises & Discoveries
 
@@ -492,6 +496,13 @@ slice test matrix:
   file set unless the ADR introduces user-visible behaviour. Rationale: a
   decision record and roadmap alignment do not by themselves change how users
   operate the server.
+- 2026-05-26: Move the ExecPlan to `IN PROGRESS` after explicit approval.
+  Rationale: the approval gate is now satisfied, so milestone implementation
+  can proceed within the documented tolerances.
+- 2026-05-26: Keep the first milestone to ADR 013 plus the living ExecPlan
+  update. Rationale: CodeRabbit review confirmed the decision record itself
+  is clean, and source-document alignment is deliberately isolated in
+  Milestone 2.
 
 ## Outcomes & Retrospective
 
