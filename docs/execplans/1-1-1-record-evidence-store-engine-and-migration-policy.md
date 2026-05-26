@@ -4,7 +4,7 @@ This ExecPlan (execution plan) is a living document. The sections `Constraints`,
  `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
 and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 ## Purpose / big picture
 
@@ -455,8 +455,10 @@ slice test matrix:
   passed `make check-fmt`, `make typecheck`, `make lint`, `make test`,
   `make markdownlint`, and `make nixie`, and cleared CodeRabbit review with
   zero findings.
-- [ ] 2026-05-26: Milestone 3: mark roadmap item 1.1.1 done after final
-  validation.
+- [x] 2026-05-26: Milestone 3: verified the evidence-store engine question is
+  no longer open in source documents, marked roadmap item 1.1.1 done, passed
+  the full final gate set, and cleared final CodeRabbit review with zero
+  findings.
 
 ## Surprises & Discoveries
 
@@ -511,6 +513,20 @@ slice test matrix:
 
 ## Outcomes & Retrospective
 
-Not started. Complete this section after implementation lands. Record the ADR
-created, documents updated, gates passed, CodeRabbit findings addressed, and
-any deviations from this plan.
+Implemented as a documentation-only contract slice. ADR 013 now records the
+accepted joint SQLite/PostgreSQL evidence-store policy, Diesel-backed adapter
+expectation, lockstep migration rule, backup expectation, and first-slice test
+matrix. The design document, terms of reference, RFC 0001, contents index, and
+roadmap now point at that accepted decision instead of treating the
+evidence-store engine as unresolved.
+
+Validation passed for each committed milestone. The final successful gate set
+was `make check-fmt`, `make typecheck`, `make lint`, `make test`,
+`make markdownlint`, and `make nixie`. CodeRabbit reviewed the ADR milestone,
+the source-document alignment milestone, and the final roadmap-completion
+milestone; all final reviews completed with zero findings.
+
+The only deviation from the ideal workflow was `make fmt`: it is not currently
+usable as a scoped documentation formatter because its Markdown fixer reports
+pre-existing line-length findings and touches unrelated files. Those formatter
+side effects were discarded, and the explicit required validation gates passed.

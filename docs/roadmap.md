@@ -55,7 +55,7 @@ deliberately postpones decisions whose first irreversible consequence appears
 in later slices. See terms-of-reference.md §§8-9, memoryd-design.md §§16-17,
 and RFC 0006.
 
-- [ ] 1.1.1. Record the evidence-store engine and migration policy.
+- [x] 1.1.1. Record the evidence-store engine and migration policy.
   - Decided: v1 uses SQLite as the local default and PostgreSQL as a
     first-class deployment path, abstracted through Diesel and maintained with
     lockstep migrations per ADR 013.
