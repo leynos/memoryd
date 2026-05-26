@@ -165,10 +165,12 @@ Axinite remains compatible in two modes:
 Push mode gives stronger consistency. Pull mode is easier to retrofit, but must
 track watermarks and tombstones carefully.
 
+ADR 013 resolves the evidence-store engine policy for this RFC. The standalone
+evidence inbox uses SQLite as the local default and PostgreSQL as a first-class
+deployment path, with Diesel-backed adapters and lockstep migrations.
+
 ## Open questions
 
-- Which store is the default evidence inbox: SQLite, libSQL, PostgreSQL, or a
-  supported set?
 - Which file-locking and cursor rules are needed for Windows Subsystem for
   Linux and native Linux?
 - Which exact Codex rollout item variants should become first-class parser

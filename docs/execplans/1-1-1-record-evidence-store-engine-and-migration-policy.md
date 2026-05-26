@@ -1,9 +1,8 @@
 # Record the evidence-store engine and migration policy
 
-This ExecPlan (execution plan) is a living document. The sections
-`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
-`Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
-proceeds.
+This ExecPlan (execution plan) is a living document. The sections `Constraints`,
+ `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
+and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
 Status: IN PROGRESS
 
@@ -68,10 +67,9 @@ approves the plan.
   document the reason in `Decision Log`, and ask for approval before editing
   code.
 - Scope: if more than six repository files need changes, stop and ask whether
-  to split the work. The expected files are the new ADR plus
-  `docs/roadmap.md`, `docs/terms-of-reference.md`,
-  `docs/memoryd-design.md`, `docs/rfcs/0001-standalone-evidence-inbox.md`,
-  and `docs/contents.md`.
+  to split the work. The expected files are the new ADR plus `docs/roadmap.md`,
+  `docs/terms-of-reference.md`, `docs/memoryd-design.md`,
+  `docs/rfcs/0001-standalone-evidence-inbox.md`, and `docs/contents.md`.
 - Interface: if the plan appears to require a public command-line interface,
   MCP tool, or configuration key before the storage ADR is accepted, stop and
   defer that interface to the implementation slice that first uses it.
@@ -105,16 +103,16 @@ approves the plan.
   neutral.
 - Risk: Backup expectations could be over-promised before tooling exists.
   Severity: medium. Likelihood: medium. Mitigation: require operator
-  documentation to recommend explicit pre-migration and pre-purge backups
-  while making clear that automatic backup tooling is a later feature unless
+  documentation to recommend explicit pre-migration and pre-purge backups while
+  making clear that automatic backup tooling is a later feature unless
   implemented.
 - Risk: `make lint` and `make test` may be slow for a documentation-only
   change. Severity: low. Likelihood: medium. Mitigation: run them anyway
   because the task explicitly requests these gates after major milestones.
 - Risk: The imported `rstest-bdd` and `pg_embedded_setup_unpriv` guides may
   become stale as upstream evolves. Severity: low. Likelihood: medium.
-  Mitigation: cite the pinned local docs for implementation guidance and
-  update them only in a separate dependency-documentation slice.
+  Mitigation: cite the pinned local docs for implementation guidance and update
+  them only in a separate dependency-documentation slice.
 
 ## Relevant documentation and skills
 
@@ -162,8 +160,7 @@ Its relevant pattern is:
 - compile-time backend feature selection so exactly one storage backend is
   linked for a build;
 - PostgreSQL integration tests that use `POSTGRES_TEST_URL` when supplied and
-  otherwise bootstrap an embedded test cluster with
-  `pg_embedded_setup_unpriv`;
+  otherwise bootstrap an embedded test cluster with `pg_embedded_setup_unpriv`;
 - a test helper that distinguishes PostgreSQL unavailability from genuine
   initialization failure, so local optional skips do not hide configured
   database failures.
@@ -179,8 +176,8 @@ cannot otherwise notice changed migration files.
 
 ## Architecture target for the future implementation
 
-The ADR should describe the target architecture without implementing it in
-this slice:
+The ADR should describe the target architecture without implementing it in this
+slice:
 
 - Domain model: tenant-scoped evidence concepts, store-engine policy names,
   migration version identity, and backup-policy vocabulary. No SQL or Diesel
@@ -192,12 +189,11 @@ this slice:
   and contract tests.
 - PostgreSQL adapter: Diesel-backed deployment path for enterprise and
   hosted-ready use. It sets transaction-local tenant context, enables RLS for
-  tenant-owned tables, and uses non-owner application roles without
-  `BYPASSRLS`.
+  tenant-owned tables, and uses non-owner application roles without `BYPASSRLS`.
 - Migration layout: paired `migrations/sqlite/<version>_<name>/` and
-  `migrations/postgres/<version>_<name>/` directories. Every version must
-  exist in both trees, use the same semantic migration name, and preserve the
-  same logical schema contract even where SQL differs.
+  `migrations/postgres/<version>_<name>/` directories. Every version must exist
+  in both trees, use the same semantic migration name, and preserve the same
+  logical schema contract even where SQL differs.
 - Testing: repository contract tests run against SQLite and PostgreSQL. The
   PostgreSQL path uses `POSTGRES_TEST_URL` when set and otherwise uses
   `pg_embedded_setup_unpriv` through `rstest` fixtures modelled after `mxd`.
@@ -313,17 +309,17 @@ evidence inbox store records the selected answer. Keep any still-open tenant
 storage strategy questions if they extend beyond the evidence store, but do not
 leave the default evidence store undecided.
 
-Update `docs/rfcs/0001-standalone-evidence-inbox.md` so its open question
-about SQLite, libSQL, PostgreSQL, or a supported set is resolved by ADR 013.
-The RFC should either remove that bullet from `Open questions` or replace it
-with a sentence in the compatibility section that says ADR 013 selects the
-joint SQLite/PostgreSQL policy.
+Update `docs/rfcs/0001-standalone-evidence-inbox.md` so its open question about
+SQLite, libSQL, PostgreSQL, or a supported set is resolved by ADR 013. The RFC
+should either remove that bullet from `Open questions` or replace it with a
+sentence in the compatibility section that says ADR 013 selects the joint
+SQLite/PostgreSQL policy.
 
 Update `docs/contents.md` to add ADR 013 to the design records list.
 
-Update `docs/roadmap.md` only to align task text with the now-settled
-decision. Do not mark item 1.1.1 done yet in this milestone unless all
-acceptance criteria are complete.
+Update `docs/roadmap.md` only to align task text with the now-settled decision.
+Do not mark item 1.1.1 done yet in this milestone unless all acceptance
+criteria are complete.
 
 Run the required gates sequentially:
 
@@ -426,13 +422,12 @@ slice test matrix:
 - SQLite integration tests that run by default and validate schema versioning,
   idempotent re-runs, tenant-scoped uniqueness, and rollback expectations.
 - PostgreSQL integration tests that use `POSTGRES_TEST_URL` when provided and
-  otherwise `pg_embedded_setup_unpriv`; configured external PostgreSQL
-  failures must fail closed, while missing optional local embedded support may
-  produce an explicit skip.
+  otherwise `pg_embedded_setup_unpriv`; configured external PostgreSQL failures
+  must fail closed, while missing optional local embedded support may produce
+  an explicit skip.
 - Cross-backend contract tests that prove equivalent repository behaviour for
-  happy paths, duplicate idempotency keys, missing tenant context,
-  cross-tenant access attempts, migration checksum drift, and unsupported
-  downgrade attempts.
+  happy paths, duplicate idempotency keys, missing tenant context, cross-tenant
+  access attempts, migration checksum drift, and unsupported downgrade attempts.
 - Property tests with `proptest` only if implementation introduces an invariant
   over generated migration manifests, schema versions, tenant scopes, or
   idempotency keys.
@@ -443,8 +438,7 @@ slice test matrix:
 ## Progress
 
 - [x] 2026-05-26: Loaded the requested `leta`, `rust-router`, and
-  `hexagonal-architecture` skills; created a Leta workspace for the
-  repository.
+  `hexagonal-architecture` skills; created a Leta workspace for the repository.
 - [x] 2026-05-26: Renamed the local branch to
   `1-1-1-record-evidence-store-engine-and-migration-policy`.
 - [x] 2026-05-26: Created context pack `memoryd-1-1-1-plan` for team planning
@@ -457,7 +451,10 @@ slice test matrix:
 - [x] 2026-05-26: Received explicit user approval to implement this ExecPlan.
 - [x] 2026-05-26: Milestone 1: wrote ADR 013, passed `make markdownlint`
   and `make nixie`, and cleared CodeRabbit review with zero findings.
-- [ ] 2026-05-26: Milestone 2: align source documents with the ADR.
+- [x] 2026-05-26: Milestone 2: aligned source documents with ADR 013,
+  passed `make check-fmt`, `make typecheck`, `make lint`, `make test`,
+  `make markdownlint`, and `make nixie`, and cleared CodeRabbit review with
+  zero findings.
 - [ ] 2026-05-26: Milestone 3: mark roadmap item 1.1.1 done after final
   validation.
 
@@ -476,6 +473,11 @@ slice test matrix:
 - Diesel's `embed_migrations!` documentation notes that migration files are
   read at compile time and require a `build.rs` rerun hint if changed
   migrations should force a rebuild.
+- `make fmt` is not a usable milestone gate for this documentation slice:
+  `markdownlint --fix` reports pre-existing line-length findings across
+  unrelated Markdown files and touched files outside the expected scope. The
+  unrelated formatter side effects were discarded; deterministic validation is
+  continuing with the explicit gates required by this ExecPlan.
 
 ## Decision Log
 
@@ -500,9 +502,12 @@ slice test matrix:
   Rationale: the approval gate is now satisfied, so milestone implementation
   can proceed within the documented tolerances.
 - 2026-05-26: Keep the first milestone to ADR 013 plus the living ExecPlan
-  update. Rationale: CodeRabbit review confirmed the decision record itself
-  is clean, and source-document alignment is deliberately isolated in
-  Milestone 2.
+  update. Rationale: CodeRabbit review confirmed the decision record itself is
+  clean, and source-document alignment is deliberately isolated in Milestone 2.
+- 2026-05-26: Keep the tenant storage strategy open after resolving the
+  evidence-store engine question. Rationale: ADR 013 settles the evidence
+  store, but Qdrant, Oxigraph, Chutoro, local, Corbusier, and hosted-ready
+  isolation still need a broader deployment decision.
 
 ## Outcomes & Retrospective
 

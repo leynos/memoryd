@@ -73,6 +73,10 @@ set.
   repair, and future recomputation.
 - [ADR 012: Durable recall audits](adr-012-durable-recall-audits.md) records
   configurable persistence for decision-relevant recall traces.
+- [ADR 013: Evidence-store engine and migration policy](adr-013-evidence-store-engine-and-migration-policy.md)
+  records the joint SQLite/PostgreSQL evidence-store policy, Diesel-backed
+  adapter expectation, lockstep migration rule, backup expectation, and
+  first-slice test matrix.
 
 ## Requests for comments
 

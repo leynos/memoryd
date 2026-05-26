@@ -98,10 +98,11 @@ split, Chutoro theme boundary, and hierarchical recall model.[^2][^3][^4][^5]
 
 ### 2.3 Minimum useful deployment
 
-The first public value milestone is release 0.1: a local daemon, SQLite
-evidence store, Qdrant serving index, Ollama embedding provider, curated memory
-writes, `flat_v1` recall, session browsing, health, redaction, tenant scoping,
-and purge safeguards. This deployment requires only:
+The first public value milestone is release 0.1: a local daemon, SQLite as the
+default local evidence store under the ADR 013 joint SQLite/PostgreSQL policy,
+Qdrant serving index, Ollama embedding provider, curated memory writes,
+`flat_v1` recall, session browsing, health, redaction, tenant scoping, and
+purge safeguards. This deployment requires only:
 
 - `memoryd`;
 - `memoryd-mcp`;
@@ -740,8 +741,10 @@ CREATE TABLE audit_log (
 );
 ```
 
-_Listing 2: Evidence inbox schema outline. The implementation may use SQLite,
-libSQL, or PostgreSQL, but these entities are the logical contract._
+_Listing 2: Evidence inbox schema outline. ADR 013 records the evidence-store
+engine policy: this logical contract is implemented through paired SQLite and
+PostgreSQL stores, with SQLite as the local default and PostgreSQL as the
+enterprise-ready deployment path._
 
 Idempotency keys are provider-specific:
 
@@ -1116,7 +1119,8 @@ PostgreSQL deployments must use non-owner application roles without
 `BYPASSRLS`, set `memoryd.tenant_id` transaction-locally, and enable RLS for
 tenant-owned tables. SQLite deployments still carry tenant IDs and enforce
 tenant predicates in adapter contract tests, but they do not claim
-database-enforced isolation.
+database-enforced isolation. ADR 013 keeps those backend-specific mechanisms
+behind storage adapters while requiring evidence-store behavioural parity.
 
 Purge is irreversible by default. `PurgeWorkspace` and `PurgeTenant` delete
 evidence rows, projection state, graph namespaces, Qdrant serving collections
@@ -1124,12 +1128,19 @@ or payload partitions, Chutoro checkpoints, source-health records, and recall
 audits within the requested scope. Before purge, operator documentation must
 recommend backing up the evidence store and graph directory, and the command
 must display the tenant and workspace or tenant scope it will remove. There is
-no implicit undo window unless a later backup feature is explicitly implemented.
+no implicit undo window unless a later backup feature is explicitly
+implemented. ADR 013 requires explicit pre-migration and pre-purge operator
+backups for the evidence store until automated backup tooling exists.
 
 ## 14. Configuration
 
 The configuration file is TOML. This shape is normative for field names even if
 the implementation later splits sections by crate.
+
+ADR 013 defines the evidence-store engine contract behind the `[store]`
+configuration: SQLite is the default local driver, PostgreSQL is a first-class
+deployment path, and migrations must be maintained in lockstep across both
+backends.
 
 ```toml
 [daemon]
@@ -1261,7 +1272,6 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 
 ## 17. Open design decisions
 
-- Choose the default evidence-store engine and migration format.
 - Accept or revise the tenant-isolation strategy for local, Corbusier, and
   hosted-ready modes.
 - Define exact Axinite projection write-back policy.
