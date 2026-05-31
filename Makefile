@@ -55,7 +55,9 @@ typecheck: ## Type-check without building
 
 fmt: ## Format Rust and Markdown sources
 	$(CARGO) +nightly fmt --all
-	mdformat-all
+	fd --print0 --type f --extension md --extension markdown --extension mdx . | \
+		xargs -0 mdtablefix --wrap --renumber --breaks --ellipsis --fences --in-place
+	$(MDLINT) --fix '**/*.md'
 
 check-fmt: ## Verify formatting
 	$(CARGO) fmt --all -- --check

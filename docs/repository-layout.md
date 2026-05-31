@@ -1,13 +1,13 @@
 # Repository layout
 
-This document describes the generated Memoryd repository layout. It is the
-canonical reference for where source code, tests, configuration, automation,
-and long-lived documentation belong.
+This document describes the Memoryd repository layout. It is the canonical
+reference for where source code, tests, configuration, automation, and
+long-lived documentation belong.
 
 ## Top-level tree
 
-The tree below shows the generated repository structure. It is intentionally
-compact and omits build output such as `target/`.
+The tree below shows the repository structure. It is intentionally compact and
+omits build output such as `target/`.
 
 ```plaintext
 .
@@ -17,22 +17,23 @@ compact and omits build output such as `target/`.
 │   ├── dependabot.yml
 │   └── workflows/
 │       ├── ci.yml
-
 │       └── release.yml
-
+├── .markdownlint-cli2.jsonc
+├── .rustfmt.toml
 ├── docs/
 │   ├── contents.md
 │   ├── developers-guide.md
+│   ├── execplans/
+│   ├── rfcs/
 │   ├── repository-layout.md
 │   ├── users-guide.md
 │   └── ...
 ├── src/
-
 │   └── main.rs
-
 ├── tests/
 │   └── stub.rs
 ├── AGENTS.md
+├── Cargo.lock
 ├── Cargo.toml
 ├── LICENSE
 ├── Makefile
@@ -47,32 +48,36 @@ compact and omits build output such as `target/`.
 - `.cargo/config.toml`: Configures Cargo defaults for local development,
   including Linux linker and code-generation settings.
 - `.github/dependabot.yml`: Configures automated dependency update checks.
-- `.github/workflows/ci.yml`: Runs the generated project's continuous
-  integration checks.
-
+- `.github/workflows/ci.yml`: Runs Memoryd's continuous integration checks.
 - `.github/workflows/release.yml`: Builds and publishes binary release
   artefacts for the application flavour.
-
+- `.markdownlint-cli2.jsonc`: Configures Markdown linting for documentation
+  validation.
+- `.rustfmt.toml`: Configures Rust formatting policy for the workspace.
 - `docs/`: Holds long-lived reference documentation, guides, style rules, and
   design material.
 - `docs/contents.md`: Indexes the documentation set and should be updated when
   documentation files are added, renamed, or removed.
-- `docs/users-guide.md`: Explains how to use the generated project and its
-  public build and test commands.
+- `docs/execplans/`: Holds execution plans for non-trivial implementation or
+  remediation work.
+- `docs/rfcs/`: Holds Requests for Comments (RFCs) for proposed technical
+  changes.
+- `docs/users-guide.md`: Explains how to use Memoryd and its public build and
+  test commands.
 - `docs/developers-guide.md`: Explains the contributor workflow and local
-  tooling used to work on the generated project.
+  tooling used to work on Memoryd.
 - `docs/repository-layout.md`: Documents the repository tree and path
   responsibilities.
-
 - `src/main.rs`: Contains the application entrypoint and top-level executable
   wiring.
-
 - `tests/`: Holds integration and behavioural tests that exercise public
   behaviour.
 - `tests/stub.rs`: Keeps the generated test directory valid until real tests
   replace it.
 - `AGENTS.md`: Provides repository-specific working instructions for agents and
   contributors.
+- `Cargo.lock`: Pins the resolved dependency graph for reproducible application
+  builds.
 - `Cargo.toml`: Defines package metadata, dependencies, lint policy, and Cargo
   configuration.
 - `LICENSE`: Records the project licence text.
@@ -88,8 +93,8 @@ compact and omits build output such as `target/`.
 
 ## Ownership boundaries
 
-- Keep generated source code under `src/`. Add modules below `src/` when a
-  feature grows beyond a small entrypoint or crate root.
+- Keep source code under `src/`. Add modules below `src/` when a feature grows
+  beyond a small entrypoint or crate root.
 - Keep black-box integration tests and externally observable workflow tests
   under `tests/`.
 - Keep reusable documentation under `docs/`. Update `docs/contents.md` whenever

@@ -14,12 +14,12 @@ set.
   GIST-aligned implementation phases and review-sized tasks.
 - [Project-design ExecPlan](execplans/project-design.md) records the live
   remediation plan for the Logisphere design-stage review.
-- [User guide](users-guide.md) explains how to use the generated project and
-  its public build and test commands.
-- [Developer guide](developers-guide.md) explains the local workflow and
+- [Users' guide](users-guide.md) explains how to use Memoryd and its public
+  build and test commands.
+- [Developers' guide](developers-guide.md) explains the local workflow and
   implementation tooling for contributors.
-- [Repository layout](repository-layout.md) explains the generated project's
-  top-level files, directories, and ownership boundaries.
+- [Repository layout](repository-layout.md) explains Memoryd's top-level files,
+  directories, and ownership boundaries.
 - [Documentation style guide](documentation-style-guide.md) defines the
   spelling, structure, Markdown, Architecture Decision Record (ADR), Request
   for Comments (RFC), and roadmap conventions used by this documentation set.
