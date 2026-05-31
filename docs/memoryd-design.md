@@ -483,7 +483,7 @@ A canonical conversation delta contains:
 
 The first content-part set is `text`, `tool_call`, `tool_result`,
 `file_reference`, `file_edit`, `compaction_summary`, `attachment_reference`, and
- `provider_metadata`. Provider-specific payload remains in redacted JSON
+`provider_metadata`. Provider-specific payload remains in redacted JSON
 metadata unless the domain needs a new event kind with distinct behaviour.
 
 Required fields depend on the producer kind:
@@ -810,7 +810,7 @@ prefix. `memoryd` never treats workspace ID alone as an authorization boundary.
 ### 8.2 Projection classes and epistemic status
 
 The standalone service keeps Axinite’s projection classes: `episode`, `summary`,
- `concept`, `fact`, and `profile`. Claim-bearing artefacts carry one of
+`concept`, `fact`, and `profile`. Claim-bearing artefacts carry one of
 `explicit`, `curated`, `deduced`, `hypothesized`, or `retracted`. Episodes and
 summaries remain evidence or summaries of evidence rather than facts.
 

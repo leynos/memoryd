@@ -11,7 +11,7 @@
 
 This RFC adapts Axinite’s secure memory sidecar design to a standalone daemon.
 Axinite’s transactional outbox remains a supported provider mode, but standalone
- `memoryd` introduces a local evidence inbox so Codex CLI, Claude Code,
+`memoryd` introduces a local evidence inbox so Codex CLI, Claude Code,
 Axinite, and manual imports can all feed the same projection pipeline.
 
 ## Problem
