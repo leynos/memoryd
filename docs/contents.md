@@ -33,6 +33,11 @@ set.
   explains how to write maintainable, executable Rust documentation examples.
 - [Rust testing with `rstest` fixtures](rust-testing-with-rstest-fixtures.md)
   explains fixture-based, parameterized, and asynchronous testing with `rstest`.
+- [rstest-bdd user guide](rstest-bdd-users-guide.md) covers writing Gherkin
+  feature files and binding them to Rust step definitions via `rstest-bdd`.
+- [pg_embedded_setup_unpriv user guide](pg-embed-setup-unpriv-users-guide.md)
+  covers preparing PostgreSQL binaries and a data directory for unprivileged
+  test environments.
 
 ## Engineering practice
 
