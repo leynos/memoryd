@@ -658,8 +658,7 @@ still running as `root`, follow these steps:
   without interactive prompts. The
   `bootstrap_for_tests().environment.pgpass_file` helper returns the path if
   the bootstrap ran inside the test process.
-- Set `TZDIR=/usr/share/zoneinfo` (or the correct path for the distribution)
-  when
+- Set `TZDIR=/usr/share/zoneinfo` (or the correct path for the distribution) when
   running the CLI. The library helper sets `TZ` automatically and, on Unix-like
   hosts, also seeds `TZDIR` when it discovers a valid timezone database.
 

@@ -651,10 +651,10 @@ July 15, 2025, <https://doc.rust-lang.org/rustdoc/documentation-tests.html>
 [^13]: Advanced features - The rustdoc boOK - Rust Documentation, accessed on
        July 15, 2025, <https://doc.rust-lang.org/rustdoc/advanced-features.html>
 [^14]: Stack Overflow — Conditionally executing a module-level doctest,
-accessed on July 15, 2025,
+  accessed on July 15, 2025,
 <https://stackoverflow.com/questions/50312190/how-can-i-conditionally-execute-a-module-level-doctest-based-on-a-feature-flag>
-Stack Overflow — Conditional compilation with doctests, accessed on July 15,
-2025,
+  Stack Overflow — Conditional compilation with doctests, accessed on July 15,
+  2025,
 <https://stackoverflow.com/questions/38292741/how-would-one-achieve-conditional-compilation-with-rust-projects-that-have-docte>
 [^15]: Reddit — Preferred approaches for doc tests, accessed on July 15,
 2025,
