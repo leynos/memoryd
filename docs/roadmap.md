@@ -55,9 +55,10 @@ deliberately postpones decisions whose first irreversible consequence appears
 in later slices. See terms-of-reference.md §§8-9, memoryd-design.md §§16-17,
 and RFC 0006.
 
-- [ ] 1.1.1. Record the evidence-store engine and migration policy.
-  - Decide whether v1 defaults to SQLite, libSQL, PostgreSQL, or a supported
-    set.
+- [x] 1.1.1. Record the evidence-store engine and migration policy.
+  - Decided: v1 uses SQLite as the local default and PostgreSQL as a
+    first-class deployment path, abstracted through Diesel and maintained with
+    lockstep migrations per ADR 013.
   - See terms-of-reference.md §9, memoryd-design.md §7, and RFC 0001 §7.
   - Success: one accepted ADR defines the default store, migration format,
     backup expectations, and first-slice test matrix for the evidence inbox.

@@ -181,7 +181,7 @@ replays.
 
 🟡 **Internal RPC methods mix CRUD and domain commands.** `IngestSourceEvent`,
 `IngestTranscriptLine`, `FinalizeSession`, `Recall`, `ReadFacts`, `ReadEpisode`,
- `ReadTheme`, `StoreCuratedMemory`, `Retract`, `Reinforce`,
+`ReadTheme`, `StoreCuratedMemory`, `Retract`, `Reinforce`,
 `ScheduleConsolidation`, `ImportTranscript`, `ListSessions`, `Health`,
 `PurgeWorkspace`, `PurgeTenant`. This list mixes command-style operations
 (Ingest, Store, Retract, Purge) with query-style operations (Read, List,
