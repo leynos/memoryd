@@ -19,6 +19,16 @@ LLVM-compatible linker behaviour.
 Install `clang`, `lld`, and `mold` before running the full generated workflow
 locally on Linux.
 
+Behavioural tests that describe externally observable workflows should use
+`rstest-bdd` so Gherkin scenarios, `rstest` fixtures, and Rust assertions run
+under the standard Cargo test harness. PostgreSQL migration and repository
+tests for the evidence store must prefer `POSTGRES_TEST_URL` when an external
+database is configured, and otherwise use `pg_embedded_setup_unpriv` when the
+local host satisfies its prerequisites. See
+[rstest-bdd user's guide](rstest-bdd-users-guide.md) and
+[pg_embedded_setup_unpriv user guide](pg-embed-setup-unpriv-users-guide.md) for
+the detailed setup and test-support APIs.
+
 ## Interface Conventions
 
 Application services expose domain use cases through port traits. Keep those
@@ -31,6 +41,14 @@ Driving adapters are responsible for translating external requests into domain
 commands. Driven adapters are responsible for translating domain port calls
 into infrastructure operations. Neither adapter family should make
 memory-policy decisions that belong in the domain or application layer.
+
+Evidence-store adapters follow
+[Architecture Decision Record (ADR) 013](adr-013-evidence-store-engine-and-migration-policy.md):
+SQLite is the local default, PostgreSQL is a first-class deployment path,
+Diesel remains behind adapter boundaries, and paired SQLite and PostgreSQL
+migrations must preserve one logical evidence-store contract. Domain ports must
+not expose Diesel, SQL connection, migration harness, or
+`pg_embedded_setup_unpriv` types.
 
 ## Error Contracts
 
