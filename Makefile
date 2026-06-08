@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release coverage lint fmt check-fmt markdownlint nixie
+.PHONY: help all clean test build release coverage lint fmt fmt-tools check-fmt markdownlint nixie
 
 
 TARGET ?= memoryd
@@ -53,11 +53,16 @@ lint: ## Run Clippy with warnings denied
 typecheck: ## Type-check without building
 	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) check $(CARGO_FLAGS)
 
-fmt: ## Format Rust and Markdown sources
+fmt: fmt-tools ## Format Rust and Markdown sources
 	$(CARGO) +nightly fmt --all
 	fd --print0 --type f --extension md --extension markdown --extension mdx . | \
 		xargs -0 mdtablefix --wrap --renumber --breaks --ellipsis --fences --in-place
 	$(MDLINT) --fix '**/*.md'
+
+fmt-tools: ## Verify Markdown formatting tools are installed
+	@command -v fd >/dev/null || { echo "Install fd: cargo install fd-find"; exit 1; }
+	@command -v mdtablefix >/dev/null || { echo "Install mdtablefix: cargo install mdtablefix"; exit 1; }
+	@command -v $(MDLINT) >/dev/null || { echo "Install $(MDLINT): bun install -g markdownlint-cli2"; exit 1; }
 
 check-fmt: ## Verify formatting
 	$(CARGO) fmt --all -- --check

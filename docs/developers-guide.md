@@ -43,11 +43,12 @@ into infrastructure operations. Neither adapter family should make
 memory-policy decisions that belong in the domain or application layer.
 
 Evidence-store adapters follow
-[ADR 013](adr-013-evidence-store-engine-and-migration-policy.md): SQLite is the
-local default, PostgreSQL is a first-class deployment path, Diesel remains
-behind adapter boundaries, and paired SQLite and PostgreSQL migrations must
-preserve one logical evidence-store contract. Domain ports must not expose
-Diesel, SQL connection, migration harness, or `pg_embedded_setup_unpriv` types.
+[Architecture Decision Record (ADR) 013](adr-013-evidence-store-engine-and-migration-policy.md):
+SQLite is the local default, PostgreSQL is a first-class deployment path,
+Diesel remains behind adapter boundaries, and paired SQLite and PostgreSQL
+migrations must preserve one logical evidence-store contract. Domain ports must
+not expose Diesel, SQL connection, migration harness, or
+`pg_embedded_setup_unpriv` types.
 
 ## Error Contracts
 
