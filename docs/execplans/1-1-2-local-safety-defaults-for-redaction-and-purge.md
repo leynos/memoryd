@@ -20,17 +20,42 @@ families of decisions currently sit in the open-decisions table of
   modes); and
 - purge (confirmation defaults and pre-purge backup expectations).
 
-Item 1.1.2 turns those decisions into one accepted Architectural Decision
-Record (ADR) and aligns every source document that previously framed those
-defaults as open. After this plan is implemented, a maintainer can open ADR
-014 and see exactly what the first release must do at each of those
-boundaries, while the design document, terms of reference, RFC 0001, contents
-index, and roadmap reference the accepted decisions instead of carrying the
-open questions. Success is observable when roadmap item 1.1.2 is marked done,
-the redaction-detector and backup-format bullets in `docs/memoryd-design.md`
-§17 are removed, the redaction policy row in `docs/terms-of-reference.md` §9
-is closed, ADR 014 appears in `docs/contents.md`, and the full documentation
-gate set passes.
+Item 1.1.2 turns those decisions into **two** Architectural Decision
+Records (ADRs), both written in this slice, and aligns every source
+document that previously framed those defaults as open:
+
+- **ADR 014 (Accepted): workspace identity and purge safety.** These
+  decisions are firm enough to ratify before any provider adapter exists,
+  because they gate workspace derivation (roadmap item 2.2.4) and the
+  eventual purge slice (roadmap item 5.3.1) without depending on real
+  transcript content.
+- **ADR 015 (Proposed): redaction defaults.** The first-release detector
+  classes, entropy thresholds, deny-pattern behaviour, and raw-text
+  storage mode are written now as a concrete proposal, but they are
+  marked `Proposed` rather than `Accepted` because the detector list and
+  entropy thresholds should be ratified by people who have read real
+  Codex and Claude transcripts. ADR 015 is explicitly revisited and
+  ratified in roadmap item 2.2.3 (the redaction pipeline slice).
+
+Splitting the decision into two documents makes the difference in
+confidence legible: a reader sees immediately that workspace identity and
+purge are settled while the redaction detector set is a recorded proposal
+awaiting transcript-informed ratification. Writing both now means the
+proposal is captured in full rather than left as a vague forward
+reference.
+
+After this plan is implemented, a maintainer can open ADR 014 to see the
+settled workspace-identity and purge defaults and ADR 015 to see the
+proposed redaction defaults, while the design document, terms of
+reference, RFC 0001, contents index, and roadmap reference both records.
+Success is observable when roadmap item 1.1.2 is marked done, the
+backup-format bullet in `docs/memoryd-design.md` §17 is removed (closed by
+ADR 014), the redaction-detector bullet in §17 is reworded to point at the
+proposed ADR 015 with ratification scheduled in roadmap item 2.2.3, the
+redaction policy row in `docs/terms-of-reference.md` §9 records ADR 015 as
+the proposed direction, both ADRs appear in `docs/contents.md`, the
+relevant roadmap tasks (2.2.3, 2.2.4, 5.3.1) signpost the decisions they
+inherit, and the full documentation gate set passes.
 
 This plan is pre-implementation. Do not execute it until the user explicitly
 approves the plan.
@@ -40,42 +65,50 @@ approves the plan.
 - Implement documentation and contract decisions only. Do not add Rust crates,
   modules, configuration parsing, detectors, hashing code, repositories, or
   tests in this slice unless the user explicitly approves a scope expansion.
-- Create one accepted ADR as the authoritative decision record. The expected
-  filename is `docs/adr-014-local-safety-defaults-workspace-redaction-purge.md`
-  because ADR 013 is currently the newest accepted sequence number.
+- Create two ADRs as the authoritative decision records:
+  `docs/adr-014-local-safety-defaults-workspace-and-purge.md` (Accepted)
+  and `docs/adr-015-redaction-defaults.md` (Proposed). ADR 013 is the
+  current newest sequence number, so 014 and 015 are the next two.
+- ADR 015 is `Proposed`, not `Accepted`, and is explicitly revisited and
+  ratified in roadmap item 2.2.3. Its detector list and entropy thresholds
+  are a concrete proposal that the redaction-pipeline slice will confirm
+  or revise against real transcripts; the plan must not mark ADR 015
+  accepted.
 - Preserve the boundary already accepted in ADR 005 (hexagonal architecture),
   ADR 006 (tenant-isolation and workspace identity), and ADR 013 (evidence
-  store and migrations). ADR 014 refines defaults inside those boundaries; it
-  does not reopen them.
+  store and migrations). ADRs 014 and 015 refine defaults inside those
+  boundaries; they do not reopen them.
 - Keep Memoryd hexagonal. The domain owns the vocabulary for workspace
   identity, redaction state, raw-text storage mode, purge confirmation, and
   pre-purge backup expectations. Concrete detector engines, BLAKE3 hashing
   implementations, SQLite `VACUUM INTO`, PostgreSQL `pg_dump`, and Qdrant
   snapshot calls stay in adapters and operator tooling.
-- Keep tenant isolation first-class. Every default named in ADR 014 must apply
-  inside an authenticated tenant context: workspace derivation is scoped by
-  tenant, redaction runs before tenant-owned storage, purge confirmation names
-  the tenant and workspace, and pre-purge backup expectations are described
-  per tenant scope.
-- Bind the workspace identity defaults to ADR 006's contract: repository
-  workspaces use a normalized Git origin URL plus a hash of the repository
-  root path plus an optional profile name; non-Git workspaces hash the
-  canonical configured root path plus the optional profile name; operator
-  overrides remain explicit; in-tenant collisions fail with an auditable
-  diagnostic. ADR 014 names the specific normalization rules, the hash
-  function, and the truncation length.
-- Bind the redaction defaults to the design document §13 first-release
-  detector list (API keys, OAuth tokens, JSON Web Tokens (JWTs), private keys,
-  SSH material, `.env` content, passwords, cookies, cloud credentials,
-  database URLs, and high-entropy blobs) and to the `[privacy]` block in §14
-  (`redact_before_store`, `redact_before_embedding`, `store_raw_text`).
-- Bind the purge defaults to the design document §13 irreversibility statement
-  and to ADR 013 §§"Migration plan" and "Known risks and limitations" (no
-  automated backup tooling; operators take explicit pre-migration and
-  pre-purge backups).
+- Keep tenant isolation first-class. Every default named in ADR 014 or ADR
+  015 must apply inside an authenticated tenant context: workspace
+  derivation is scoped by tenant, redaction runs before tenant-owned
+  storage, purge confirmation names the tenant and workspace, and pre-purge
+  backup expectations are described per tenant scope.
+- Bind the workspace identity defaults (ADR 014) to ADR 006's contract:
+  repository workspaces use a normalized Git origin URL plus a hash of the
+  repository root path plus an optional profile name; non-Git workspaces
+  hash the canonical configured root path plus the optional profile name;
+  operator overrides remain explicit; in-tenant collisions fail with an
+  auditable diagnostic. ADR 014 names the specific normalization rules, the
+  hash function, and the truncation length.
+- Bind the redaction defaults (ADR 015) to the design document §13
+  first-release detector list (API keys, OAuth tokens, JSON Web Tokens
+  (JWTs), private keys, SSH material, `.env` content, passwords, cookies,
+  cloud credentials, database URLs, and high-entropy blobs) and to the
+  `[privacy]` block in §14 (`redact_before_store`, `redact_before_embedding`,
+  `store_raw_text`).
+- Bind the purge defaults (ADR 014) to the design document §13
+  irreversibility statement and to ADR 013 §§"Migration plan" and "Known
+  risks and limitations" (no automated backup tooling; operators take
+  explicit pre-migration and pre-purge backups).
 - Keep the raw-text mode enumeration aligned with `docs/memoryd-design.md` §14
-  (`none`, `redacted`, `encrypted`). ADR 014 selects `redacted` as the v1
-  default and explicitly defers `encrypted` to a later ADR.
+  but tightened to exactly `none | redacted` for v1 (ADR 015). `encrypted`
+  is rejected at configuration-parse time and reserved for a future ADR
+  with key-management contracts.
 - Use en-GB Oxford spelling in documentation while preserving external
   identifiers such as `redact_before_store`, `store_raw_text`,
   `VACUUM INTO`, `pg_dump`, `BLAKE3`, environment variable names, and Cargo
@@ -92,21 +125,22 @@ approves the plan.
 - Run `coderabbit review --agent` only after deterministic gates for the
   current milestone pass. Clear any applicable concerns before moving to the
   next milestone.
-- Do not mark roadmap item 1.1.2 done until the accepted ADR, all required
-  cross-document updates, and the gate set have all landed.
+- Do not mark roadmap item 1.1.2 done until both ADRs, all required
+  cross-document updates (including the roadmap signposts in items 2.2.3,
+  2.2.4, and 5.3.1), and the gate set have all landed.
 
 ## Tolerances (exception triggers)
 
 - Scope: if implementation requires production Rust code changes, stop,
   document the reason in `Decision Log`, and ask for approval before editing
   code.
-- Scope: if more than six repository files need changes, stop and ask
-  whether to split the work. The expected files are the new ADR plus
-  `docs/roadmap.md`, `docs/terms-of-reference.md`, `docs/memoryd-design.md`,
-  `docs/rfcs/0001-standalone-evidence-inbox.md`, `docs/contents.md`, and
-  `docs/developers-guide.md`. `docs/users-guide.md` is deliberately
-  excluded; user-visible safety guidance belongs in the implementation
-  slices that ship the CLI, configuration parser, and purge prompt.
+- Scope: if more than nine repository files need changes, stop and ask
+  whether to split the work. The expected files are the two new ADRs
+  (`docs/adr-014-local-safety-defaults-workspace-and-purge.md` and
+  `docs/adr-015-redaction-defaults.md`) plus `docs/roadmap.md`,
+  `docs/terms-of-reference.md`, `docs/memoryd-design.md`,
+  `docs/rfcs/0001-standalone-evidence-inbox.md`, `docs/contents.md`,
+  `docs/developers-guide.md`, and `docs/users-guide.md`.
 - Interface: if the plan appears to require a public command-line interface,
   MCP tool, internal RPC method, or configuration key beyond the
   already-documented `[privacy]` block in `docs/memoryd-design.md` §14, stop
@@ -131,42 +165,59 @@ approves the plan.
 
 ## Risks
 
-- Risk: ADR 014 could over-commit to a specific detector library and force
+- Risk: ADR 015 could over-commit to a specific detector library and force
   the implementation slice to ship that library. Severity: medium.
-  Likelihood: medium. Mitigation: name the detector classes and the
-  community-standard entropy thresholds, but keep the concrete engine
-  (Gitleaks, detect-secrets, TruffleHog, or a Memoryd-internal regex set)
-  selectable at the adapter boundary.
+  Likelihood: medium. Mitigation: ADR 015 names the detector classes and the
+  community-standard starting entropy thresholds, but keeps the concrete
+  engine (Gitleaks, detect-secrets, TruffleHog, or a Memoryd-internal regex
+  set) selectable at the adapter boundary, and is `Proposed` so roadmap item
+  2.2.3 can revise it.
+- Risk: the entropy thresholds inherited from credential scanning misfire on
+  Codex and Claude transcripts (file hashes, UUIDs, lockfile content, and
+  base64 tool attachments inflate false positives). Severity: medium.
+  Likelihood: medium. Mitigation: ADR 015 records `b64 ≥ 4.5` / `hex ≥ 3.0`
+  / length `≥ 20` as starting defaults and schedules tuning against observed
+  false-positive rates in roadmap item 2.2.3. This is why ADR 015 stays
+  `Proposed`.
 - Risk: workspace identity defaults could lock in a Git-shaped model that
   breaks for monorepos, worktrees, or non-Git imports. Severity: high.
-  Likelihood: medium. Mitigation: separate the Git-origin normalization rules
-  from the non-Git canonical root path rules, keep operator overrides
-  first-class, and require an auditable in-tenant collision diagnostic rather
-  than automatic merge.
+  Likelihood: medium. Mitigation: ADR 014 separates the Git-origin
+  normalization rules from the non-Git canonical root path rules, keeps
+  operator overrides first-class, keeps the canonical root path
+  symlink-stable, and requires a registration-time collision diagnostic
+  rather than automatic merge.
 - Risk: purge confirmation could read as policy theatre and still permit a
-  fat-finger destructive call. Severity: high. Likelihood: medium.
-  Mitigation: require a typed-name match against `{tenant}/{workspace}`,
-  refuse implicit tenant-wide purges in local mode, and require an explicit
-  `--force-tenant` plus operator-supplied scope display before tenant-wide
-  purge is even reachable.
+  fat-finger or clipboard-paste destructive call. Severity: high.
+  Likelihood: medium. Mitigation: ADR 014 requires a typed-name match
+  against `{tenant}/{workspace}` plus a small per-invocation randomised
+  challenge derived from the resolved scope, refuses tenant-wide purge on
+  the MCP and RPC surfaces entirely, and gates tenant-wide purge behind the
+  operator CLI plus `--force-tenant-scope`.
 - Risk: pre-purge backup expectations could read as a promise to ship backup
-  tooling. Severity: medium. Likelihood: medium. Mitigation: phrase backup
-  expectations as documented operator procedures (SQLite `VACUUM INTO`,
-  PostgreSQL `pg_dump`, Qdrant snapshot API) and keep automated tooling out
-  of v1 in line with ADR 013.
+  tooling. Severity: medium. Likelihood: medium. Mitigation: ADR 014 phrases
+  backup expectations as documented operator procedures (SQLite
+  `VACUUM INTO`, PostgreSQL `pg_dump`, Qdrant snapshot API), records audited
+  `(collection, snapshot_id)` pairs, and keeps automated tooling out of v1
+  in line with ADR 013.
 - Risk: raw-text storage mode could be silently weakened by a future ADR.
-  Severity: low. Likelihood: medium. Mitigation: name the enum explicitly,
-  select `redacted` as default, mark `none` as a tighter alternative, and
-  defer `encrypted` to a separately scheduled ADR with its key-management
-  contract.
+  Severity: low. Likelihood: medium. Mitigation: ADR 015 enumerates the v1
+  enum as exactly `none | redacted`, selects `redacted` as default, and
+  rejects `encrypted` at configuration-parse time pending a follow-up ADR
+  with key-management contracts.
 - Risk: `make lint` and `make test` may be slow for a documentation-only
   change. Severity: low. Likelihood: medium. Mitigation: run them anyway
   because the task explicitly requests these gates after major milestones.
 - Risk: detector class list could imply unsupported guarantees about secret
-  recovery rate. Severity: medium. Likelihood: low. Mitigation: state that
-  the first release detects the listed classes on a best-effort basis with
-  the community-standard entropy thresholds, while accepting that adversarial
-  inputs can still evade pattern-based redaction.
+  recovery rate. Severity: medium. Likelihood: low. Mitigation: ADR 015
+  states that the first release detects the listed classes on a best-effort
+  basis with the community-standard entropy thresholds, while accepting that
+  adversarial inputs can still evade pattern-based redaction.
+- Risk: per-tenant deny patterns and per-collection Qdrant snapshots could
+  be costly at scale (a tenant with many workspaces or large collections).
+  Severity: medium. Likelihood: low. Mitigation: ADR 014 allows an explicit
+  `--skip-snapshot --collection-empty` acknowledgement for verified-empty
+  collections and ADR 015 fixes deny-pattern syntax to `globset` so adapters
+  share one matcher rather than divergent interpreters.
 
 ## Relevant documentation and skills
 
@@ -218,9 +269,11 @@ The implementer must use these skills as working rules:
 - `firecrawl`: external prior art may be re-checked when the
   community-of-experts review (`logisphere-design-review`) raises gaps about
   the cited detector lists, hash construction, or backup tooling.
-- `logisphere-design-review`: run the multi-agent design review against this
-  plan before milestone 1 begins, and apply the review's
-  must-fix concerns to the plan before writing the ADR.
+- `logisphere-design-review`: the multi-agent design review has already been
+  run against this plan; its eight must-fix concerns, three unresolved-risk
+  signposts, and four improvements were applied before the plan was
+  delivered for approval (see `Decision Log`). Re-run it only if a milestone
+  materially changes a default.
 
 ## Prior art and external references
 
@@ -303,8 +356,8 @@ External prior art was checked with Firecrawl during plan drafting:
   `priority: replica | snapshot | no_sync`; per-node snapshots are required
   in distributed clusters.
 
-These external references inform the ADR's defaults but do not bind the
-implementation to any specific library. The ADR names the detector classes,
+These external references inform the ADRs' defaults but do not bind the
+implementation to any specific library. The ADRs name the detector classes,
 entropy thresholds, normalization rules, hash function, and confirmation
 shape; adapter selection of Gitleaks, detect-secrets, TruffleHog, a
 Memoryd-internal regex set, BLAKE3, SQLite `VACUUM INTO`, `pg_dump`, or the
@@ -312,10 +365,12 @@ Qdrant snapshot API remains a deployment concern.
 
 ## Architecture target for the future implementation
 
-The ADR should describe the target architecture without implementing it in
-this slice.
+The ADRs should describe the target architecture without implementing it in
+this slice. ADR 014 owns the workspace-identity and purge defaults; ADR 015
+owns the redaction defaults and is `Proposed` pending ratification in
+roadmap item 2.2.3.
 
-### Workspace identity defaults
+### Workspace identity defaults (ADR 014)
 
 Repository workspaces derive their workspace identifier from three inputs
 inside one tenant context:
@@ -361,8 +416,8 @@ string and triggers a deliberate workspace re-registration migration. The
 canonical repository root path is the operator-configured absolute path,
 not a runtime symlink-resolved path, so identifier stability survives
 symlinks, worktrees, and bind mounts. Case folding of the path component
-is platform-dependent and configured per workspace; ADR 014 does not auto-
-detect case-insensitive filesystems.
+is platform-dependent and configured per workspace; ADR 014 does not
+auto-detect case-insensitive filesystems.
 
 Non-Git workspaces hash the canonical identity tuple
 `(canonical_configured_root_path, profile_name?)` with the same context
@@ -393,9 +448,15 @@ collision before evidence accumulates; failing at first conflicting ingest
 is too late because evidence has already cross-contaminated. Ingestion
 remains responsible for rejecting writes against unregistered identifiers.
 
-### Redaction defaults
+### Redaction defaults (ADR 015, Proposed)
 
-The first release must detect the categories already named in
+ADR 015 is `Proposed`. It records a concrete first-release redaction
+proposal so the contract is captured in full, but the detector list and
+entropy thresholds are ratified or revised in roadmap item 2.2.3 against
+real Codex and Claude transcripts. Until then, the defaults below are the
+recommended starting point, not a frozen contract.
+
+The first release should detect the categories already named in
 `docs/memoryd-design.md` §13:
 
 - API keys and bearer tokens;
@@ -417,9 +478,9 @@ entropy `≥ 4.5`, and hexadecimal substrings of length `≥ 20` with Shannon
 entropy `≥ 3.0`. These thresholds are inherited from credential-scanning
 work where the input is mostly source code; Codex and Claude transcripts
 include file hashes, UUIDs, lockfile content, and base64-encoded tool
-attachments that may inflate the false-positive rate. ADR 014 records
-the thresholds as starting defaults that the first projection slice may
-revise based on observed false-positive rates. Detection runs before
+attachments that may inflate the false-positive rate. ADR 015 records
+the thresholds as starting defaults that roadmap item 2.2.3 ratifies or
+revises based on observed false-positive rates. Detection runs before
 storage and before embedding. The implementation slice picks the concrete
 detector engine.
 
@@ -442,7 +503,7 @@ two values:
 
 A configuration value of `encrypted` (or anything outside the two values
 above) must be rejected at configuration-parse time with a clear semantic
-error pointing to ADR 014. Encrypted raw-text storage is a deferred
+error pointing to ADR 015. Encrypted raw-text storage is a deferred
 follow-up: a future ADR that ships explicit key-management, rotation, and
 recovery contracts will reintroduce `encrypted` as an accepted value at
 the same time as the storage layer learns to honour it. The configuration
@@ -461,7 +522,7 @@ work may set the explicit escape hatch `[privacy].unsafe_disable_redaction
 serving recall to a tenant other than the configured local-single tenant.
 The escape hatch is not a quiet `false` toggle on either flag.
 
-### Purge defaults
+### Purge defaults (ADR 014)
 
 `PurgeWorkspace` and `PurgeTenant` remain irreversible unless a future
 backup-tooling ADR adds an undo window.
@@ -471,40 +532,35 @@ RPC methods do not accept `PurgeTenant` at all. Tenant-wide purge is
 reachable only through the operator-facing `memoryd` CLI, which runs in
 the operator's terminal, accepts typed input, and refuses to read its
 confirmation answer from a pipe or here-document. MCP and internal RPC
-expose only `PurgeWorkspace`, which requires the typed-scope confirmation
-described below plus the `memory.purge` capability already named in
-`docs/memoryd-design.md` §12.
+expose only `PurgeWorkspace`, which requires the small randomised challenge
+confirmation described below plus the `memory.purge` capability already
+named in `docs/memoryd-design.md` §12.
 
-Workspace confirmation requires the operator to type the exact
-`{tenant_slug}/{workspace_slug}` into the confirmation prompt. Empty
-strings, partial matches, whitespace-padded matches, and case-folded
-matches are rejected. **Clipboard-paste defence** is a first-class
-requirement: the typed-scope match alone is insufficient because a
-pasted slug from a previous shell-history entry can defeat it. ADR 014
-binds two complementary mitigations that the workspace purge command must
-implement:
+Workspace confirmation uses a **small randomised challenge** as its
+primary defence. The operator must answer a short per-invocation prompt
+derived from the resolved scope, for example "type the third character of
+the workspace slug, then the seventh". The challenge is generated
+server-side from a cryptographic random source, is never reused, and is
+short enough to be answered without friction. A small randomised challenge
+is preferred over a plain typed-name match because it defeats the
+clipboard-paste failure mode: a slug pasted from shell history satisfies a
+typed-name prompt but cannot satisfy a challenge the operator has not seen
+before. Empty answers, partial answers, whitespace-padded answers, and
+case-folded answers are rejected. Before reading the answer, the CLI (or
+MCP/RPC response preamble) prints the resolved tenant and workspace
+identifiers, the count of evidence rows, the count of Qdrant collections,
+the list of graph named-graph URIs, and the Chutoro checkpoint file paths,
+so the operator confirms against the displayed scope, not against memory.
 
-- a small randomised challenge prompt drawn from the resolved scope
-  ("type the third character of the workspace slug, then the seventh");
-  the challenge is generated server-side from a cryptographic random
-  source and is not reused; **and**
-- a second flag `--i-understand-this-is-irreversible` that the operator
-  must supply explicitly before the confirmation prompt is reached.
-
-The two together defeat clipboard-paste because the challenge is unique
-per invocation and the second flag is unique per terminal session. The CLI
-prints the resolved tenant and workspace identifiers, the count of evidence
-rows, the count of Qdrant collections, the list of graph named-graph URIs,
-and the Chutoro checkpoint file paths before reading the typed answer.
-
-Tenant confirmation requires the operator to type the exact
-`tenant:{tenant_slug}` into the confirmation prompt and supply both
-`--i-understand-this-is-irreversible` and `--force-tenant-scope`. The
-randomised challenge applies identically. `PurgeTenant` is disabled by
+Tenant confirmation uses the same small randomised challenge plus the
+explicit `--force-tenant-scope` flag, and is reachable only through the
+operator CLI. The flag exists to make tenant-wide blast radius a
+deliberate, separate act from workspace purge; the randomised challenge
+still carries the clipboard-paste defence. `PurgeTenant` is disabled by
 default in `tenant.mode = "local_single"` and requires a high-privilege
 capability token in every tenant mode. ADR 014 confirms the
-confirmation-string shape without changing the capability vocabulary
-already named in `docs/memoryd-design.md` §12 and the developers' guide.
+confirmation shape without changing the capability vocabulary already
+named in `docs/memoryd-design.md` §12 and the developers' guide.
 
 **Pre-purge backup completion is binding, not advisory.** Every purge
 command runs through a deterministic pre-purge phase that completes (or
@@ -534,21 +590,20 @@ is touched. The phase emits a per-step status to the audit log:
   with ADR 013.
 
 The purge audit log records the resolved `(tenant_id, workspace_id)`
-scope, the actor identity, a BLAKE3-keyed hash of the confirmation string
-the operator typed (using a separate context string
-`"memoryd v1 purge-confirmation"` so the audit row cannot itself leak
-slugs), the operator-supplied backup acknowledgement identifier, every
-`(collection, snapshot_id)` pair from the Qdrant phase, and the resolved
-challenge prompt the operator answered. The audit row does not record
-backup file paths because the file system is the operator's domain, not
-Memoryd's.
+scope, the actor identity, the challenge prompt that was issued (but not
+the operator's answer, and not the slug, so the audit row cannot itself
+leak workspace names), the operator-supplied backup acknowledgement
+identifier, and every `(collection, snapshot_id)` pair from the Qdrant
+phase. The audit row does not record backup file paths because the file
+system is the operator's domain, not Memoryd's.
 
 ### Hexagonal placement of these defaults
 
 ADR 014 binds **behaviour** to layers; it does not bind Rust type names.
 Roadmap item 1.2.1 owns the domain model and picks the concrete newtype
-and port-trait names. The behavioural contracts ADR 014 places by layer
-are as follows.
+and port-trait names. The behavioural contracts ADRs 014 and 015 place by
+layer are as follows (ADR 014 for workspace identity and purge, ADR 015 for
+redaction).
 
 The domain layer owns the vocabulary that names:
 
@@ -562,9 +617,9 @@ The domain layer owns the vocabulary that names:
   enumeration;
 - the purge scope (workspace or tenant), the multi-step purge plan that
   enumerates affected evidence rows, Qdrant collections, graph
-  named-graphs, and Chutoro checkpoints, the confirmation record (typed
-  scope, randomised challenge, irreversibility acknowledgement, hashed
-  audit form), and the per-step pre-purge backup acknowledgement record.
+  named-graphs, and Chutoro checkpoints, the confirmation record (resolved
+  scope display plus the small randomised challenge), and the per-step
+  pre-purge backup acknowledgement record.
 
 The application layer owns:
 
@@ -578,7 +633,7 @@ The application layer owns:
   pattern matches;
 - a workspace purge use case that drives the pre-purge backup phase to
   completion, records every `(collection, snapshot_id)` pair, validates
-  the typed-scope confirmation and randomised challenge answer, then
+  the small randomised challenge answer against the resolved scope, then
   executes the purge plan through evidence-store, graph-store,
   vector-store, and clustering-store ports.
 
@@ -592,19 +647,20 @@ The adapter layer owns:
 - SQLite `VACUUM INTO`, PostgreSQL `pg_dump`, and Qdrant snapshot API
   invocations, executed as operator procedures invoked from the
   `memoryd` CLI in v1, not in-process commands invoked from the daemon;
-- the `memoryd` CLI surface that owns the typed-scope prompt, randomised
-  challenge generation, and `--i-understand-this-is-irreversible` /
-  `--force-tenant-scope` flag parsing.
+- the `memoryd` CLI surface that owns the resolved-scope display, the
+  small randomised challenge generation, and `--force-tenant-scope` flag
+  parsing.
 
 No new Rust crate, module, configuration key, RPC method, or MCP tool is
-added by this ADR. The `[privacy]` block already documented in
+added by these ADRs. The `[privacy]` block already documented in
 `docs/memoryd-design.md` §14 covers the redaction defaults; the
 `memory.purge` capability already documented in §12 covers the purge
 defaults; the workspace-derivation contract already documented in §5.4
 and ADR 006 covers the workspace defaults. The new
-`[privacy].unsafe_disable_redaction` escape hatch and the new operator-CLI
-purge command are the only configuration and surface additions ADR 014
-records; both land in the implementation slices that first use them.
+`[privacy].unsafe_disable_redaction` escape hatch (ADR 015) and the new
+operator-CLI purge command (ADR 014) are the only configuration and
+surface additions these ADRs record; both land in the implementation
+slices that first use them.
 
 ## Implementation plan
 
@@ -621,126 +677,157 @@ If the branch is not correct, rename it before making changes. If the
 working tree contains unrelated user changes, leave them alone and do not
 stage them.
 
-### Milestone 0: Community-of-experts review of this plan
+### Milestone 0: Community-of-experts review of this plan (complete)
 
-Before any source-document edits begin, run the `logisphere-design-review`
-skill against this plan. The review must focus on:
+The `logisphere-design-review` skill has already been run against this
+plan during drafting. The full panel (Pandalump, Wafflecat, Buzzy Bee,
+Telefono, Doggylump, Dinolump) examined the workspace-identity algorithm,
+detector-selection alternatives, per-tenant deny-pattern and
+per-collection snapshot scaling, the port boundaries, failure modes for
+collision diagnostics and aborted purges, and long-term viability. Its
+eight must-fix concerns, three unresolved-risk signposts, and four
+improvements were applied to this plan before it was delivered for
+approval, and Wafflecat's split-ADR alternative was adopted (see the
+`Decision Log`). No further review is required before milestone 1 unless a
+milestone materially changes a default, in which case re-run the skill and
+record the outcome in `Decision Log`.
 
-- structural integrity of the workspace-identity algorithm (Pandalump);
-- alternative approaches to detector selection and entropy thresholds
-  (Wafflecat);
-- scaling characteristics of per-tenant deny patterns and per-collection
-  Qdrant snapshots (Buzzy Bee);
-- contract design at the `WorkspaceIdentityPort`, `RedactionPort`, and
-  `WorkspacePurgePort` boundaries (Telefono);
-- failure modes for collision diagnostics, partial redaction, and aborted
-  purges (Doggylump);
-- long-term viability if a future ADR adds encrypted raw-text storage or an
-  automated backup tool (Dinolump).
+### Milestone 1: Write both ADRs
 
-Apply must-fix concerns from the review to this plan in a single
-`Decision Log` entry before milestone 1 starts. Optional and nice-to-have
-concerns are recorded in `Decision Log` but do not block milestone 1 unless
-the user requests otherwise.
+Create two ADRs in this milestone. Both use the documentation style
+guide's ADR structure (the required sections in order, en-GB Oxford
+spelling, captioned tables, language-tagged code blocks).
 
-### Milestone 1: Write the accepted ADR
+#### ADR 014: Local safety defaults for workspace identity and purge (Accepted)
 
-Create `docs/adr-014-local-safety-defaults-workspace-redaction-purge.md`.
+Create `docs/adr-014-local-safety-defaults-workspace-and-purge.md` with:
 
-The ADR must use the documentation style guide's ADR structure and include
-these sections:
-
-- `Status`: `Accepted`, with the date and a one-sentence summary closing the
-  workspace-identity, redaction, and purge defaults.
+- `Status`: `Accepted`, with the date and a one-sentence summary closing
+  the workspace-identity and purge defaults.
 - `Date`: the implementation date in `YYYY-MM-DD` format.
 - `Context and problem statement`: explain that roadmap item 1.1.2 must
-  close the workspace-identity, redaction, and purge default decisions
-  before any provider adapter implementation begins, and that the design
-  document §17 and the terms-of-reference §9 currently carry these as open
-  questions.
-- `Decision drivers`: include local-first quick start, Corbusier
-  compatibility, security posture against transcript exfiltration,
+  close the workspace-identity and purge default decisions before any
+  provider adapter implementation begins, and that the design document §17
+  and the terms-of-reference §9 currently carry these as open questions.
+- `Decision drivers`: local-first quick start, Corbusier compatibility,
   reproducible workspace identifiers across worktrees and symlinks,
-  irreversible purge safety, and explicit operator responsibility for
-  backups.
-- `Requirements`: record functional and technical requirements for
-  workspace identity (normalization, hashing, collision diagnostics,
-  overrides), redaction (detector classes, entropy thresholds,
-  deny-pattern scope, raw-text mode enum), and purge (confirmation shape,
-  scope display, pre-purge backup expectations).
+  irreversible purge safety, defence against fat-finger and clipboard-paste
+  purges, and explicit operator responsibility for backups.
+- `Requirements`: functional and technical requirements for workspace
+  identity (normalization, two-layer hashing, registration-time collision
+  diagnostics, overrides) and purge (small randomised challenge,
+  surface separation, scope display, pre-purge backup completion).
 - `Options considered`: contrast at least
   (a) a Git-only workspace identity model versus a Git+non-Git model with
   operator overrides;
-  (b) a fixed first-release detector list versus a fully library-deferred
-  list;
-  (c) a yes/no purge prompt versus a typed-scope prompt with a typed
-  `--force-tenant-scope` for tenant-wide purge.
+  (b) a plain yes/no purge prompt versus a typed-name match versus a small
+  randomised challenge against the resolved scope.
 - `Decision outcome / proposed direction`: state the final defaults in
   binding language.
-- `Goals and non-goals`: enumerate goals (closing the open decisions) and
-  non-goals (implementing detectors, hashing, snapshot tooling, or backup
+- `Goals and non-goals`: goals (closing the workspace and purge
+  decisions); non-goals (implementing hashing, snapshot tooling, or backup
   automation in this slice).
-- `Migration plan`: note that roadmap items 2.2.3 (redaction pipeline),
-  2.2.4 (workspace derivation), and the eventual purge implementation slice
-  apply these defaults; ADR 013 already supplies the joint SQLite/PostgreSQL
-  test matrix this work will share.
-- `Known risks and limitations`: cover detector-engine lock-in, evolving
-  entropy thresholds, Git URL edge cases (`file://`, scp-shorthand, IPv6
-  literals), Qdrant snapshot-cost for large collections, and the cost of
-  rejecting case-folded purge confirmations.
-- `Consequences`: describe how later slices must implement these defaults
-  behind ports, add adapter contract tests, document operator backup
-  procedures, and surface workspace-collision diagnostics through the
-  source-health and audit-log surfaces.
-- `References`: link local docs (ADR 005, ADR 006, ADR 008, ADR 013,
-  design §§5.4/§7/§8.4/§13/§14/§17, terms of reference §§7-9, RFC 0001 §§3,
-  7) and the external prior-art URLs cited above.
+- `Migration plan`: note that roadmap item 2.2.4 (workspace derivation) and
+  the eventual purge implementation slice (roadmap item 5.3.1) apply these
+  defaults; ADR 013 already supplies the joint SQLite/PostgreSQL test
+  matrix this work will share.
+- `Known risks and limitations`: Git URL edge cases (`file://`,
+  scp-shorthand, IPv6 literals), 48-bit short-ID collision space (mitigated
+  by keying storage on the full hash), Qdrant snapshot cost for large
+  collections, and the operability of the randomised challenge in scripted
+  environments.
+- `Consequences`: how later slices implement these defaults behind ports,
+  add adapter contract tests, document operator backup procedures, and
+  surface workspace-collision diagnostics through source-health and
+  audit-log surfaces.
+- `References`: ADR 005, ADR 006, ADR 008, ADR 013, ADR 015, design
+  §§5.4/§7/§8.4/§13/§14/§17, terms of reference §§7-9, RFC 0001 §§3, 7, and
+  the external prior-art URLs cited above.
 
-The ADR must explicitly state:
+ADR 014 must explicitly state:
 
 - the normalized Git origin URL form, including the documented
-  case-insensitive host list (`github.com`, `gitlab.com`,
-  `bitbucket.org`, `dev.azure.com`) for path-component lowercasing;
+  case-insensitive host list (`github.com`, `gitlab.com`, `bitbucket.org`,
+  `dev.azure.com`) for path-component lowercasing;
 - the two-layer workspace identity contract: full BLAKE3 `derive_key`
-  storage identifier with context string `"memoryd v1 workspace-id"`, and
-  a 12-hex-character presentational short form;
+  storage identifier with context string `"memoryd v1 workspace-id"`, and a
+  12-hex-character presentational short form that storage never keys on;
 - the intentional `v1` in the BLAKE3 context string so future algorithm
   changes trigger an explicit re-registration migration;
 - the non-Git canonical configured root path identity tuple, hashed with
   the same context string and construction;
-- explicit operator overrides scoped to one tenant, audited at
-  workspace registration;
+- explicit operator overrides scoped to one tenant, audited at workspace
+  registration, and non-retroactive;
 - failure-on-collision at workspace registration with an auditable
-  `WorkspaceCollision` diagnostic naming both source configurations;
-- the first-release redaction detector class list;
-- the truffleHog-derived starting entropy thresholds (`b64 ≥ 4.5`,
-  `hex ≥ 3.0`, length `≥ 20`) and their tunability in the projection
-  slice;
-- per-workspace `globset`-compatible deny patterns;
-- `redact_before_store = true` and `redact_before_embedding = true` as
-  binding defaults in every tenant mode, with the
-  `[privacy].unsafe_disable_redaction` escape hatch documented as the
-  only safe disablement path for local-single diagnostic work;
-- `store_raw_text` enumerated as exactly `none | redacted` for v1, with
-  `redacted` as the default and `encrypted` rejected at configuration
-  parse time pending a follow-up ADR;
-- typed `{tenant_slug}/{workspace_slug}` confirmation plus a randomised
-  challenge prompt plus `--i-understand-this-is-irreversible` for
-  `PurgeWorkspace`, with MCP and internal RPC surfaces refusing
-  `PurgeTenant` entirely;
-- typed `tenant:{tenant_slug}` confirmation plus the same randomised
-  challenge plus both `--i-understand-this-is-irreversible` and
-  `--force-tenant-scope` flags for `PurgeTenant`, reachable only via the
-  operator CLI;
-- pre-purge backup completion semantics: SQLite `VACUUM INTO`,
-  PostgreSQL `pg_dump`, and per-collection Qdrant snapshot API steps
-  must complete (or be explicitly skipped through documented flags) with
+  collision diagnostic naming both source configurations;
+- a small per-invocation randomised challenge against the resolved scope as
+  the primary `PurgeWorkspace` confirmation, with MCP and internal RPC
+  surfaces refusing `PurgeTenant` entirely;
+- the same small randomised challenge plus `--force-tenant-scope` for
+  `PurgeTenant`, reachable only via the operator CLI;
+- pre-purge backup completion semantics: SQLite `VACUUM INTO`, PostgreSQL
+  `pg_dump`, and per-collection Qdrant snapshot API steps must complete (or
+  be explicitly skipped through documented flags) with
   `(collection, snapshot_id)` pairs recorded in the audit log before any
   tenant-owned row is touched; partial failure aborts the purge;
 - automated backup tooling and automated snapshot correlation are
   explicitly out of v1.
 
-After the ADR is written, run the documentation gates:
+#### ADR 015: Redaction defaults (Proposed)
+
+Create `docs/adr-015-redaction-defaults.md` with:
+
+- `Status`: `Proposed`, with the date and a one-sentence summary noting
+  that the redaction defaults are a concrete proposal ratified or revised
+  in roadmap item 2.2.3.
+- `Date`: the implementation date in `YYYY-MM-DD` format.
+- `Context and problem statement`: explain that the first-release detector
+  list and entropy thresholds should be set against real Codex and Claude
+  transcripts, that they are recorded now so the contract is captured in
+  full, and that roadmap item 2.2.3 owns ratification.
+- `Decision drivers`: security posture against transcript exfiltration,
+  redaction before storage and before embedding, low false-positive rate on
+  real transcripts, and a fail-closed configuration parser.
+- `Requirements`: detector classes, starting entropy thresholds,
+  `globset` deny-pattern syntax and per-workspace scope, the two-value
+  raw-text storage mode, and the binding `redact_before_*` flags.
+- `Options considered`: a fixed first-release detector list versus a fully
+  library-deferred list; an asymmetric `redact_before_*` policy per tenant
+  mode versus a non-disablable policy with an explicit escape hatch.
+- `Decision outcome / proposed direction`: state the proposed defaults and
+  mark them for ratification in roadmap item 2.2.3.
+- `Goals and non-goals`: goals (capturing the redaction proposal in full);
+  non-goals (implementing detectors or selecting a detector engine in this
+  slice; deciding encrypted raw-text storage).
+- `Migration plan`: roadmap item 2.2.3 ratifies or revises this ADR against
+  real transcripts and flips its status to `Accepted` (or supersedes it).
+- `Known risks and limitations`: detector-engine lock-in, entropy
+  thresholds inherited from credential scanning, and adversarial inputs
+  that evade pattern-based redaction.
+- `Outstanding decisions`: the threshold tuning and detector-engine
+  selection deferred to roadmap item 2.2.3, and encrypted raw-text storage
+  deferred to a future ADR.
+- `References`: ADR 005, ADR 006, ADR 014, design §§7/§13/§14/§17, terms of
+  reference §§7.2/8.1/9, RFC 0001 §3, and the external detector and entropy
+  references cited above.
+
+ADR 015 must explicitly state:
+
+- the first-release redaction detector class list;
+- the truffleHog-derived starting entropy thresholds (`b64 ≥ 4.5`,
+  `hex ≥ 3.0`, length `≥ 20`) and their tunability in roadmap item 2.2.3;
+- per-workspace `globset`-compatible deny patterns;
+- `redact_before_store = true` and `redact_before_embedding = true` as
+  binding defaults in every tenant mode, with the
+  `[privacy].unsafe_disable_redaction` escape hatch as the only safe
+  disablement path for local-single diagnostic work;
+- `store_raw_text` enumerated as exactly `none | redacted` for v1, with
+  `redacted` as the default and `encrypted` rejected at configuration-parse
+  time pending a follow-up ADR;
+- that the ADR is a proposal whose detector list and thresholds are
+  ratified in roadmap item 2.2.3.
+
+After both ADRs are written, run the documentation gates:
 
 ```sh
 set -o pipefail
@@ -759,80 +846,108 @@ them and rerun the deterministic gates before asking CodeRabbit again. If
 the command is unavailable or cannot authenticate, record that in
 `Surprises & Discoveries` and continue only if deterministic gates pass.
 
-Commit the ADR with a file-based commit message:
+Commit both ADRs with a file-based commit message:
 
 ```sh
 COMMIT_MSG_DIR=$(mktemp -d)
 cat > "$COMMIT_MSG_DIR/COMMIT_MSG.md" << 'ENDOFMSG'
-Record local safety defaults ADR
+Record local safety defaults ADRs
 
-Accept the workspace identity, redaction, and purge defaults for roadmap
-item 1.1.2, including normalized Git origin URLs, BLAKE3-derived workspace
-short IDs, the first-release redaction detector classes and entropy
-thresholds, the binding `[privacy]` flags, and the typed-scope purge
-confirmation contract with explicit pre-purge backup expectations.
+Accept the workspace identity and purge defaults (ADR 014) for roadmap
+item 1.1.2, including normalized Git origin URLs, two-layer
+BLAKE3-derived workspace identifiers, registration-time collision
+diagnostics, and the small-randomised-challenge purge confirmation with
+binding pre-purge backup completion. Propose the redaction defaults
+(ADR 015) covering the first-release detector classes, starting entropy
+thresholds, globset deny patterns, and the two-value store_raw_text enum,
+to be ratified against real transcripts in roadmap item 2.2.3.
 ENDOFMSG
-git add docs/adr-014-local-safety-defaults-workspace-redaction-purge.md
+git add docs/adr-014-local-safety-defaults-workspace-and-purge.md \
+  docs/adr-015-redaction-defaults.md
 git commit -F "$COMMIT_MSG_DIR/COMMIT_MSG.md"
 rm -rf "$COMMIT_MSG_DIR"
 ```
 
-### Milestone 2: Align source documents with the ADR
+### Milestone 2: Align source documents with the ADRs
 
 Update `docs/memoryd-design.md`:
 
 - §5.4: keep the existing workspace-derivation paragraph and add a sentence
   pointing readers to ADR 014 for the exact normalization rules, hash
-  function, truncation length, and collision diagnostic shape.
+  function, truncation length, and collision-diagnostic shape.
 - §13: keep the first-release detector list, add a sentence stating that
-  ADR 014 binds the entropy thresholds and per-workspace deny-pattern
-  scope, and add a sentence stating that ADR 014 binds the typed-scope
-  purge confirmation and the pre-purge backup expectations.
+  ADR 015 (proposed) records the entropy thresholds and per-workspace
+  deny-pattern scope pending ratification in roadmap item 2.2.3, and add a
+  sentence stating that ADR 014 binds the small-randomised-challenge purge
+  confirmation and the pre-purge backup completion semantics.
 - §14: keep the `[privacy]` block; add a sentence to the paragraph
-  introducing the listing stating that ADR 014 binds `store_raw_text` enum
-  semantics and the `redact_before_*` defaults for Corbusier and hosted
-  modes.
-- §17: remove the bullet "Define the redaction detector set and encrypted
-  raw-text mode" and the bullet "Define the operator backup format used
-  before irreversible purge"; both decisions are closed by ADR 014.
+  introducing the listing stating that ADR 015 binds the `store_raw_text`
+  enum (`none | redacted`) and the `redact_before_*` defaults in every
+  tenant mode, and names the `unsafe_disable_redaction` escape hatch.
+- §17: remove the bullet "Define the operator backup format used before
+  irreversible purge" (closed by ADR 014). Reword the bullet "Define the
+  redaction detector set and encrypted raw-text mode" so it points at ADR
+  015 as the proposed direction, ratified in roadmap item 2.2.3, rather
+  than reading as an unframed open question.
 
 Update `docs/terms-of-reference.md`:
 
-- §9: replace the "What redaction policy is sufficient for the first
-  release?" row with a closed reference to ADR 014 (mirroring the prelude
-  paragraph format used for ADR 013), and update the prelude paragraph to
-  note that ADR 014 closes the redaction policy and pre-purge backup
-  defaults.
-- Appendix B: remove or strike through the ADR candidate "Decide redaction
-  guarantees and whether encrypted raw-text storage is in scope" since ADR
-  014 closes the v1 portion; if encrypted raw-text storage remains a
-  future decision, keep a single bullet referencing ADR 014 for context.
+- §9: update the prelude paragraph to note that ADR 014 closes the
+  workspace-identity and pre-purge backup defaults and that ADR 015
+  proposes the redaction defaults for ratification in roadmap item 2.2.3.
+  Update the "What redaction policy is sufficient for the first release?"
+  row so its suggested path references ADR 015 (proposed) and roadmap item
+  2.2.3 rather than an open security review.
+- Appendix B: reword the ADR candidate "Decide redaction guarantees and
+  whether encrypted raw-text storage is in scope" so it references ADR 015
+  for the v1 proposal and notes that encrypted raw-text storage remains a
+  future ADR.
 
 Update `docs/rfcs/0001-standalone-evidence-inbox.md`:
 
 - §7 (Compatibility and migration): append a sentence noting that ADR 014
-  binds the workspace-identity defaults, redaction policy, and pre-purge
-  backup expectations the evidence inbox uses.
+  binds the workspace-identity defaults and pre-purge backup expectations
+  and that ADR 015 proposes the redaction policy the evidence inbox uses.
 
 Update `docs/contents.md`:
 
-- Add an ADR 014 entry to the design-records list immediately after the
-  ADR 013 row, following the existing one-line description style.
+- Add an ADR 014 entry and an ADR 015 entry to the design-records list
+  immediately after the ADR 013 row, following the existing one-line
+  description style. The ADR 015 line must note its `Proposed` status.
 
 Update `docs/developers-guide.md`:
 
 - Authentication-and-authorization section: append a sentence noting that
-  ADR 014 binds the typed-scope confirmation shape for `memory.purge` and
-  the pre-purge backup procedures.
+  ADR 014 binds the small-randomised-challenge confirmation shape for
+  `memory.purge`, the surface separation that keeps `PurgeTenant` off the
+  MCP and RPC surfaces, and the pre-purge backup procedures.
 
-Do **not** update `docs/users-guide.md` in this slice. User-visible safety
-guidance lands when the operator-facing CLI command, configuration
-parser, and purge prompt actually ship; updating the users' guide ahead
-of those surfaces would document behaviour that is not yet implemented.
-Roadmap items 1.3 and 2.2.3-2.2.4 carry the users' guide updates.
+Update `docs/users-guide.md`:
 
-Update `docs/roadmap.md` only to align task text with the now-settled
-decision. Do not mark item 1.1.2 done yet in this milestone.
+- Add one short subsection titled "Workspace, redaction, and purge
+  defaults" that summarises, for an operator, how workspace identity is
+  derived, that transcripts are redacted before storage and embedding, and
+  that purge is irreversible and gated by a confirmation challenge plus
+  pre-purge backups. Keep it to a few sentences and link ADR 014 and ADR
+  015. This subsection documents the policy a user should know about even
+  before the operator CLI ships; the command-specific usage detail lands in
+  roadmap items 1.3 and 2.2.3-2.2.4.
+
+Update `docs/roadmap.md`:
+
+- Align the item 1.1.2 task text with the now-settled decisions, but do not
+  mark item 1.1.2 done yet in this milestone.
+- Signpost the inherited decisions and open questions in the relevant
+  tasks:
+  - item 2.2.3 (redaction pipeline): add a note that this task ratifies or
+    revises ADR 015's proposed detector list and entropy thresholds against
+    real Codex and Claude transcripts and flips ADR 015 to `Accepted` (or
+    supersedes it);
+  - item 2.2.4 (workspace derivation): add a note that this task implements
+    ADR 014's workspace-identity contract (normalization, two-layer
+    hashing, registration-time collision diagnostics, overrides);
+  - item 5.3.1 (workspace purge): add a note that this task implements ADR
+    014's purge confirmation and pre-purge backup completion semantics.
 
 Run the required gates sequentially:
 
@@ -860,23 +975,27 @@ cat > "$COMMIT_MSG_DIR/COMMIT_MSG.md" << 'ENDOFMSG'
 Align safety-defaults documentation
 
 Update the design, terms of reference, RFC 0001, contents index,
-developers' guide, and (optionally) users' guide so the accepted
-workspace identity, redaction, and purge defaults are discoverable from
-every source document that previously carried the open decisions.
+developers' guide, users' guide, and roadmap so the accepted workspace
+and purge defaults (ADR 014) and the proposed redaction defaults
+(ADR 015) are discoverable from every source document that previously
+carried the open decisions, and so roadmap items 2.2.3, 2.2.4, and 5.3.1
+signpost the decisions they inherit.
 ENDOFMSG
 git add docs/memoryd-design.md docs/terms-of-reference.md \
   docs/rfcs/0001-standalone-evidence-inbox.md docs/contents.md \
-  docs/developers-guide.md docs/roadmap.md
+  docs/developers-guide.md docs/users-guide.md docs/roadmap.md
 git commit -F "$COMMIT_MSG_DIR/COMMIT_MSG.md"
 rm -rf "$COMMIT_MSG_DIR"
 ```
 
 ### Milestone 3: Mark roadmap item 1.1.2 done
 
-Verify that the accepted ADR exists, every source document links or names
-it, no source document still frames the redaction policy or backup format
-as unresolved, and the design open-decisions list no longer carries those
-two bullets. Then update `docs/roadmap.md` to mark item 1.1.2 done.
+Verify that both ADRs exist (ADR 014 `Accepted`, ADR 015 `Proposed`),
+every source document links or names them, the design §17 list no longer
+carries the backup-format bullet and reframes the redaction bullet as the
+proposed ADR 015 awaiting ratification in roadmap item 2.2.3, and roadmap
+items 2.2.3, 2.2.4, and 5.3.1 carry their signposts. Then update
+`docs/roadmap.md` to mark item 1.1.2 done.
 
 Run the full gate set again:
 
@@ -903,9 +1022,10 @@ COMMIT_MSG_DIR=$(mktemp -d)
 cat > "$COMMIT_MSG_DIR/COMMIT_MSG.md" << 'ENDOFMSG'
 Mark safety-defaults task complete
 
-Mark roadmap item 1.1.2 done after the accepted ADR and supporting
-documentation close the workspace identity, redaction, and purge
-default decisions.
+Mark roadmap item 1.1.2 done after ADR 014 (accepted) and ADR 015
+(proposed) and the supporting documentation close the workspace identity
+and purge decisions and capture the proposed redaction defaults for
+ratification in roadmap item 2.2.3.
 ENDOFMSG
 git add docs/roadmap.md
 git commit -F "$COMMIT_MSG_DIR/COMMIT_MSG.md"
@@ -928,36 +1048,38 @@ make nixie
 ```
 
 For the future implementation slices that will apply these defaults, the
-ADR must require this test matrix:
+ADRs must require this test matrix:
 
 - Unit tests with `rstest` covering Git origin normalization rules
   (scp-shorthand, `git+ssh`, `git+https`, embedded userinfo, host
-  lowercasing, `.git` stripping, trailing-slash stripping, IPv6 literals,
-  `file://` rejection), BLAKE3 short-ID truncation, profile-suffix
-  composition, override resolution, and in-tenant collision detection.
+  lowercasing, path-component case folding for the documented host list,
+  `.git` stripping, trailing-slash stripping, IPv6 literals, `file://`
+  rejection), BLAKE3 storage-identifier derivation and short-form
+  truncation, profile-field composition, override resolution, and
+  registration-time collision detection.
 - Behavioural tests with `rstest-bdd` covering scenarios such as
   "operator imports the same repository from two paths within one tenant",
   "operator overrides workspace identity for a moved repository", and
   "non-Git workspace identifier survives a symlink relocation".
-- Snapshot tests with `insta` covering normalized URL output, short-ID
-  derivation, collision diagnostic shape, redacted JSON envelopes for each
-  detector class, and the purge confirmation prompt text.
+- Snapshot tests with `insta` covering normalized URL output, storage and
+  short identifier derivation, collision diagnostic shape, redacted JSON
+  envelopes for each detector class, and the purge confirmation challenge
+  prompt text.
 - Property tests with `proptest` covering Git URL canonicalization
   idempotence (`normalize(normalize(x)) == normalize(x)`), redaction
-  idempotence on already-redacted text, and confirmation-string equality
-  semantics (rejecting case-folded, whitespace-padded, and partial
-  matches).
+  idempotence on already-redacted text, and challenge-answer validation
+  (rejecting empty, case-folded, whitespace-padded, and partial answers).
 - End-to-end tests covering the SQLite default path for workspace
-  registration, redaction-before-store, redaction-before-embedding, and
-  typed-scope purge confirmation; PostgreSQL equivalents under
-  `POSTGRES_TEST_URL` or `pg_embedded_setup_unpriv` per ADR 013.
+  registration, redaction-before-store, redaction-before-embedding, and the
+  small-randomised-challenge purge confirmation; PostgreSQL equivalents
+  under `POSTGRES_TEST_URL` or `pg_embedded_setup_unpriv` per ADR 013.
 - Source-health and audit-log assertions covering deny-pattern matches,
   workspace-collision diagnostics, and pre-purge backup acknowledgement
   records.
 - Optional Kani or Verus harnesses only if a later implementation slice
   introduces a bounded state machine for purge progression or a
-  contractual lemma for redaction idempotence. The documentation-only ADR
-  must not introduce formal verification work by itself.
+  contractual lemma for redaction idempotence. The documentation-only ADRs
+  must not introduce formal verification work by themselves.
 
 `googletest` assertions and `pretty_assertions` apply to all of the above.
 
@@ -965,40 +1087,41 @@ ADR must require this test matrix:
 
 Every step in this plan is idempotent. Re-running a milestone simply
 re-executes the gates and either reports that the documents already match
-the ADR or fails the gates with diagnostic output. The ADR file itself is
-overwrite-safe because Git tracks history. The cross-document alignment
-edits are scoped to specific named sections so repeated edits converge to
-the same outcome.
+the ADRs or fails the gates with diagnostic output. The ADR files
+themselves are overwrite-safe because Git tracks history. The
+cross-document alignment edits are scoped to specific named sections so
+repeated edits converge to the same outcome.
 
 If a gate fails twice after focused repair, stop and record the blocker in
 `Surprises & Discoveries` with the failing log path under `/tmp`, then ask
 the user for direction before retrying.
 
 If CodeRabbit's review surfaces a concern that contradicts the accepted
-defaults, do not silently weaken the ADR; instead record the conflict in
+defaults, do not silently weaken the ADRs; instead record the conflict in
 `Decision Log`, ask the user to confirm whether the default should change,
-and only then revise the ADR plus all linked documents.
+and only then revise the relevant ADR plus all linked documents.
 
 ## Interfaces and dependencies
 
 This slice does not add new Rust interfaces or commit to Rust type names.
-ADR 014 binds the **behavioural** contracts that subsequent slices must
-honour; roadmap item 1.2.1 owns the concrete domain newtypes, port traits,
-and module layout.
+ADR 014 and ADR 015 bind the **behavioural** contracts that subsequent
+slices must honour; roadmap item 1.2.1 owns the concrete domain newtypes,
+port traits, and module layout.
 
-The behavioural contracts the ADR fixes are:
+The behavioural contracts the ADRs fix are:
 
-- a tenant-scoped workspace identity contract with a two-layer
+- a tenant-scoped workspace identity contract (ADR 014) with a two-layer
   (storage / presentational) shape and a deterministic registration-time
   collision diagnostic;
-- a per-workspace redaction policy contract that classifies events into
-  the first-release detector classes, enforces deny-pattern skipping
-  before ingest, and binds the two-value raw-text storage mode;
-- a multi-step purge contract whose pre-purge backup phase runs to
-  completion (or aborts) before any tenant-owned row is touched, whose
-  confirmation requires typed scope plus randomised challenge plus an
-  irreversibility flag, and whose tenant-wide variant is reachable only
-  from the operator CLI.
+- a per-workspace redaction policy contract (ADR 015, proposed) that
+  classifies events into the first-release detector classes, enforces
+  deny-pattern skipping before ingest, and binds the two-value raw-text
+  storage mode;
+- a multi-step purge contract (ADR 014) whose pre-purge backup phase runs
+  to completion (or aborts) before any tenant-owned row is touched, whose
+  confirmation is a small randomised challenge against the resolved scope,
+  and whose tenant-wide variant is reachable only from the operator CLI
+  behind `--force-tenant-scope`.
 
 Adapter responsibilities under those contracts are: BLAKE3 derivation,
 Git origin parsing, host-case-list lookup, detector engine selection
@@ -1008,7 +1131,7 @@ Memoryd-internal regex/entropy), SQLite `VACUUM INTO`, PostgreSQL
 handling. None of these are committed as Rust crate or module choices in
 this slice.
 
-No new external dependency is committed by this ADR.
+No new external dependency is committed by these ADRs.
 
 ## Progress
 
@@ -1024,18 +1147,25 @@ No new external dependency is committed by this ADR.
   and SQLite / PostgreSQL / Qdrant backup references.
 - [x] 2026-06-05: Drafted this pre-implementation ExecPlan.
 - [x] 2026-06-05: Ran `logisphere-design-review` over the draft and
-  applied the eight must-fix concerns plus six nice-to-have refinements
+  applied the eight must-fix concerns plus the nice-to-have refinements
   before delivery.
+- [x] 2026-06-14: Applied the reviewer-direction refinements: split the
+  decision into ADR 014 (workspace + purge, Accepted) and ADR 015
+  (redaction, Proposed) written in the same milestone; switched purge
+  confirmation to a small randomised challenge as the primary defence;
+  committed to one short users-guide subsection; and added roadmap
+  signposts for items 2.2.3, 2.2.4, and 5.3.1.
 - [ ] Received explicit user approval to implement this ExecPlan.
-- [ ] Milestone 1: wrote ADR 014, passed `make markdownlint` and
-  `make nixie`, and cleared CodeRabbit review.
-- [ ] Milestone 2: aligned source documents with ADR 014, passed
-  `make check-fmt`, `make typecheck`, `make lint`, `make test`,
-  `make markdownlint`, and `make nixie`, and cleared CodeRabbit review.
-- [ ] Milestone 3: verified the redaction policy and backup-format
-  questions are no longer open in source documents, marked roadmap item
-  1.1.2 done, passed the full final gate set, and cleared the final
-  CodeRabbit review.
+- [ ] Milestone 1: wrote ADR 014 and ADR 015, passed `make markdownlint`
+  and `make nixie`, and cleared CodeRabbit review.
+- [ ] Milestone 2: aligned source documents with both ADRs and added the
+  roadmap signposts, passed `make check-fmt`, `make typecheck`,
+  `make lint`, `make test`, `make markdownlint`, and `make nixie`, and
+  cleared CodeRabbit review.
+- [ ] Milestone 3: verified the backup-format question is closed and the
+  redaction bullet points at proposed ADR 015 / roadmap item 2.2.3, marked
+  roadmap item 1.1.2 done, passed the full final gate set, and cleared the
+  final CodeRabbit review.
 
 ## Surprises & Discoveries
 
@@ -1061,12 +1191,15 @@ No new external dependency is committed by this ADR.
   `hex ≥ 3.0`, length `≥ 20`. Rationale: the truffleHog-derived defaults
   are reused verbatim by detect-secrets and entro.py and represent the
   community-standard pattern memoryd integrators already trust.
-- 2026-06-05: Bind purge confirmation to a typed
-  `{tenant_slug}/{workspace_slug}` (or `tenant:{tenant_slug}`) match plus
-  `--force-tenant-scope` for tenant-wide purge. Rationale: GitHub's
-  danger-zone deletion flow already trains operators in typed-name
-  confirmation and AWS S3's `aws s3 rb --force` pattern legitimises
-  refusing recursive deletes unless explicitly requested.
+- 2026-06-14: Make a small randomised challenge the primary purge
+  confirmation, superseding the earlier typed-name match. Rationale:
+  reviewer direction preferred the small randomised challenge because a
+  typed-name prompt can be satisfied by a slug pasted from shell history,
+  whereas a short per-invocation challenge the operator has not seen before
+  cannot. Tenant-wide purge keeps the additional `--force-tenant-scope`
+  flag and remains operator-CLI-only; GitHub's danger-zone flow and AWS
+  S3's `aws s3 rb --force` remain the cited precedents for explicit-scope
+  destructive actions.
 - 2026-06-05: Defer `store_raw_text = "encrypted"` to a future ADR and
   enumerate the v1 enum as exactly `none | redacted`. Rationale: a
   fail-closed configuration parser is safer than an "accept-but-reject"
@@ -1085,27 +1218,45 @@ No new external dependency is committed by this ADR.
   (4) making `redact_before_*` non-disablable in every tenant mode,
   with a single explicit `[privacy].unsafe_disable_redaction` escape
   hatch instead of an implicit `local_single` exemption;
-  (5) augmenting typed-scope purge confirmation with a randomised
-  challenge prompt and an `--i-understand-this-is-irreversible` flag to
+  (5) augmenting purge confirmation with a randomised challenge prompt to
   defeat clipboard-paste mistakes;
   (6) confirming MCP and internal RPC surfaces refuse `PurgeTenant`
   entirely and that `--force-tenant-scope` is an operator-CLI concept;
   (7) moving collision detection to workspace registration time with a
-  named `WorkspaceCollision` diagnostic;
+  named collision diagnostic;
   (8) binding pre-purge backup completion semantics with audited
   `(collection, snapshot_id)` pairs and partial-failure abort. Nice-to-
   have refinements applied: documented case-insensitive host list for
   path-component lowercasing, `globset` syntax for deny patterns,
-  intentional `v1` in the BLAKE3 context string, entropy thresholds
-  flagged as starting defaults the projection slice may tune, and
-  removal of the conditional `docs/users-guide.md` edit from milestone 2.
-- 2026-06-05: Considered Wafflecat's strongest alternative (split into a
-  workspace-identity ADR and a deferred redaction-defaults ADR). Kept the
-  single-ADR scope because the §17 open decisions move together in the
-  design document and because every downstream slice that consumes one
-  default benefits from having the other two settled at the same time.
-  Recorded the alternative here so a future reviewer can see it was
-  weighed and rejected for reasons rather than skipped.
+  intentional `v1` in the BLAKE3 context string, and entropy thresholds
+  flagged as starting defaults to be tuned later.
+- 2026-06-14: On reviewer direction, adopted Wafflecat's split-ADR
+  alternative: ADR 014 (workspace identity + purge, Accepted) and ADR 015
+  (redaction defaults, Proposed), both written in milestone 1, with ADR
+  015 explicitly revisited and ratified in roadmap item 2.2.3. Rationale:
+  the user preferred a separate document so the difference in confidence is
+  legible — workspace and purge are settled, while the redaction detector
+  list and thresholds are a recorded proposal awaiting transcript-informed
+  ratification. Writing both now captures the proposal in full rather than
+  leaving a vague forward reference. This supersedes the earlier decision
+  to keep a single ADR.
+- 2026-06-14: On reviewer direction, made the purge confirmation a small
+  randomised challenge (primary defence) and dropped the separate
+  `--i-understand-this-is-irreversible` flag for workspace purge to keep the
+  flow lean; tenant-wide purge retains `--force-tenant-scope`. Rationale:
+  the user explicitly preferred the small randomised challenge.
+- 2026-06-14: On reviewer direction, committed to one short
+  `docs/users-guide.md` subsection ("Workspace, redaction, and purge
+  defaults") in milestone 2, reversing the earlier decision to omit the
+  users' guide. Rationale: the user wants the policy a user should know
+  about documented now, with command-specific usage detail still deferred
+  to the implementation slices. The expected-file tolerance rose to nine
+  accordingly.
+- 2026-06-14: On reviewer direction, signposted the inherited open
+  questions in the relevant roadmap tasks (2.2.3 redaction ratification,
+  2.2.4 workspace derivation, 5.3.1 workspace purge). Rationale: the user
+  asked for the open questions to be visible from the tasks that resolve
+  them rather than only in the execplan and ADRs.
 
 ## Outcomes & Retrospective
 
