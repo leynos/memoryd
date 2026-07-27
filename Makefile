@@ -18,6 +18,7 @@ TEST_CMD := $(if $(shell $(CARGO) nextest --version 2>/dev/null),nextest run,tes
 COVERAGE_LINKER_FLAGS ?= -fuse-ld=lld
 COVERAGE_RUST_FLAGS ?= $(RUST_FLAGS) -C link-arg=$(COVERAGE_LINKER_FLAGS)
 MDLINT ?= markdownlint-cli2
+MDFORMAT_ALL ?= mdformat-all
 NIXIE ?= nixie
 WHITAKER ?= $(or $(shell command -v whitaker 2>/dev/null),$(wildcard $(USER_WHITAKER)),whitaker)
 
@@ -55,14 +56,10 @@ typecheck: ## Type-check without building
 
 fmt: fmt-tools ## Format Rust and Markdown sources
 	$(CARGO) +nightly fmt --all
-	fd --print0 --type f --extension md --extension markdown --extension mdx . | \
-		xargs -0 mdtablefix --wrap --renumber --breaks --ellipsis --fences --in-place
-	$(MDLINT) --fix '**/*.md'
+	$(MDFORMAT_ALL)
 
 fmt-tools: ## Verify Markdown formatting tools are installed
-	@command -v fd >/dev/null || { echo "Install fd: cargo install fd-find"; exit 1; }
-	@command -v mdtablefix >/dev/null || { echo "Install mdtablefix: cargo install mdtablefix"; exit 1; }
-	@command -v $(MDLINT) >/dev/null || { echo "Install $(MDLINT): bun install -g markdownlint-cli2"; exit 1; }
+	@command -v $(MDFORMAT_ALL) >/dev/null || { echo "Install $(MDFORMAT_ALL) from agent-helper-scripts"; exit 1; }
 
 check-fmt: ## Verify formatting
 	$(CARGO) fmt --all -- --check

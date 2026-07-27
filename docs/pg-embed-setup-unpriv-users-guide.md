@@ -504,8 +504,8 @@ template invalidation explicit without hashing the migration directory.
 
 ### Performance comparison
 
-The following table compares test isolation approaches:
-Table: Comparison of test-cluster approaches and their isolation/overhead characteristics.
+The following table compares test isolation approaches: Table: Comparison of
+test-cluster approaches and their isolation/overhead characteristics.
 
 | Approach                       | Bootstrap | Per-test overhead | Isolation |
 | ------------------------------ | --------- | ----------------- | --------- |
