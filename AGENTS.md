@@ -381,3 +381,17 @@ They require a nightly toolchain and, on Linux, a `mold` binary on the
 `PATH`. The fragment is passed explicitly with `--config`, so release,
 coverage, and verification builds are unaffected; never copy its contents
 into `.cargo/config.toml`, which Cargo applies to every build.
+
+## Standard development path
+
+The dev-fast profile is the standard development path, not a side path:
+`make build`, `make test`, `make lint`, and `make typecheck` all pass
+`--config tools/dev-fast/config.toml` to Cargo. An agent or human calling
+`cargo build`, `cargo test`, `cargo clippy`, `cargo check`, or `cargo doc`
+directly for a development build, test, lint, or typecheck run must pass
+that same `--config` flag, or the run will use a different codegen
+backend and linker than `make` does. The fragment must never be applied
+to coverage, release, or verification builds. Mixing direct-cargo and
+`make` invocations without the flag thrashes the incremental build
+cache, because Cargo fingerprints the codegen backend and the two runs
+produce different fingerprints for what looks like the same build.
