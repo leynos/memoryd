@@ -9,8 +9,16 @@
 //! development path" section for the full rationale. This test reads the
 //! repository's own Makefile so an over-eager edit that drops the wiring
 //! fails locally before the estate-wide DF-004 audit ever runs.
+//!
+//! Checks operate per cargo-invoking recipe line, not on a recipe's whole
+//! text: a target whose recipe carries several cargo lines (the `doc`
+//! step plus `clippy` in `lint`) would otherwise pass a whole-block match
+//! even when only one of those lines is wired. A separate pair of tests
+//! dry-runs `dev-build`/`dev-test` with a substituted `CARGO` value to
+//! prove the Wave 1 block's `$(CARGO)` indirection actually reaches the
+//! `--config` flag, without needing the nightly toolchain or `mold`.
 
-use std::path::Path;
+use std::{path::Path, process::Command};
 
 use rstest::rstest;
 
@@ -50,6 +58,17 @@ fn build_recipe(makefile: &str) -> String {
     }
 }
 
+/// Returns the lines within `recipe` that directly invoke `$(CARGO)`, as
+/// distinct from lines that invoke some other tool (for example the
+/// Whitaker binary, which reuses `$(CARGO_FLAGS)` but not `$(CARGO)`
+/// itself).
+fn cargo_invocation_lines(recipe: &str) -> Vec<&str> {
+    recipe
+        .lines()
+        .filter(|line| line.contains("$(CARGO)"))
+        .collect()
+}
+
 /// Reports whether `text` references the dev-fast configuration
 /// fragment, matching `dev-fast` or `dev_fast` case-insensitively.
 fn mentions_dev_fast(text: &str) -> bool {
@@ -57,17 +76,41 @@ fn mentions_dev_fast(text: &str) -> bool {
     lower.contains("dev-fast") || lower.contains("dev_fast")
 }
 
-/// Asserts that a Makefile recipe wires cargo through the dev-fast
-/// configuration fragment, naming the convention and where it is
-/// documented when the assertion fails.
+/// Asserts that every `$(CARGO)` invocation in `recipe` passes `--config`
+/// and references the dev-fast fragment, checked line by line so a
+/// partially-wired multi-line recipe fails rather than passing on the
+/// strength of its other lines.
 fn assert_uses_dev_fast_config(target: &str, recipe: &str) {
-    let wired = recipe.contains("--config") && mentions_dev_fast(recipe);
+    let cargo_lines = cargo_invocation_lines(recipe);
     assert!(
-        wired,
-        "the `{target}` Makefile target must invoke cargo with `--config \
-         tools/dev-fast/config.toml` (the DEV_FAST_CONFIG variable) so it runs on the estate's \
-         dev-fast standard development path; see AGENTS.md's \"Standard development path\" section",
+        !cargo_lines.is_empty(),
+        "the `{target}` Makefile target's recipe has no $(CARGO) invocation to check for dev-fast \
+         wiring; see AGENTS.md's \"Standard development path\" section",
     );
+    for line in cargo_lines {
+        let wired = line.contains("--config") && mentions_dev_fast(line);
+        assert!(
+            wired,
+            "the `{target}` Makefile target's cargo invocation `{line}` must pass `--config \
+             tools/dev-fast/config.toml` (the DEV_FAST_CONFIG variable) so it runs on the \
+             estate's dev-fast standard development path; see AGENTS.md's \"Standard development \
+             path\" section",
+        );
+    }
+}
+
+/// Asserts that no `$(CARGO)` invocation in `recipe` references the
+/// dev-fast fragment, checked line by line for the same reason as
+/// [`assert_uses_dev_fast_config`].
+fn assert_never_uses_dev_fast_config(target: &str, recipe: &str) {
+    for line in cargo_invocation_lines(recipe) {
+        assert!(
+            !mentions_dev_fast(line),
+            "the `{target}` Makefile target's cargo invocation `{line}` must never reference the \
+             dev-fast configuration fragment: {target} requires the LLVM codegen backend and the \
+             platform linker; see AGENTS.md's \"Fast development builds\" section",
+        );
+    }
 }
 
 #[rstest]
@@ -89,12 +132,7 @@ fn build_target_uses_dev_fast_config() {
 #[test]
 fn coverage_target_never_uses_dev_fast_config() {
     let recipe = recipe_after(MAKEFILE, "coverage:");
-    assert!(
-        !mentions_dev_fast(&recipe),
-        "the `coverage` Makefile target must never reference the dev-fast configuration fragment: \
-         coverage requires the LLVM codegen backend and the platform linker; see AGENTS.md's \
-         \"Fast development builds\" section",
-    );
+    assert_never_uses_dev_fast_config("coverage", &recipe);
 }
 
 #[test]
@@ -109,4 +147,53 @@ fn dev_fast_config_file_exists() {
          standard development targets depend on it; see AGENTS.md's \"Fast development builds\" \
          section",
     );
+}
+
+/// Runs `make --dry-run <target> CARGO=<probe_cargo>` in the repository
+/// root and returns the printed command, without building or testing
+/// anything. Proves the Wave 1 block's `$(CARGO)` indirection actually
+/// reaches the recipe, on any toolchain, with no nightly or `mold`
+/// dependency.
+///
+/// Returns `Err` rather than panicking directly: this is a helper, not a
+/// `#[test]` function itself, so `clippy::expect_used` still applies to
+/// it even with `allow-expect-in-tests` set.
+fn dry_run(target: &str, probe_cargo: &str) -> Result<String, String> {
+    let output = Command::new("make")
+        .arg("--dry-run")
+        .arg(target)
+        .arg(format!("CARGO={probe_cargo}"))
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .map_err(|error| {
+            format!("failed to run `make --dry-run {target} CARGO={probe_cargo}`: {error}")
+        })?;
+    String::from_utf8(output.stdout)
+        .map_err(|error| format!("make dry-run output for `{target}` was not valid UTF-8: {error}"))
+}
+
+/// Asserts that each string in `needles` occurs in `text`, in the given
+/// order, by repeatedly splitting off everything before and including
+/// the next needle. Names `target` when a needle is missing or
+/// out of order.
+fn assert_ordered(target: &str, text: &str, needles: &[&str]) {
+    let mut remaining = text;
+    for needle in needles {
+        let Some((_, after)) = remaining.split_once(needle) else {
+            panic!(
+                "the `make {target}` dry-run output must contain {needles:?} in order; {needle:?} \
+                 was missing after the previous marker; full output: {text:?}",
+            );
+        };
+        remaining = after;
+    }
+}
+
+#[rstest]
+#[case::probe_dev_build("dev-build")]
+#[case::probe_dev_test("dev-test")]
+fn dev_fast_target_respects_cargo_substitution(#[case] target: &str) {
+    let probe_cargo = "probe-cargo";
+    let output = dry_run(target, probe_cargo).expect("make --dry-run must succeed");
+    assert_ordered(target, &output, &[probe_cargo, "--config", "dev-fast"]);
 }
