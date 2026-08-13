@@ -23,3 +23,10 @@ updates:
       - "cargo"
     schedule:
       interval: "daily"
+  - package-ecosystem: rust-toolchain
+    directory: /
+    labels:
+      - dependencies
+      - rust-toolchain
+    schedule:
+      interval: weekly
