@@ -18,6 +18,10 @@ coverage tooling expects LLVM-compatible linker behaviour. `.cargo/config.toml`
 no longer enables the Cranelift codegen backend for debug builds; that opt-in
 acceleration now lives in `tools/dev-fast/config.toml` instead, so it applies
 only when explicitly requested rather than to every build Cargo discovers.
+`rust-toolchain.toml` still pins the `llvm-tools-preview` and
+`rustc-codegen-cranelift-preview` components, so both the coverage tooling
+and the Cranelift backend itself remain installed; `tools/dev-fast/config.toml`
+is what controls whether a given build actually activates Cranelift.
 
 `make dev-build` and `make dev-test` compile with that Cranelift-plus-mold
 fragment, passed explicitly via `cargo --config tools/dev-fast/config.toml`.

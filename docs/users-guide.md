@@ -12,11 +12,14 @@ Application projects render `src/main.rs`, release automation, and
 
 On Linux targets, `.cargo/config.toml` configures clang to link with `mold`
 so local debug builds link quickly. Coverage generation uses `lld` instead
-because LLVM coverage tools expect LLVM-compatible linker behaviour.
-Cranelift debug code generation is no longer enabled by default; it is
-available as an opt-in accelerated build via `tools/dev-fast/config.toml`
-and the `make dev-build`/`make dev-test` targets below, so ordinary builds,
-coverage, and verification keep the supported LLVM backend.
+because LLVM coverage tools expect LLVM-compatible linker behaviour. The
+pinned nightly toolchain still installs the Cranelift codegen backend, but
+`.cargo/config.toml` no longer activates it by default for every build;
+only the automatic activation was removed, not the component itself. It
+remains available as an opt-in accelerated build via
+`tools/dev-fast/config.toml` and the `make dev-build`/`make dev-test`
+targets below, so ordinary builds, coverage, and verification keep the
+supported LLVM backend.
 
 ## Makefile Targets
 
