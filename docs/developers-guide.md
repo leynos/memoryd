@@ -28,6 +28,31 @@ the fragment is never merged into `.cargo/config.toml`.
 Install `clang`, `lld`, and `mold` before running the full generated workflow
 locally on Linux.
 
+## Lint baseline
+
+Memoryd is a single crate with no `[workspace]` table, so its lint tables
+live directly under `[lints.clippy]`, `[lints.rust]`, and `[lints.rustdoc]`
+in `Cargo.toml`, rather than under `[workspace.lints]` with per-member
+inheritance. They implement the estate's phase 2 Rust baseline. `Cargo.toml`
+is authoritative for the exact set and level of each lint; this section
+summarizes intent rather than duplicating the list.
+
+Violations must be fixed, not silenced. Where a violation is a genuine,
+scheduled deferral, annotate the site with
+`#[expect(clippy::<lint>, reason = "...")]`, never `#[allow(...)]`: once the
+site is fixed, the unfulfilled expectation itself becomes a warning, so the
+backlog announces its own shrinkage instead of rotting silently.
+
+`clippy.toml` carries the numeric thresholds (cognitive complexity,
+argument count, function length, nesting depth) and the
+`disallowed-methods` list that forbids direct `std::env::var`/`set_var`/
+`remove_var` calls and their `_os`/`vars` siblings; inject an environment
+reader instead so environment access stays testable.
+
+The pinned nightly toolchain in `rust-toolchain.toml` supplies the
+`rustfmt`, `clippy`, and `rust-analyzer` components the lint and formatting
+gates depend on.
+
 Behavioural tests that describe externally observable workflows should use
 `rstest-bdd` so Gherkin scenarios, `rstest` fixtures, and Rust assertions run
 under the standard Cargo test harness. PostgreSQL migration and repository
