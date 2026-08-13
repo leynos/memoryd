@@ -7,7 +7,7 @@
 #[test]
 fn replace_this_stub_when_real_tests_exist() {
     assert!(
-        std::env::var_os("CARGO_MANIFEST_DIR").is_some(),
+        !env!("CARGO_MANIFEST_DIR").is_empty(),
         "CARGO_MANIFEST_DIR should be set by Cargo when running tests"
     );
 }

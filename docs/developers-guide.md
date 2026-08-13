@@ -7,17 +7,55 @@ This guide explains the contributor workflow for the generated Memoryd project.
 Use `make all` as the public entrypoint for formatting, linting, and tests.
 `make lint` runs rustdoc, Clippy, and Whitaker. `make test` prefers
 `cargo nextest run` and falls back to `cargo test` when cargo-nextest is not
-available. `make coverage` uses `cargo llvm-cov` with `lld`.
+available. `make coverage` uses `cargo llvm-cov` with `lld`. `make dev-build`
+and `make dev-test` are opt-in accelerated variants; see below.
 
 ## Tooling
 
-Development builds use Cranelift for debug code generation. On Linux targets,
-`.cargo/config.toml` configures clang to link with `mold` so debug builds link
-quickly. Coverage generation uses `lld` because LLVM coverage tooling expects
-LLVM-compatible linker behaviour.
+On Linux targets, `.cargo/config.toml` configures clang to link with `mold`
+so debug builds link quickly. Coverage generation uses `lld` because LLVM
+coverage tooling expects LLVM-compatible linker behaviour. `.cargo/config.toml`
+no longer enables the Cranelift codegen backend for debug builds; that opt-in
+acceleration now lives in `tools/dev-fast/config.toml` instead, so it applies
+only when explicitly requested rather than to every build Cargo discovers.
+`rust-toolchain.toml` still pins the `llvm-tools-preview` and
+`rustc-codegen-cranelift-preview` components, so both the coverage tooling
+and the Cranelift backend itself remain installed; `tools/dev-fast/config.toml`
+is what controls whether a given build actually activates Cranelift.
+
+`make dev-build` and `make dev-test` compile with that Cranelift-plus-mold
+fragment, passed explicitly via `cargo --config tools/dev-fast/config.toml`.
+They require a nightly toolchain and, on Linux, a `mold` binary on the
+`PATH`. Release, coverage, and verification builds are unaffected because
+the fragment is never merged into `.cargo/config.toml`.
 
 Install `clang`, `lld`, and `mold` before running the full generated workflow
 locally on Linux.
+
+## Lint baseline
+
+Memoryd is a single crate with no `[workspace]` table, so its lint tables
+live directly under `[lints.clippy]`, `[lints.rust]`, and `[lints.rustdoc]`
+in `Cargo.toml`, rather than under `[workspace.lints]` with per-member
+inheritance. They implement the estate's phase 2 Rust baseline. `Cargo.toml`
+is authoritative for the exact set and level of each lint; this section
+summarizes intent rather than duplicating the list.
+
+Violations must be fixed, not silenced. Where a violation is a genuine,
+scheduled deferral, annotate the site with
+`#[expect(clippy::<lint>, reason = "...")]`, never `#[allow(...)]`: once the
+site is fixed, the unfulfilled expectation itself becomes a warning, so the
+backlog announces its own shrinkage instead of rotting silently.
+
+`clippy.toml` carries the numeric thresholds (cognitive complexity,
+argument count, function length, nesting depth) and the
+`disallowed-methods` list that forbids direct `std::env::var`/`set_var`/
+`remove_var` calls and their `_os`/`vars` siblings; inject an environment
+reader instead so environment access stays testable.
+
+The pinned nightly toolchain in `rust-toolchain.toml` supplies the
+`rustfmt`, `clippy`, and `rust-analyzer` components the lint and formatting
+gates depend on.
 
 Behavioural tests that describe externally observable workflows should use
 `rstest-bdd` so Gherkin scenarios, `rstest` fixtures, and Rust assertions run

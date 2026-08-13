@@ -10,10 +10,8 @@ settings, and documented starter code. Library projects render `src/lib.rs`.
 Application projects render `src/main.rs`, release automation, and
 `[package.metadata.binstall]` metadata for binary installation.
 
-Development builds use Cranelift for debug code generation. On Linux targets,
-`.cargo/config.toml` configures clang to link with `mold` so local debug builds
-link quickly. Coverage generation uses `lld` instead because LLVM coverage
-tools expect LLVM-compatible linker behaviour.
+See the [developers' guide](developers-guide.md) for the local build and
+linker configuration.
 
 ## Makefile Targets
 
@@ -27,8 +25,10 @@ The generated `Makefile` exposes these public targets:
 - `make build` builds the debug target.
 - `make release` builds the release target.
 - `make coverage` writes `lcov.info` using `cargo llvm-cov` and `lld`.
+- `make dev-build` and `make dev-test` provide opt-in accelerated build
+  variants; see the [developers' guide](developers-guide.md) for details.
 - `make markdownlint` checks Markdown files.
 - `make nixie` validates Mermaid diagrams.
 
-Install `clang`, `lld`, and `mold` before running the full generated workflow
-locally on Linux.
+See the [developers' guide](developers-guide.md) for the toolchain
+prerequisites needed to run the full generated workflow locally.
