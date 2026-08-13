@@ -46,7 +46,10 @@ omits build output such as `target/`.
 ## Path responsibilities
 
 - `.cargo/config.toml`: Configures Cargo defaults for local development,
-  including Linux linker and code-generation settings.
+  including the Linux linker.
+- `tools/dev-fast/config.toml`: Opt-in Cranelift-plus-mold configuration
+  fragment for accelerated local debug builds, applied explicitly by
+  `make dev-build` and `make dev-test`.
 - `.github/dependabot.yml`: Configures automated dependency update checks.
 - `.github/workflows/ci.yml`: Runs Memoryd's continuous integration checks.
 - `.github/workflows/release.yml`: Builds and publishes binary release

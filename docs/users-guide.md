@@ -12,10 +12,11 @@ Application projects render `src/main.rs`, release automation, and
 
 On Linux targets, `.cargo/config.toml` configures clang to link with `mold`
 so local debug builds link quickly. Coverage generation uses `lld` instead
-because LLVM coverage tools expect LLVM-compatible linker behaviour. Cranelift
-debug code generation, previously enabled here, has been removed; opt-in
-build acceleration is now the concern of the shared `tools/dev-fast`
-configuration rather than the per-repository toolchain pin.
+because LLVM coverage tools expect LLVM-compatible linker behaviour.
+Cranelift debug code generation is no longer enabled by default; it is
+available as an opt-in accelerated build via `tools/dev-fast/config.toml`
+and the `make dev-build`/`make dev-test` targets below, so ordinary builds,
+coverage, and verification keep the supported LLVM backend.
 
 ## Makefile Targets
 
@@ -29,6 +30,8 @@ The generated `Makefile` exposes these public targets:
 - `make build` builds the debug target.
 - `make release` builds the release target.
 - `make coverage` writes `lcov.info` using `cargo llvm-cov` and `lld`.
+- `make dev-build` and `make dev-test` build and test with the opt-in
+  Cranelift-plus-mold configuration in `tools/dev-fast/config.toml`.
 - `make markdownlint` checks Markdown files.
 - `make nixie` validates Mermaid diagrams.
 

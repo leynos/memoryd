@@ -7,18 +7,23 @@ This guide explains the contributor workflow for the generated Memoryd project.
 Use `make all` as the public entrypoint for formatting, linting, and tests.
 `make lint` runs rustdoc, Clippy, and Whitaker. `make test` prefers
 `cargo nextest run` and falls back to `cargo test` when cargo-nextest is not
-available. `make coverage` uses `cargo llvm-cov` with `lld`.
+available. `make coverage` uses `cargo llvm-cov` with `lld`. `make dev-build`
+and `make dev-test` are opt-in accelerated variants; see below.
 
 ## Tooling
 
 On Linux targets, `.cargo/config.toml` configures clang to link with `mold`
 so debug builds link quickly. Coverage generation uses `lld` because LLVM
-coverage tooling expects LLVM-compatible linker behaviour. The Cranelift
-codegen backend that a previous version of this configuration enabled for
-debug builds has been removed; the estate's canonical `rust-toolchain.toml`
-pins only `rustfmt`, `clippy`, and `rust-analyzer`, so per-repository
-opt-in acceleration such as Cranelift now lives in the shared
-`tools/dev-fast` configuration instead.
+coverage tooling expects LLVM-compatible linker behaviour. `.cargo/config.toml`
+no longer enables the Cranelift codegen backend for debug builds; that opt-in
+acceleration now lives in `tools/dev-fast/config.toml` instead, so it applies
+only when explicitly requested rather than to every build Cargo discovers.
+
+`make dev-build` and `make dev-test` compile with that Cranelift-plus-mold
+fragment, passed explicitly via `cargo --config tools/dev-fast/config.toml`.
+They require a nightly toolchain and, on Linux, a `mold` binary on the
+`PATH`. Release, coverage, and verification builds are unaffected because
+the fragment is never merged into `.cargo/config.toml`.
 
 Install `clang`, `lld`, and `mold` before running the full generated workflow
 locally on Linux.
