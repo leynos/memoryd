@@ -1,2 +1,9 @@
 target/
 **/*.rs.bk
+.vtcode/
+.claude/
+.memdb/
+.grepai/
+*.swp
+*.swo
+*~
