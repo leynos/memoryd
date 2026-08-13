@@ -11,10 +11,14 @@ available. `make coverage` uses `cargo llvm-cov` with `lld`.
 
 ## Tooling
 
-Development builds use Cranelift for debug code generation. On Linux targets,
-`.cargo/config.toml` configures clang to link with `mold` so debug builds link
-quickly. Coverage generation uses `lld` because LLVM coverage tooling expects
-LLVM-compatible linker behaviour.
+On Linux targets, `.cargo/config.toml` configures clang to link with `mold`
+so debug builds link quickly. Coverage generation uses `lld` because LLVM
+coverage tooling expects LLVM-compatible linker behaviour. The Cranelift
+codegen backend that a previous version of this configuration enabled for
+debug builds has been removed; the estate's canonical `rust-toolchain.toml`
+pins only `rustfmt`, `clippy`, and `rust-analyzer`, so per-repository
+opt-in acceleration such as Cranelift now lives in the shared
+`tools/dev-fast` configuration instead.
 
 Install `clang`, `lld`, and `mold` before running the full generated workflow
 locally on Linux.
