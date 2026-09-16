@@ -10,8 +10,8 @@ settings, and documented starter code. Library projects render `src/lib.rs`.
 Application projects render `src/main.rs`, release automation, and
 `[package.metadata.binstall]` metadata for binary installation.
 
-See the [developers' guide](developers-guide.md) for the local build and
-linker configuration.
+See the [developers' guide](developers-guide.md) for the local build and linker
+configuration.
 
 ## Makefile Targets
 

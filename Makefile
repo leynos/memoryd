@@ -18,7 +18,14 @@ TEST_CMD := $(if $(shell $(CARGO) nextest --version 2>/dev/null),nextest run,tes
 COVERAGE_LINKER_FLAGS ?= -fuse-ld=lld
 COVERAGE_RUST_FLAGS ?= $(RUST_FLAGS) -C link-arg=$(COVERAGE_LINKER_FLAGS)
 MDLINT ?= markdownlint-cli2
-MDFORMAT_ALL ?= mdformat-all
+# `make fmt` and `make check-fmt` call mdtablefix directly. `--git` selects the
+# Markdown files Git tracks and `--include-untracked` adds the untracked files
+# Git does not ignore, so a new document is formatted before it is staged.
+# Both modes need mdtablefix 0.6.0 or later; CI pins the version at the
+# install-mdtablefix step.
+MDTABLEFIX ?= mdtablefix
+MDTABLEFIX_SELECT = --git --include-untracked
+MDTABLEFIX_RULES = --wrap --renumber --breaks --ellipsis --fences
 NIXIE ?= nixie
 WHITAKER ?= $(or $(shell command -v whitaker 2>/dev/null),$(wildcard $(USER_WHITAKER)),whitaker)
 
@@ -56,13 +63,16 @@ typecheck: ## Type-check without building
 
 fmt: fmt-tools ## Format Rust and Markdown sources
 	$(CARGO) +nightly fmt --all
-	$(MDFORMAT_ALL)
+	$(MDTABLEFIX) --in-place $(MDTABLEFIX_SELECT) $(MDTABLEFIX_RULES)
+	$(MDLINT) --fix "**/*.md"
 
 fmt-tools: ## Verify Markdown formatting tools are installed
-	@command -v $(MDFORMAT_ALL) >/dev/null || { echo "Install $(MDFORMAT_ALL) from agent-helper-scripts"; exit 1; }
+	@command -v $(MDTABLEFIX) >/dev/null || { echo "Install mdtablefix 0.6.0 or later"; exit 1; }
+	@command -v $(MDLINT) >/dev/null || { echo "Install $(MDLINT)"; exit 1; }
 
 check-fmt: ## Verify formatting
 	$(CARGO) fmt --all -- --check
+	$(MDTABLEFIX) --check $(MDTABLEFIX_SELECT) $(MDTABLEFIX_RULES)
 
 markdownlint: ## Lint Markdown files
 	$(MDLINT) '**/*.md'
