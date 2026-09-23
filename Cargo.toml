@@ -100,4 +100,4 @@ invalid_codeblock_attributes        = "deny"
 unescaped_backticks                 = "deny"
 
 [dev-dependencies]
-rstest = "0.26.1"
+rstest = "0.27.0"
