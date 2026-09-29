@@ -375,12 +375,14 @@ collaboration.
 
 ## Fast development builds
 
-`make dev-build` and `make dev-test` compile with the opt-in Cranelift backend
-and the mold linker configured in `tools/dev-fast/config.toml`. They require a
-nightly toolchain and, on Linux, a `mold` binary on the `PATH`. The fragment is
-passed explicitly with `--config`, so release, coverage, and verification
-builds are unaffected; never copy its contents into `.cargo/config.toml`, which
-Cargo applies to every build.
+`make dev-build` and `make dev-test` compile with the Cranelift backend
+selected in `tools/dev-fast/config.toml`. They require the pinned nightly
+toolchain. The fragment is passed explicitly with `--config`, so release,
+coverage, and verification builds are unaffected. Never copy it into
+`.cargo/config.toml`: the release builds on stable, and stable Cargo refuses a
+`codegen-backend` key there. The build standard's `mold` linker (on Linux) and
+`-Zthreads=8` do live in `.cargo/config.toml`, so every development build gets
+them, with or without the fragment.
 
 ## Standard development path
 
@@ -389,9 +391,9 @@ The dev-fast profile is the standard development path, not a side path:
 `--config tools/dev-fast/config.toml` to Cargo. An agent or human calling
 `cargo build`, `cargo test`, `cargo clippy`, `cargo check`, or `cargo doc`
 directly for a development build, test, lint, or typecheck run must pass that
-same `--config` flag, or the run will use a different codegen backend and
-linker than `make` does. The fragment must never be applied to coverage,
-release, or verification builds. Mixing direct-cargo and `make` invocations
-without the flag thrashes the incremental build cache, because Cargo
-fingerprints the codegen backend and the two runs produce different
-fingerprints for what looks like the same build.
+same `--config` flag, or the run will use a different codegen backend than
+`make` does. The fragment must never be applied to coverage, release, or
+verification builds. Mixing direct-cargo and `make` invocations without the
+flag thrashes the incremental build cache, because Cargo fingerprints the
+codegen backend and the two runs produce different fingerprints for what looks
+like the same build.
