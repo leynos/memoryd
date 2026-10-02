@@ -146,6 +146,9 @@ impl Source {
     /// Returns whether the table applies on Linux alone.
     fn is_linux(&self) -> bool { self.table.starts_with("target.") && self.table.contains("linux") }
 
+    /// Returns whether the table selects every Linux target, not one triple.
+    fn is_all_linux(&self) -> bool { self.table == ALL_LINUX_TABLE }
+
     /// Returns what is wrong with the source's flags for a pin: the frontend
     /// flag on a nightly pin only, and mold in a Linux table only.
     fn problem(&self, pin: Pin) -> Option<String> {
@@ -153,6 +156,10 @@ impl Source {
         Some(format!("[{}] {reason}", self.table))
     }
 }
+
+/// The table name for `[target.'cfg(target_os = "linux")']`, which every Linux
+/// target matches; a triple table covers one architecture alone.
+const ALL_LINUX_TABLE: &str = "target.'cfg(target_os = \"linux\")'";
 
 /// One line of a Cargo configuration, as far as the standard reads it.
 enum Line {
@@ -239,6 +246,11 @@ fn shape_problems(found: &[Source], pin: Pin) -> Problems {
         (
             !found.iter().any(Source::is_linux),
             "no Linux target table carries rustflags",
+        ),
+        (
+            found.iter().any(Source::is_linux) && !found.iter().any(Source::is_all_linux),
+            "no `cfg(target_os = \"linux\")` table carries rustflags, so mold reaches one Linux \
+             architecture only",
         ),
         (
             pin.takes_threads() && !found.iter().any(|source| source.table == "build"),
