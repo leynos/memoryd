@@ -13,6 +13,8 @@
 mod ci_steps;
 #[path = "build_standard_support/config.rs"]
 mod config;
+#[path = "build_standard_support/exhaustive.rs"]
+mod exhaustive;
 #[path = "build_standard_support/make.rs"]
 mod make;
 use ci_steps::{Workflow, coverage_problems, linker_install_problems, workflow_problems};

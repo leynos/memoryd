@@ -41,12 +41,7 @@ impl Pin {
     ///
     /// Returns the reason when the channel is missing, repeated or unsupported.
     pub fn read(toolchain: &str) -> Result<Self, String> {
-        let channels: Vec<&str> = toolchain
-            .lines()
-            .map(str::trim)
-            .filter(|line| line.starts_with("channel"))
-            .filter_map(|line| line.split('"').nth(1))
-            .collect();
+        let channels = toolchain_channels(toolchain);
         match channels.as_slice() {
             [] => Err("rust-toolchain.toml names no channel".to_owned()),
             [channel] => Self::classify(channel),
@@ -76,6 +71,34 @@ impl Pin {
 
     /// Returns whether the pin takes `-Zthreads`, which is a nightly flag.
     pub const fn takes_threads(self) -> bool { matches!(self, Self::Nightly) }
+}
+
+/// Returns the quoted value of a `channel = "..."` line, if the line is one.
+fn channel_value(line: &str) -> Option<&str> {
+    let (key, value) = line.split_once('=')?;
+    if key.trim() != "channel" {
+        return None;
+    }
+    value.trim().strip_prefix('"')?.split('"').next()
+}
+
+/// Returns every `channel` value under `[toolchain]`, skipping comments, so a
+/// lookalike key, a commented line or a key in another table is not counted.
+fn toolchain_channels(toolchain: &str) -> Vec<&str> {
+    let mut table = "";
+    let mut found = Vec::new();
+    for line in toolchain
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.starts_with('#'))
+    {
+        if line.starts_with('[') {
+            table = line.trim_matches(|c| c == '[' || c == ']').trim();
+        } else if table == "toolchain" {
+            found.extend(channel_value(line));
+        }
+    }
+    found
 }
 
 /// A list of compiler flags, with `-C value` pairs joined into `-Cvalue` so
