@@ -22,7 +22,7 @@ jobs:
         with:
           install-mold: 'true'
           expect-cache: any
-      - name: Install mold linker
+      - name: Install clang and lld
         if: runner.os == 'Linux'
         run: |
           set -euo pipefail
