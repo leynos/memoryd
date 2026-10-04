@@ -26,9 +26,29 @@ The generated `Makefile` exposes these public targets:
 - `make release` builds the release target.
 - `make coverage` writes `lcov.info` using `cargo llvm-cov` and `lld`.
 - `make dev-build` and `make dev-test` provide opt-in accelerated build
-  variants; see the [developers' guide](developers-guide.md) for details.
+  variants. They use the Cranelift backend, and also `-Zthreads=8` and, on
+  Linux, the `mold` linker, like the other development targets; see the
+  [developers' guide](developers-guide.md) for details.
 - `make markdownlint` checks Markdown files.
 - `make nixie` validates Mermaid diagrams.
 
 See the [developers' guide](developers-guide.md) for the toolchain
 prerequisites needed to run the full generated workflow locally.
+
+## Building from source
+
+The repository's Cargo defaults and the Makefile development targets
+(`make test`, `make lint`, `make typecheck` and the debug build) use the
+parallel `rustc` frontend (`-Zthreads=8`) and, on Linux, the `mold` linker. On
+Linux, install `mold` and `clang` before building, because the configuration
+names them and a build without them fails at link time. A release build
+(`make release`) and the coverage build use neither flag, because an assigned
+`RUSTFLAGS` displaces the configuration's flags. `make release` assigns
+`RUSTFLAGS="${RUSTFLAGS-}"`, which passes the caller's value through unchanged
+and adds nothing, so a shipped artefact keeps the platform linker. The coverage
+build assigns its own flags and ignores caller-provided flags. To build with
+the platform linker directly, assign an empty `RUSTFLAGS`:
+
+```bash
+RUSTFLAGS="" cargo build --release
+```
