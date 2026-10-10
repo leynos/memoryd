@@ -18,7 +18,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@b804b69fa7f978cf9091b9d9bd5481d8ce58c2ea
+        uses: leynos/shared-actions/.github/actions/setup-rust@65e76d487b4ed17d0f4003a17eaccdc8859a7d0e
         with:
           install-mold: 'true'
           expect-cache: any
@@ -26,7 +26,7 @@ jobs:
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
-        uses: leynos/shared-actions/.github/actions/install-mdtablefix@0606ca899ce2995a0c4bc78e660e80832e6e8855
+        uses: leynos/shared-actions/.github/actions/install-mdtablefix@65e76d487b4ed17d0f4003a17eaccdc8859a7d0e
         with:
           version: "0.6.1"
 
@@ -43,7 +43,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: cargo binstall --no-confirm cargo-nextest
       - name: Install Whitaker
-        uses: leynos/shared-actions/.github/actions/install-whitaker@6dea5677a84fec60ca51b07202570e3af12ffdb4
+        uses: leynos/shared-actions/.github/actions/install-whitaker@65e76d487b4ed17d0f4003a17eaccdc8859a7d0e
         with:
           cranelift: true
       - name: Lint
@@ -55,7 +55,7 @@ jobs:
           echo "Coverage CFLAGS: -fuse-ld=lld"
           echo "Coverage LDFLAGS: -fuse-ld=lld"
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@e4c6b0e200a057edf927c45c298e7ddf229b3934
+        uses: leynos/shared-actions/.github/actions/generate-coverage@65e76d487b4ed17d0f4003a17eaccdc8859a7d0e
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
@@ -68,7 +68,7 @@ jobs:
         env:
           CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
         if: ${{ env.CS_ACCESS_TOKEN }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@e4c6b0e200a057edf927c45c298e7ddf229b3934
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@65e76d487b4ed17d0f4003a17eaccdc8859a7d0e
         with:
           format: lcov
           access-token: ${{ env.CS_ACCESS_TOKEN }}
