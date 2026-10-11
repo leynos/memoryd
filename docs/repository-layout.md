@@ -17,6 +17,7 @@ omits build output such as `target/`.
 │   ├── dependabot.yml
 │   └── workflows/
 │       ├── ci.yml
+│       ├── coverage-main.yml
 │       └── release.yml
 ├── .markdownlint-cli2.jsonc
 ├── .rustfmt.toml
@@ -54,6 +55,9 @@ omits build output such as `target/`.
   there; it never affects release, coverage, or verification builds.
 - `.github/dependabot.yml`: Configures automated dependency update checks.
 - `.github/workflows/ci.yml`: Runs Memoryd's continuous integration checks.
+- `.github/workflows/coverage-main.yml`: Publishes coverage from `main`,
+  uploading to CodeScene (a missing token is recorded as a notice) and writing
+  the ratchet baseline.
 - `.github/workflows/release.yml`: Builds and publishes binary release
   artefacts for the application flavour.
 - `.markdownlint-cli2.jsonc`: Configures Markdown linting for documentation
