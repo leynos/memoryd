@@ -14,6 +14,8 @@ set.
   GIST-aligned implementation phases and review-sized tasks.
 - [Project-design ExecPlan](execplans/project-design.md) records the live
   remediation plan for the Logisphere design-stage review.
+- [Local safety defaults ExecPlan](execplans/1-1-2-record-local-safety-defaults.md)
+  proposes the approval-gated decision work for roadmap item 1.1.2.
 - [Users' guide](users-guide.md) explains how to use Memoryd and its public
   build and test commands.
 - [Developers' guide](developers-guide.md) explains the local workflow and
