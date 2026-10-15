@@ -2,10 +2,13 @@
 
 ## Status
 
-Accepted on 2026-10-15. Memoryd v1 derives workspace identity from a versioned
-descriptor, stores redacted text by default, refuses unsupported raw-text
-modes, and requires explicit scope-bound confirmation before an irreversible
-purge. This ADR records policy; it does not implement or enforce it.
+Accepted on 2026-10-15. Memoryd v1 is required to derive workspace identity
+from a versioned descriptor, to store redacted text by default, to refuse
+unsupported raw-text modes, and to require explicit scope-bound confirmation
+before an irreversible purge. This ADR records that policy; it does not
+implement or enforce it. The runtime that performs these checks is built by
+roadmap items 2.2.3, 2.2.4, and 5.3.1, and until those land the present
+behaviour is the application stub described in the ExecPlan.
 
 ## Date
 

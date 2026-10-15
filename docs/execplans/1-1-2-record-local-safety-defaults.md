@@ -708,8 +708,9 @@ named upstream, and compare local, tracking, and remote SHAs. Create a draft PR
 titled `Plan: Record local safety defaults (1.1.2)` with a branch-wise plan
 link. End the body with `## References` and this session link:
 <https://lody.ai/leynos/sessions/f4b8ecd8-40e8-4637-8b52-d3df57a3e3a8>. Read
-back title, body, head, base, and draft status. Publication is authorized;
-execution of EP-M1 is not yet authorized.
+back title, body, head, base, and draft status. Publication is authorized.
+This paragraph described the state before approval; execution was authorized on
+2026-10-15, and the Progress section records the milestones completed since.
 
 ## Idempotence and recovery
 
