@@ -3,6 +3,117 @@
 This guide explains how to use the generated Memoryd project after rendering it
 from the template.
 
+## Local safety defaults (planned)
+
+These defaults are accepted policy in
+[ADR 015](adr-015-local-safety-defaults.md) but are **not yet enforced**: the
+daemon, collector, and MCP server do not implement workspace derivation,
+redaction, deny patterns, or purge. Treat this section as the target contract
+for planned behaviour; the build and test commands later in this guide are the
+tooling that actually runs today.
+
+### What a workspace is
+
+A workspace is a tenant-owned evidence namespace. Its authoritative identity is
+the pair of authenticated tenant and workspace; a workspace name on its own is
+never authority. Memoryd derives a workspace from a versioned descriptor:
+
+- for a Git repository, the normalized `remote.origin.url`, a digest of the
+  canonical local repository root path, and an optional profile name;
+- for a non-Git directory, a digest of the canonical root path and the profile
+  name.
+
+Consequences to plan for:
+
+- **A moved root is a new workspace.** Renaming or moving the local directory
+  changes the derived workspace, and existing evidence stays with the old one.
+  Use an explicit operator mapping when the two must line up.
+- **A changed origin is a new workspace.** Changing `remote.origin.url`, or
+  switching between SSH and HTTPS forms of the same repository, yields a
+  different workspace unless an operator maps them explicitly.
+- **Linked worktrees are separate workspaces.** Git's shared common directory
+  does not merge them, so a checkout and its linked worktree do not share
+  evidence by default.
+- **Cross-machine stability is not promised.** The root path is part of the
+  identity, so the same repository cloned to two machines registers as two
+  workspaces.
+
+Operators can map an exact descriptor to a chosen workspace identifier, scoped
+to one tenant. An intentional merge requires listing the descriptors
+explicitly. Memoryd never learns a merge from provider payloads, and a digest
+collision is an error rather than an automatic merge.
+
+### What is excluded and redacted
+
+Redaction runs before storage and before embedding, and neither can be disabled
+in the first release. The planned default configuration is:
+
+```toml
+[privacy]
+redact_before_store = true
+redact_before_embedding = true
+store_raw_text = "redacted" # none | redacted | encrypted
+```
+
+`redacted` is the default and keeps sanitized text for search and explanation.
+`none` keeps identities and minimal structural metadata but drops all free-text
+payloads, so text-derived recall and summaries are unavailable for that
+workspace. `encrypted` is **rejected as unsupported** until a separate
+key-management decision exists; selecting it is a configuration error, not a
+silent fallback. There is no plaintext mode.
+
+The first detector corpus covers provider API keys, OAuth bearer and basic
+values, JSON Web Tokens, PEM and OpenSSH private-key blocks, dotenv and
+password assignments, cookies, cloud credentials, credential-bearing database
+URLs, and high-entropy blobs. Known secret prefixes are redacted aggressively,
+so a short or malformed token after a known prefix is removed too. Expect false
+positives: a random-looking 32-byte string can become `[REDACTED]` when it is
+not a secret. Redaction is a mitigation, not a guarantee, so do not treat
+Memoryd as making a sensitive workspace safe to store.
+
+These paths are excluded by default and cannot be re-enabled in the first
+release: `.env`, `.env.*`, `**/.env`, `**/.env.*`, `.git/**`, `**/.git/**`,
+`.ssh/**`, and `**/.ssh/**`. The `.ssh` exclusion deliberately covers public
+keys as well as private ones. Operators may add exclusions but not remove the
+mandatory defaults. Deny patterns are case-sensitive, root-relative globs where
+`*` stops at a path separator and `**` spans directories; a match always denies.
+
+A record that fails redaction, exceeds a processing limit, or matches a deny
+pattern is rejected rather than stored partially, and its source cursor does
+not advance. That surfaces as a source-health error. An operator can fix the
+source or explicitly skip that one source position; skipping is audited and is
+never automatic.
+
+### Purging a workspace
+
+Purge is irreversible and disabled by default. Read-only MCP mode exposes no
+purge path, and tenant-wide purge stays administratively disabled in local
+mode. A workspace purge requires an authenticated tenant, an allowed workspace,
+and a purge capability before Memoryd will even show a preview.
+
+The preview names the tenant, the workspace, the active stores that will be
+affected, and the backup limitations. Interactive confirmation requires
+retyping the complete displayed scope; empty input, end of input, a mismatch,
+or cancellation changes nothing. Non-interactive use requires an explicit scope
+and a confirmation bound to that exact preview.
+
+Before purging you must acknowledge that a restorable backup was taken. Stop
+writers for the scope before the backup and leave them stopped through the
+purge; a write in between invalidates the acknowledgement and requires a fresh
+backup and preview. Use SQLite's online backup API or `.backup` command rather
+than copying the database file while writers run, and a consistent custom-format
+`pg_dump` for PostgreSQL. There is no automatic backup and no automatic undo.
+
+What purge cannot do: it does not securely erase filesystem blocks, it does not
+delete the provider's original transcripts, and it does not reach backups you
+made earlier. A pre-purge backup still contains the removed evidence, so its
+access controls, retention, and deletion are your responsibility. After a
+successful purge, Memoryd keeps a content-free tombstone for that workspace and
+blocks re-collection until an operator explicitly re-enables the scope; that
+re-enabling is a separate action, not a side effect of a retry or a restart. If
+a purge cannot finish, it reports the incomplete cleanup without exposing
+payloads, and retrying over the same scope is safe to repeat.
+
 ## Generated Tooling
 
 Generated projects use Rust 2024, a pinned nightly toolchain, strict lint

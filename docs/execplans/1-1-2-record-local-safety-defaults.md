@@ -93,7 +93,26 @@ runtime slice implements and verifies them.
 - [x] (2026-10-15) EP-M1: ADR 015 accepted; design §5.4, §13, §14, §15, and
   §17, TOR §7.2, §8.2, and §9, RFC 0001's Proposed design and Compatibility and
   migration headings, and the contents index synchronized.
-- [ ] EP-M2: Publish operator/developer contracts and verification handoffs.
+- [x] (2026-10-15) EP-M1 committed as `a2dc412`. All six gates passed on that
+  candidate: `make fmt`, `make check-fmt`, `make markdownlint`, and
+  `make nixie` exited zero with the tree byte-identical before and after
+  formatting; `make lint` and `make test` exited zero, the latter with 146
+  tests passed and zero skipped. Long gate durations came from shared
+  package-cache and compile admission contention, and an unreachable managed
+  sccache means uncached compilation, not a failure.
+- [x] (2026-10-15) EP-M1 milestone review completed against `8639da6..a2dc412`
+  with full coverage of all six changed paths. Two minor findings were raised
+  and both confirmed against source; both are repaired in `893eb8c`.
+- [x] (2026-10-15) EP-M2: `docs/users-guide.md` gained a "Local safety defaults
+  (planned)" section covering the workspace descriptor and its consequences,
+  the exclusions and detector corpus, the three raw-text modes, purge preview
+  and confirmation, the backup acknowledgement, and what purge cannot erase.
+  `docs/developers-guide.md` gained "Local safety policy reuse" with ownership,
+  permitted callers, validated input, semantic errors, storage-binding
+  constraints, and the V-ID, V-TEXT, and V-PURGE obligations with owners,
+  witnesses, negative controls, proof commands, and integration tests. The
+  contents index reflects both. Both guides label the policy as unenforced and
+  keep runnable tooling distinct from planned behaviour.
 - [ ] EP-M3: Reconcile acceptance evidence and mark roadmap 1.1.2 done.
 
 ## Surprises & discoveries
@@ -136,6 +155,12 @@ tombstone semantics, or redaction processing ceilings. ADR 015 originates
 those, which is why it states them as decisions with explicit examples rather
 than as restatements of upstream norms.
 
+The roadmap's "See" line for 1.1.2 cites "RFC 0001 §§3 and 7", but RFC 0001 has
+named headings and no numbered sections, so that citation does not resolve. The
+plan already records the same mismatch for the request that produced it; EP-M3
+decides whether to repair the roadmap citation or leave it, since editing the
+roadmap is a separate tracked artefact from the ADR and guides.
+
 ## Decision log
 
 - (2026-10-14, planning) Keep 1.1.2 a decision-record slice, matching 1.1.1
@@ -154,6 +179,16 @@ than as restatements of upstream norms.
 - (2026-10-15, EP-M1) Numbered the ADR 015 rather than 014 because 014 was
   already allocated, and repaired the missing ADR 014 index entry in the same
   commit so the contents list is complete.
+- (2026-10-15, EP-M2) Put the operator contract in `docs/users-guide.md` and the
+  reuse and proof-to-test contract in `docs/developers-guide.md`, rather than
+  expanding the design document further. The design document already carries
+  the architecture, and the guides are what roadmap 2.2.3, 2.2.4, and 5.3.1
+  implementors read first.
+- (2026-10-15, review) Both milestone-review findings were confirmed against
+  source and repaired rather than dismissed: the ADR status line stated
+  present-tense behaviour it then disclaimed, and the ExecPlan's publication
+  paragraph still denied an approval the plan records. Text corrections only;
+  no contract changed.
 
 ## Outcomes & retrospective
 
@@ -173,6 +208,13 @@ ADR that had taken 014.
 No runtime behaviour has changed, no proof is claimed, and roadmap 1.1.2
 remains open until EP-M3. Runtime verification stays with roadmap items 2.2.3,
 2.2.4, and 5.3.1, and the ADR states plainly that nothing is enforced yet.
+
+EP-M2 completed on 2026-10-15. The milestone review earned its keep: both
+findings were real, and the second one — a stale "execution is not yet
+authorized" sentence left in the publication instructions — would have told a
+later operator to halt already-approved work. The lesson is that a living plan
+accumulates stale imperatives at its tail as its head advances, so a status
+edit belongs wherever the plan states a permission, not only in Progress.
 
 ## Context and orientation
 
@@ -639,14 +681,23 @@ remains a documented later gap. No compatibility layer is needed.
 
 ### EP-M2: Publish the implementation handoff
 
-Update `docs/users-guide.md` with planned defaults, root-move consequences,
-override limitations, exclusions, text modes, scope confirmation, backup and
-restore expectations, and partial-purge behaviour. Distinguish planned commands
-from currently runnable tooling. Update `docs/developers-guide.md` with policy
-reuse and the proof-to-test relationships; retain detailed architecture in the
-design/ADR rather than only this plan. Capture the abstract models and
-invariants that influence storage bindings, interval provenance, and purge
-fencing there.
+**Complete (2026-10-15).** `docs/users-guide.md` gained a "Local safety
+defaults (planned)" section before the existing build material. It covers the
+workspace descriptor and the moved-root, changed-origin, linked-worktree, and
+cross-machine consequences; override limitations; the mandatory exclusions and
+additive deny patterns; the three raw-text modes with `encrypted` rejected; the
+detector corpus and its false positives; the purge preview, scope-bound
+confirmation, and capability gate; what to back up and how; and what purge
+cannot erase, including the tombstone and re-enablement.
+
+`docs/developers-guide.md` gained "Local safety policy reuse" before the
+interface conventions: ownership, permitted callers, the fixed composition
+order (authority, workspace, deny, redact, persist/project), validated input,
+semantic error classes, the storage-binding constraints that matter for
+interval provenance and purge fencing, and a subsection giving each V-ID,
+V-TEXT, and V-PURGE obligation its roadmap owner, witnesses, negative control,
+proof command, and integration-test requirement. Detailed architecture stays in
+the design document and ADR 015. `docs/contents.md` summarises both additions.
 
 Acceptance E2: a new provider author can determine every safe ingest outcome
 from the ADR and guides without choosing graph/theme policy. An operator can
@@ -708,8 +759,8 @@ named upstream, and compare local, tracking, and remote SHAs. Create a draft PR
 titled `Plan: Record local safety defaults (1.1.2)` with a branch-wise plan
 link. End the body with `## References` and this session link:
 <https://lody.ai/leynos/sessions/f4b8ecd8-40e8-4637-8b52-d3df57a3e3a8>. Read
-back title, body, head, base, and draft status. Publication is authorized.
-This paragraph described the state before approval; execution was authorized on
+back title, body, head, base, and draft status. Publication is authorized. This
+paragraph described the state before approval; execution was authorized on
 2026-10-15, and the Progress section records the milestones completed since.
 
 ## Idempotence and recovery

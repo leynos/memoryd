@@ -121,6 +121,132 @@ local host satisfies its prerequisites. See
 [pg_embedded_setup_unpriv user guide](pg-embed-setup-unpriv-users-guide.md) for
 the detailed setup and test-support APIs.
 
+## Local safety policy reuse
+
+[ADR 015](adr-015-local-safety-defaults.md) settles the local safety defaults
+for workspace identity, redaction, and purge. The policy is one domain-owned
+decision used by every ingestion and purge path; it is not a per-adapter
+convention, and it is not a library that adapters may reimplement. Read the ADR
+for the normative rules and this section for where the implementing code
+belongs.
+
+Ownership: the workspace descriptor and its versioned serialization, the digest
+and normalization rules, exclusion and deny-pattern evaluation, the redaction
+decision, the processing limits, and the purge scope and tombstone types are
+domain values and pure decisions. Application use cases orchestrate them.
+Filesystem and Git discovery, SQL and Diesel bindings, capability resolution,
+terminal input, and backup tooling remain adapters. Runtime names and
+signatures belong to the owning implementation slice after its abstraction
+sweep; this section fixes contracts, not APIs.
+
+Permitted callers: both existing ingestion ports (`ConversationPushIngestPort`
+and `CollectedConversationIngestPort`), the collector's source-reader
+implementations, and the purge use case. Adapters may call the policy, never
+bypass it. A pushing provider need not redact locally, because the daemon
+revalidates push and worker input and must not trust a caller-supplied redacted
+flag. Do not add a universal safety port or framework, and do not introduce a
+provider-specific branch into the shared pipeline to reach a provider's own
+normalization or redaction helper.
+
+Composition order is fixed: establish authority, resolve the workspace, apply
+exclusions and deny patterns, redact, then persist or project. Every stage
+either passes the record on unchanged or rejects it. Rejecting is the only
+failure mode: no stage may persist, project, or embed partial output, and no
+stage may advance a source cursor for a rejected record. Authority comes from
+the authenticated request context; the pair of authenticated tenant and
+workspace is the authority, and a workspace string, a provider field, or a
+descriptor alone is not.
+
+Validated inputs: workspace registration requires a structurally valid
+versioned descriptor, and the daemon rejects an unsupported version rather than
+guessing. Digests are compared in full; a collision is a conflict error and
+never an implicit join. A descriptor joins an existing workspace only through
+an explicitly configured mapping scoped to one tenant, and the registry never
+learns a join from provider payloads. Redaction requires in-bounds, valid UTF-8
+intervals; an invalid interval is an error, not an empty or pass-through
+result. Purge requires an authenticated tenant, an allowed workspace, and a
+purge capability before it produces a preview, and the confirmation must match
+that preview's scope and policy revision.
+
+Semantic errors: use the envelope from [Error Contracts](#error-contracts) and
+prefer specific codes over string matching. The safety surface must at least
+distinguish an unsupported descriptor version, a workspace registration
+conflict, a cross-tenant scope violation, a denied-path reject, a redaction
+failure, a processing-bound failure, insufficient capability, a stale or
+mismatched purge preview, a missing or invalidated backup acknowledgement, and
+a partial purge with pending cleanup. Diagnostics carry the exclusion reason,
+never the matched content: report a sanitized reason and a bounded location,
+not the payload, the pattern text, or a raw filesystem path.
+
+These rules constrain storage bindings. The tombstone recorded after a
+successful purge is control metadata holding tenant and workspace identifiers
+and operation state only; it is not retained evidence and not a recall audit,
+so it must not live in the evidence or audit tables it fences off. Tenant and
+workspace ownership must be explicit columns on every record the scoped-delete
+transition touches, because the purge kernel's correctness depends on a tenant
+predicate that SQL must not supply by convention. Interval provenance must
+survive whatever representation the store uses, so a stored redaction record
+identifies source positions instead of re-deriving them from rendered output.
+
+### Obligations, witnesses, and proof-to-test relationships
+
+[ADR 015](adr-015-local-safety-defaults.md) and the design document record the
+abstract models V-ID, V-TEXT, and V-PURGE. No claim is discharged by this
+documentation slice, and the proof files and a project proof target do not
+exist yet. Each obligation below names its later roadmap owner, its witness,
+its negative control, the proof command planned for that owner, and the
+integration test that must accompany it. Refine or remove a lemma once
+executable verification conditions exist; nothing here is a frozen proof
+decomposition.
+
+V-ID (workspace registration preserves existing bindings and never adds an
+unapproved descriptor). Owner: roadmap 2.2.4. Witnesses: two distinct
+descriptors forced to the same final digest, and two distinct canonical roots
+forced to the same root digest. Negative control: remove descriptor comparison
+and require verification or tests to reject it. Proof command:
+`prover-tools verus run --repo-root . --proof-file verus/workspace_binding.rs`.
+Integration test: `tests/workspace_safety.rs`, with `rstest` cases for
+transport separation, explicit origin joins, absent origin, linked worktrees,
+root moves, non-Git roots, profiles, invalid encodings, cross-tenant keys,
+forced root and final-digest collisions, different SSH usernames, and override
+conflicts, plus `proptest` for deterministic serialization and field-boundary
+separation.
+
+V-TEXT (no output segment copies a covered source byte position, and copied
+segments preserve source order from the complement). Owner: roadmap 2.2.3.
+Witnesses: empty, full, overlapping, and adjacent intervals, and multibyte
+text. Negative control: copy one covered byte and require a counterexample or a
+failed proof. Proof command:
+`prover-tools verus run --repo-root . --proof-file verus/redaction_intervals.rs`.
+Integration test: `tests/redaction_safety.rs`, covering each detector with
+positive, negative, malformed, boundary, and nested-metadata cases; deny
+matches; symlink escapes; policy errors; and the `none`, `redacted`, and
+rejected `encrypted` modes. Detector completeness is an external limitation and
+must not be inferred from this proof.
+
+V-PURGE (deleting a scope preserves every item outside it; a rejected
+authorization or confirmation leaves state unchanged; repeated deletion is
+idempotent). Owner: roadmap 5.3.1. Witnesses: two tenants with the same
+workspace label, plus a third workspace in the target tenant. Negative control:
+drop the tenant predicate. Proof command:
+`prover-tools verus run --repo-root . --proof-file verus/purge_scope.rs`.
+Integration test: `tests/local_safety_e2e.rs` and
+`tests/features/local_safety.feature`, using `rstest-bdd` and preserving the
+four acceptance scenarios recorded in the ExecPlan, plus denied capability,
+stale preview, missing backup acknowledgement, partial store failure, restart
+with the tombstone present, explicit re-enablement, delayed ingest after a
+successful purge, and a successful idempotent retry.
+
+Treat the external interfaces as assumptions rather than proof targets: Git
+discovery, filesystem canonicalization, SHA-256 determinism (never
+injectivity), the authenticated request context, glob semantics, database
+backup interfaces, and storage deletion acknowledgements. Exercise those at
+their real boundaries. Because a later proof must connect runtime byte offsets,
+renderer branches, SQL, asynchronous retries, and physical erasure to the
+models, record the production mapping with the implementation and verify the
+executable kernel or a substantive refinement; a spec mirror alone does not
+discharge an obligation.
+
 ## Interface Conventions
 
 Application services expose domain use cases through port traits. Keep those

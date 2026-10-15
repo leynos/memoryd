@@ -16,10 +16,12 @@ set.
   remediation plan for the Logisphere design-stage review.
 - [Local safety defaults ExecPlan](execplans/1-1-2-record-local-safety-defaults.md)
   proposes the approval-gated decision work for roadmap item 1.1.2.
-- [Users' guide](users-guide.md) explains how to use Memoryd and its public
+- [Users' guide](users-guide.md) explains how to use Memoryd, the planned local
+  safety defaults for workspace identity, redaction, and purge, and its public
   build and test commands.
 - [Developers' guide](developers-guide.md) explains the local workflow and
-  implementation tooling for contributors.
+  implementation tooling for contributors, including where the local safety
+  policy belongs and the proof-to-test handoffs that implement it.
 - [Repository layout](repository-layout.md) explains Memoryd's top-level files,
   directories, and ownership boundaries.
 - [Documentation style guide](documentation-style-guide.md) defines the
