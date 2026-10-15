@@ -345,6 +345,13 @@ workspaces derive from a hash of the canonical configured root path and profile
 name. Operators may define explicit workspace aliases or overrides in
 configuration. If derivation detects a collision inside one tenant, ingestion
 must fail with an auditable collision diagnostic rather than merging evidence.
+[ADR 015](adr-015-local-safety-defaults.md) records the derivation contract in
+detail: a versioned, length-prefixed descriptor, the origin normalization
+rules, the separate Git and non-Git tags, the digest and canonical-root binding
+that registration persists, and the explicit descriptor join that an
+intentional merge requires. Because full origin and root-path fidelity is part
+of identity, a root move, a different worktree, or an origin change yields a
+new workspace rather than silently reusing an existing one.
 
 Driven adapters enforce tenant context using the strongest mechanism available
 for their store:
@@ -1097,7 +1104,13 @@ The collector redacts before storage and before embedding. The first release
 must detect API keys, OAuth tokens, JSON Web Tokens (JWTs), private keys, SSH
 material, `.env` content, passwords, cookies, cloud credentials, database URLs,
 and high-entropy blobs. Per-workspace deny patterns block configured paths from
-transcript capture and import.
+transcript capture and import. [ADR 015](adr-015-local-safety-defaults.md)
+turns that class list into a versioned detector corpus with explicit prefix,
+assignment, JSON-key, and entropy rules; mandatory default exclusions that an
+operator may extend but not disable; the `none` and `redacted` raw-text
+behaviour; and fail-closed processing limits. Redaction is a mitigation, not a
+guarantee: no detector corpus finds every secret, and a high-entropy match is a
+warning heuristic rather than proof.
 
 Large tool outputs are not embedded directly. The daemon summarizes or extracts
 bounded spans, records hashes and evidence references, and keeps raw references
@@ -1131,6 +1144,13 @@ must display the tenant and workspace or tenant scope it will remove. There is
 no implicit undo window unless a later backup feature is explicitly
 implemented. ADR 013 requires explicit pre-migration and pre-purge operator
 backups for the evidence store until automated backup tooling exists.
+[ADR 015](adr-015-local-safety-defaults.md) makes the confirmation act
+scope-bound and explicit, requires a pre-purge backup acknowledgement bound to
+the preview, refuses to report success before every active store deletion is
+acknowledged, and retains a content-free workspace tombstone that blocks
+recapture until an operator explicitly re-enables the scope. It also states
+what purge cannot do: it does not securely erase filesystem blocks, does not
+delete provider originals, and does not reach operator backups.
 
 ## 14. Configuration
 
@@ -1214,20 +1234,38 @@ store_raw_text = "redacted" # none | redacted | encrypted
 
 _Listing 3: Initial configuration shape._
 
+The `[privacy]` field names are normative.
+[ADR 015](adr-015-local-safety-defaults.md) fixes their meaning:
+`redact_before_store` and `redact_before_embedding` are both `true` and cannot
+be disabled in the first release, `store_raw_text = "redacted"` is the default,
+`"none"` drops all free-text payload fields, and `"encrypted"` is rejected as
+unsupported until a separate key-management decision exists. Selecting an
+unsupported value is a configuration error, never a silent fallback. ADR 015
+also proposes the deny-pattern limits and processing ceilings that need
+configuration surface; no `[redaction]`, `[deny]`, or `[purge]` section exists
+yet, so those keys remain outstanding implementation work rather than decided
+field names.
+
 ## 15. Verification strategy
 
-The design carries three correctness surfaces that deserve explicit
-verification beyond ordinary unit and behavioural tests.
+The design carries several correctness surfaces that deserve explicit
+verification beyond ordinary unit and behavioural tests. The local-safety rows
+below come from [ADR 015](adr-015-local-safety-defaults.md); they are
+requirements on the slices that implement it, not evidence that the policy is
+already enforced.
 
-| Property                     | Verification method                                                                                      | Scope                                                                         |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Ingestion idempotency        | Property tests over provider paths, offsets, line hashes, hook retries, and import request IDs           | `source_cursor`, `raw_event`, `raw_span`, and `ingest_job` writes             |
-| Source health                | Provider dropout, stale cursor, parse error, and inaccessible source fixtures                            | Source registry, health snapshots, collector health, and MCP health           |
-| Projection provenance        | Property tests and fixture-based replay that reject semantic carriers with unresolved support references | Extractor outputs, validator, Qdrant writes, and Oxigraph writes              |
-| Claim support edges          | Fixture replay that rejects dangling, stale, redacted, cross-tenant, and unsupported support relations   | Claims, support edges, validator, graph provenance, and explanations          |
-| Recall audits                | Mode-combination fixtures for disabled, sampled, decision-relevant, errors-only, and full audit paths    | Recall use case, policy, redaction, persistence, purge, and MCP requests      |
-| Workspace purge completeness | End-to-end fixture that creates evidence, graph edges, Qdrant payloads, Chutoro checkpoints, then purges | Evidence inbox, Oxigraph namespaces, Qdrant collections, and checkpoint files |
-| Tenant isolation             | Two-tenant fixtures and adapter contract tests for read, write, recall, repair, and purge paths          | Request context, persistence, Qdrant, Oxigraph, Chutoro, MCP, and RPC         |
+| Property                     | Verification method                                                                                       | Scope                                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Ingestion idempotency        | Property tests over provider paths, offsets, line hashes, hook retries, and import request IDs            | `source_cursor`, `raw_event`, `raw_span`, and `ingest_job` writes               |
+| Source health                | Provider dropout, stale cursor, parse error, and inaccessible source fixtures                             | Source registry, health snapshots, collector health, and MCP health             |
+| Projection provenance        | Property tests and fixture-based replay that reject semantic carriers with unresolved support references  | Extractor outputs, validator, Qdrant writes, and Oxigraph writes                |
+| Claim support edges          | Fixture replay that rejects dangling, stale, redacted, cross-tenant, and unsupported support relations    | Claims, support edges, validator, graph provenance, and explanations            |
+| Recall audits                | Mode-combination fixtures for disabled, sampled, decision-relevant, errors-only, and full audit paths     | Recall use case, policy, redaction, persistence, purge, and MCP requests        |
+| Workspace purge completeness | End-to-end fixture that creates evidence, graph edges, Qdrant payloads, Chutoro checkpoints, then purges  | Evidence inbox, Oxigraph namespaces, Qdrant collections, and checkpoint files   |
+| Workspace identity           | Descriptor examples plus property tests over serialization, field boundaries, and registration sequences  | Derivation policy, descriptor codec, registration registry, and collision error |
+| Redaction                    | Positive, negative, malformed, boundary, and nested-metadata cases per detector, plus generated intervals | Detector corpus, interval renderer, deny patterns, and raw-text modes           |
+| Purge confirmation           | Capability, empty-input, mismatch, stale-preview, and backup-acknowledgement fixtures                     | Purge use case, confirmation policy, scope fencing, and ingestion tombstone     |
+| Tenant isolation             | Two-tenant fixtures and adapter contract tests for read, write, recall, repair, and purge paths           | Request context, persistence, Qdrant, Oxigraph, Chutoro, MCP, and RPC           |
 
 _Table 10: Design-level verification targets._
 
@@ -1273,15 +1311,23 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 ## 17. Open design decisions
 
 - Accept or revise the tenant-isolation strategy for local, Corbusier, and
-  hosted-ready modes.
+  hosted-ready modes. ADR 015 fixes the workspace-identity derivation,
+  collision, and override rules that the strategy must preserve; the
+  deployment-mode strategy itself remains open.
 - Define exact Axinite projection write-back policy.
-- Define the redaction detector set and encrypted raw-text mode.
+- Define the encrypted raw-text mode, including key management.
+  [ADR 015](adr-015-local-safety-defaults.md) defines the detector corpus and
+  closes the `none` and `redacted` modes, but leaves `encrypted` unsupported
+  until a key-provisioning, rotation, recovery, and audit decision exists.
 - Define the Chutoro checkpoint format and acceptable theme-ID churn during
   rebuild.
 - Define source-health freshness defaults for each provider.
 - Define recall-audit retention defaults and whether redacted query text is
   ever stored by default.
 - Define the operator backup format used before irreversible purge.
+  [ADR 015](adr-015-local-safety-defaults.md) fixes when a backup is required
+  and what the operator must acknowledge, but not the backup format or the
+  restore rehearsal procedure.
 
 ## References
 

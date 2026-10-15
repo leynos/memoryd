@@ -229,9 +229,13 @@ retrieve, corrupt, or delete another tenant's memory.
 - Ingestion is idempotent across restarts, repeated file observations, hook
   retries, and manual imports.
 - Redaction happens before storage and before embedding for configured secret
-  classes and deny patterns.
+  classes and deny patterns. ADR 015 fixes the first detector corpus, the
+  mandatory default exclusions, and the raw-text modes, and states plainly that
+  detection is a mitigation rather than a guarantee.
 - Purging a workspace removes raw evidence rows, graph namespaces, Qdrant
-  collections or workspace-scoped payloads, and Chutoro checkpoints.
+  collections or workspace-scoped payloads, and Chutoro checkpoints. ADR 015
+  requires an explicit scope-bound confirmation and a pre-purge backup
+  acknowledgement before any of that deletion runs.
 - Tenant isolation is enforced in every storage-backed path: application ports
   require tenant context, tenant-owned persistence rows carry tenant identity,
   vector searches use tenant filters or tenant-scoped collections, graph reads
@@ -295,6 +299,9 @@ retrieve, corrupt, or delete another tenant's memory.
   local repository root path, and optional profile name. Non-Git workspaces use
   the canonical configured root path hash and profile name. Collisions inside a
   tenant require an auditable operator override rather than automatic merge.
+  ADR 015 fixes the normalization, descriptor, and collision rules; it accepts
+  that full path and origin fidelity means a moved root or a changed origin
+  yields a new workspace rather than silently reusing the old one.
 - Tenant identity is available from authenticated callers, capability tokens,
   or a configured local default. If tenant context is missing in Corbusier
   mode, the request must fail before application use cases run.
@@ -324,6 +331,13 @@ retrieve, corrupt, or delete another tenant's memory.
 ADR 013 resolves the standalone evidence inbox store question: v1 uses SQLite
 as the local default and PostgreSQL as a first-class deployment path, with
 Diesel-backed adapters and lockstep migrations across both stores.
+
+ADR 015 resolves the first-release redaction question below by fixing a
+documented default exclusion list, a versioned secret detector corpus, the
+raw-text storage modes, the operator override and explicit-join model, and the
+workspace-identity derivation those defaults depend on. The encrypted raw-text
+mode stays open and is rejected as unsupported until a key-management decision
+exists.
 
 | Question                                                                                        | Why it matters                                                                           | Criteria for resolution                                                            | Suggested path       |
 | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------- |

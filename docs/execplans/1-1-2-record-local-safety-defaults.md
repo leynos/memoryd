@@ -1,6 +1,6 @@
 # Record local safety defaults for workspace, redaction, and purge
 
-Status: DRAFT — approval required before execution.
+Status: IN PROGRESS — EP-M1 complete; EP-M2 and EP-M3 remaining.
 
 This ExecPlan is a living document. Keep Constraints, Tolerances, Risks,
 Progress, Surprises & discoveries, Decision log, Outcomes & retrospective,
@@ -17,10 +17,11 @@ handoffs. This task records contracts; roadmap 2.2.3 implements redaction,
 2.2.4 implements workspace derivation, and 5.3.1 implements cross-store purge.
 It does not turn the current application stub into those features.
 
-The present PR contains only this plan and its documentation-index entry.
-Explicit user approval is required before executing the milestones below.
-Approval ratifies the proposed defaults only to the extent explicitly accepted;
-record any requested changes before marking the resulting ADR Accepted.
+The planning PR contained this plan and its documentation-index entry.
+Execution was approved on 2026-10-15 by the user's explicit instruction to
+implement the plan, which the `sdlc-implementation` contract treats as
+supplying that approval. The defaults are therefore ratified as proposed, in
+ADR 015, with no requested changes recorded.
 
 ## Constraints
 
@@ -84,11 +85,14 @@ runtime slice implements and verifies them.
 - [x] (2026-10-14) Format the draft; initial `make check-fmt`,
   `make markdownlint`, `make nixie`, and full `make lint` passed.
 - [x] (2026-10-14) `make test` passed: 146 tests, zero skipped.
-- [ ] Final documentation checks and publication readback. The PR will record
-  the commit, tracking verification, and final gate results. Implementation
-  remains unapproved.
-- [ ] Obtain explicit user approval before executing EP-M1.
-- [ ] EP-M1: Ratify local safety defaults in an ADR and synchronize design.
+- [x] (2026-10-14) Publication readback complete; planning PR #46 opened as a
+  draft with the plan link and the planning session reference.
+- [x] (2026-10-15) Execution approved by the user's explicit instruction to
+  implement this plan, which the `sdlc-implementation` contract treats as
+  supplying that approval.
+- [x] (2026-10-15) EP-M1: ADR 015 accepted; design §5.4, §13, §14, §15, and
+  §17, TOR §7.2, §8.2, and §9, RFC 0001's Proposed design and Compatibility and
+  migration headings, and the contents index synchronized.
 - [ ] EP-M2: Publish operator/developer contracts and verification handoffs.
 - [ ] EP-M3: Reconcile acceptance evidence and mark roadmap 1.1.2 done.
 
@@ -109,6 +113,29 @@ The Makefile is more authoritative than the abbreviated commands in AGENTS:
 when available. Development targets use `tools/dev-fast/config.toml`.
 Verification must not inherit that Cranelift configuration.
 
+ADR 014 was allocated by an unrelated change (main-owned CodeScene coverage
+publication) before this branch was published, so the plan's fallback applied
+and the local-safety ADR is **015**. The same change never added its ADR to
+`docs/contents.md`, leaving an index gap; EP-M1 repairs that omission alongside
+the ADR 015 entry.
+
+TOR §9 records the first-release redaction question as explicitly open, with "a
+documented default deny list, secret detector set, and override model" as its
+resolution criteria. ADR 015 is that resolution, so it closes a recorded open
+question rather than overriding a settled norm.
+
+The TOR contains no purge-confirmation or pre-purge-backup requirement at all;
+those norms live in design §12 (the confirmation string and the local-mode
+disablement of `PurgeTenant`) and §13 (irreversibility, scope display, and the
+ADR 013 backup expectation). The plan's Table 1 cites "TOR §7.2" for
+SAFE-PURGE, which is accurate only for the deletion-scope sentence; the
+confirmation and backup obligations trace to the design and ADR 013.
+
+No source defines deny-pattern syntax, workspace-descriptor serialization,
+tombstone semantics, or redaction processing ceilings. ADR 015 originates
+those, which is why it states them as decisions with explicit examples rather
+than as restatements of upstream norms.
+
 ## Decision log
 
 - (2026-10-14, planning) Keep 1.1.2 a decision-record slice, matching 1.1.1
@@ -120,6 +147,13 @@ Verification must not inherit that Cranelift configuration.
 - (2026-10-14, proposed) Defer encrypted raw text because key provisioning,
   rotation, and recovery are independent decisions. Reject its selection until
   implemented rather than falling back silently.
+- (2026-10-15, ratified) All three proposals are accepted as ADR 015. Approval
+  came from the user's explicit instruction to implement this plan; the
+  contracts are transferred with worked examples and expected outcomes, and
+  remain labelled unenforced until 2.2.3, 2.2.4, and 5.3.1 implement them.
+- (2026-10-15, EP-M1) Numbered the ADR 015 rather than 014 because 014 was
+  already allocated, and repaired the missing ADR 014 index entry in the same
+  commit so the contents list is complete.
 
 ## Outcomes & retrospective
 
@@ -129,10 +163,16 @@ including rustdoc, Clippy, and Whitaker. `make test` passed all 146 tests, with
 zero skipped. Cargo emitted the pre-existing redundant `package.homepage`
 manifest warning; no manifest change belongs to this documentation task.
 
-Final documentation checks and publication readback remain pending; the PR will
-carry that evidence. No runtime behaviour has changed, no proof is claimed, and
-roadmap 1.1.2 remains open. At execution completion, reconcile upstream
-documents and distinguish accepted policy from later runtime verification.
+EP-M1 completed on 2026-10-15. ADR 015 answers all ten requested defaults with
+worked examples and explicit expected outcomes, and the design, terms of
+reference, RFC 0001, and contents index now reference it. The most valuable
+episode was the ADR-number collision: the plan reserved `adr-014` conditionally
+and the fallback triggered, which also exposed a missing contents entry for the
+ADR that had taken 014.
+
+No runtime behaviour has changed, no proof is claimed, and roadmap 1.1.2
+remains open until EP-M3. Runtime verification stays with roadmap items 2.2.3,
+2.2.4, and 5.3.1, and the ADR states plainly that nothing is enforced yet.
 
 ## Context and orientation
 
@@ -562,19 +602,32 @@ bindings respectively.
 
 ### EP-M1: Ratify the decision
 
-After explicit approval, create the next available local-safety ADR using the
-required Status, Date, Context and problem statement, alternatives, decision,
-risks, and consequences sections. Transfer SAFE-ID, SAFE-TEXT, and SAFE-PURGE,
-including the concrete examples and verification limits. Record accepted date
-and authority only after approval. Compare conservative identity with automatic
-transport merging, redacted with plaintext/encrypted modes, and explicit
-confirmation with implicit yes; explain rejected alternatives.
+**Complete (2026-10-15).** ADR 015 uses the required Status, Date, Context and
+problem statement, Decision Drivers, Requirements, Options considered, Decision
+outcome, Goals and non-goals, Migration plan, Known risks and limitations,
+Outstanding decisions, and Architectural rationale sections. It transfers
+SAFE-ID, SAFE-TEXT, and SAFE-PURGE with worked examples, expected outcomes, and
+the verification limits, and records the accepted date and the approval
+authority. Options tables compare conservative identity against automatic
+transport merging, `redacted` against `none`/plaintext/`encrypted`, and
+scope-bound confirmation against a bare `--yes`, a prompt-only contract, and
+capability-only authority.
 
-Synchronize `docs/memoryd-design.md` §§5.4,8.4,13–15,17,
-`docs/terms-of-reference.md` §§7–9, and RFC 0001's named headings. Close only
-settled open questions; encrypted mode and later graph/theme decisions remain
-explicitly deferred. Add the ADR to `docs/contents.md`. Preserve normative TOML
-field names and mark unsupported encrypted mode explicitly.
+Design §§5.4, 13, 14, 15, and 17, TOR §§7.2, 8.2, and 9, RFC 0001's Proposed
+design and Compatibility and migration headings, and `docs/contents.md` are
+synchronized. Design §8.4 needed no edit: the Qdrant layout's purge and
+lazy-creation rules are unchanged by this decision. Only settled questions were
+closed; `encrypted` mode, the Axinite write-back policy, the operator backup
+format, and the deployment tenant strategy remain explicitly deferred.
+Normative TOML field names are preserved and `encrypted` is marked unsupported.
+
+Acceptance E1: all ten requested defaults have unambiguous decisions, all
+cross-references resolve, and the identity, detector, and purge examples have
+explicit expected outcomes. Conformance: SAFE-ID/TEXT/PURGE checked against
+every source in Table 1; no interface, trust, or format expansion was
+introduced beyond the TOR §9 resolution the criteria anticipated. Rollback is a
+normal revert of the documentation commit. Runtime enforcement remains a
+documented later gap.
 
 Acceptance E1: all ten requested defaults have unambiguous decisions, all
 cross-references resolve, and the identity/detector/purge examples have

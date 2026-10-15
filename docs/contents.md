@@ -84,6 +84,13 @@ set.
   records the joint SQLite/PostgreSQL evidence-store policy, Diesel-backed
   adapter expectation, lockstep migration rule, backup expectation, and
   first-slice test matrix.
+- [ADR 014: Main owns CodeScene coverage publication](adr-014-main-owns-coverage-publication.md)
+  records why the coverage upload runs on main and what the shared CV-005
+  contract requires from pull requests.
+- [ADR 015: Local safety defaults for workspace identity, redaction, and purge](adr-015-local-safety-defaults.md)
+  records the versioned workspace descriptor and collision rule, the first
+  redaction detector corpus with mandatory deny patterns and raw-text modes,
+  and the scope-bound confirmation and pre-purge backup expectations.
 
 ## Requests for comments
 
