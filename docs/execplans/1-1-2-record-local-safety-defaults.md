@@ -242,11 +242,14 @@ fixed first.
   present-tense behaviour it then disclaimed, and the ExecPlan's publication
   paragraph still denied an approval the plan records. Text corrections only;
   no contract changed.
-- (2026-10-16, EP-M3) Reconciled the cursor rule into one wording, reused
-  verbatim in ADR 015, the users' guide, RFC 0001, and this plan: an
-  intentional exclusion advances the cursor, a processing failure does not. The
-  earlier wording left denial and non-advancement entangled, so a reader could
-  conclude that a denied path blocks its source forever.
+- (2026-10-16, EP-M3) Reconciled the cursor rule across ADR 015, the users'
+  guide, RFC 0001, and this plan into one canonical statement with two cases:
+  an intentional exclusion advances the cursor, a processing failure does not.
+  The earlier wording left denial and non-advancement entangled, so a reader
+  could conclude that a denied path blocks its source forever. The documents
+  keep their own voice — the guide says "your own audited skip" where the ADR
+  says "an operator's audited skip" — but the two cases and their outcomes are
+  identical everywhere, and no document may restate only one of them.
 - (2026-10-16, EP-M3) Fixed the deny-pattern root rather than deferring it: the
   root is the workspace's canonical root, so linked worktrees evaluate their
   own patterns. The ADR already defined that root for the descriptor, so naming
@@ -299,7 +302,10 @@ Outstanding decisions contract instead of being re-attributed. Second, the
 cursor rule was stated three times in three slightly different ways, and only a
 side-by-side comparison exposed that one variant implied a denied path blocks
 its source permanently. Restating a rule in several documents requires one
-canonical wording, copied rather than paraphrased.
+canonical statement to copy from. It does not require identical sentences: a
+guide addresses the reader as "you" while an ADR speaks of "the operator", and
+forcing one voice on both would make one of them read badly. What must not vary
+is the rule — the cases, their outcomes, and which one retries.
 
 A tool limitation was also recorded rather than worked around silently:
 `mapsplice` 0.1.0 fails on this roadmap's task 1.1.2 because it treats a
@@ -530,8 +536,9 @@ an operator's audited skip of one source position) is deliberately skipped and
 does advance the cursor, while a processing failure (failed redaction, detector
 or policy error, breached processing ceiling, or store error) is not
 acknowledged as captured and the cursor does not advance, so the record is
-retried until it succeeds or an operator skips it. ADR 015 states this in the
-wording every document reuses.
+retried until it succeeds or an operator skips it. ADR 015 is the canonical
+statement; the other documents keep their own voice but not their own version
+of the rule.
 
 ### SAFE-PURGE: confirmation and backup
 

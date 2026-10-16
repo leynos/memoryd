@@ -368,8 +368,9 @@ recognize copied file text, so secret detectors apply to all text instead. A
 source-level deny excludes the whole source. Only a sanitized skipped reason
 and a stable source identity are recorded.
 
-The cursor rule has exactly two cases, and every document that states it must
-use these words:
+The cursor rule has exactly two cases. This is the canonical statement; other
+documents may address the reader directly and adjust the possessives, but the
+two cases and their outcomes must not change:
 
 - an **intentional exclusion** — a mandatory default exclusion, a configured
   deny-pattern match, or an operator's audited skip of one source position — is
