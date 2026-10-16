@@ -1,8 +1,11 @@
 # Record local safety defaults for workspace, redaction, and purge
 
-Status: COMPLETE — EP-M1, EP-M2, and EP-M3 delivered, with all gates green on
-the final candidate. Commit and publication handoff are the remaining delivery
-steps and are tracked in Progress.
+Status: COMPLETE — EP-M1, EP-M2, and EP-M3 delivered. All eight commit gates
+are green on commit `ba5b12401f6504659879a849b19635d6d0d38cf5`; see Progress
+for the per-gate results and for the earlier candidates each gate run belongs
+to. Publication handoff to `pr-babysitting` owns hosted CI and the review
+conversations, so a local gate run is evidence about the local candidate only
+and is not a claim about CI.
 
 This ExecPlan is a living document. Keep Constraints, Tolerances, Risks,
 Progress, Surprises & discoveries, Decision log, Outcomes & retrospective,
@@ -158,6 +161,23 @@ runtime slice implements and verifies them.
   commit message records the five repairs, the two recorded gaps, and the
   `mapsplice` deviation. Publication handoff to `pr-babysitting` is the
   remaining step and is tracked there rather than in this plan.
+- [x] (2026-10-16) All eight commit gates passed on commit `ba5b124`, run
+  strictly sequentially by the scrutineer with the head verified before and
+  after: `make fmt` (no change), `make check-fmt` (42 files unchanged),
+  `make markdownlint` (42 files, 0 issues), `make nixie`, `make test` (146
+  passed, 0 skipped), `make typecheck`, `make test-workflow-contracts` (6
+  passed), and `make lint` (rustdoc, Clippy, and Whitaker). This run belongs to
+  `ba5b124` alone. The gate runs recorded above for `a2dc412` and `75a93e3`
+  remain true of those commits and are not evidence for this one; the Rust
+  gates spent most of their wall time queued on the shared compile-admission
+  pool with sccache unreachable, which is an environment fact and not a result.
+- [x] (2026-10-16) Reconciled the assessment findings against `ba5b124` and
+  repaired two. R1-21 stated a `note` line containing a quote, which closes the
+  password value under the same document's rule that a quoted value ends at its
+  closing quote however many lines later, so the row contradicted the grammar
+  it exists to test; its next line now carries no quote. The status header no
+  longer claims green gates on an unnamed "final candidate" and names the
+  commit the evidence belongs to.
 - [x] (2026-10-16) Hosted assessment `EPM-1-1-2-B473C17-20261016` returned five
   findings, all confirmed against source before any edit. The developers' guide
   cursor rule contradicted ADR 015; the detector corpus did not meet this
@@ -360,6 +380,16 @@ fixed first.
   triggered by the string carrying an escape at all, not by the escape
   position, because deciding the latter requires the mapping the rule declines
   to reconstruct.
+- (2026-10-16, corpus completion) Made R1-21 genuinely unterminated. The row
+  gave its following line a quote of its own, and the same document's rule says
+  a quoted value ends at its closing quote however many lines later, so that
+  quote closed the password value: the input produced
+  `password = [REDACTED]handbook index"` rather than the whole-record redaction
+  the cell claimed. This is the same class as the JWT contradiction below — a
+  rule and its own test case cannot both hold — and it was introduced by the
+  repair that gave R1-21 a concrete `note` line in the first place, so the fix
+  for one finding created the next. The `note` line now carries no quote, which
+  is load-bearing rather than cosmetic.
 - (2026-10-16, corpus completion) Repaired R1-02 and stated the cell
   convention for `\n`. R1-02 marked its input with double backticks, which
   render as a code span around a backtick-quoted token rather than the bare
