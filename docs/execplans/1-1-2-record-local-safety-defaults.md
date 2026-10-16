@@ -202,7 +202,7 @@ runtime slice implements and verifies them.
   machine identifier is added, and no executable fixture is added in this
   documentation-only slice.
 - [x] (2026-10-16) Hosted assessment `EPM-1-1-2-0BCD857-20261016` closed both
-  outstanding findings -- R1-21 and the completion claim -- and independently
+  outstanding findings — R1-21 and the completion claim — and independently
   confirmed the corrected entropy arithmetic, with E3 recorded as closed. It
   raised one new defect: R1-02's outcome cell, which asserted that the trailing
   space was required to prevent redaction. That was verified by construction
@@ -215,9 +215,9 @@ runtime slice implements and verifies them.
   word in all 37 outcome cells was run afterwards, and the six remaining hits
   across four rows — R1-18, R1-21, R1-31, and R1-34 — were each verified
   against the rule rather than dismissed. The first draft of this sentence said
-  "five remaining hits" while naming only four rows, and omitted R1-18 from
-  the list entirely; the count and the enumeration were both wrong, and both
-  are corrected here.
+  "five remaining hits" while naming only four rows, and omitted R1-18 from the
+  list entirely; the count and the enumeration were both wrong, and both are
+  corrected here.
 
 ## Surprises & discoveries
 
@@ -445,24 +445,30 @@ fixed first.
   `sum(v * log2(v))` = 18, 16, 12 and
   `H = (n * log2(n) - sum(v * log2(v))) / n` yielding 4.4375, 4.5000, 4.6250.
   Found by recomputing every committed figure rather than re-reading any of
-  them, which is how four of the five earlier corpus defects surfaced; the
-  sixth, recorded below, came from hosted review instead, but it is the same
-  class -- a rule and a stated case that cannot both hold.
+  them. Most of the earlier corpus defects were found the same way; R1-02's
+  trailing-space assertion, recorded below, came from hosted review instead,
+  but it is the same class — a rule and a stated case that cannot both hold.
+  This sentence first quantified that split and got it wrong, for the reason
+  the retrospective now records: the figure it divided had gone stale.
 - (2026-10-16, R1-02 explanation) Withdrew R1-02's assertion that the trailing
   space is required to prevent redaction. The cell claimed a variant ending at
   the hyphen "would state an input the rule redacts", but the prefix rule
   redacts the non-whitespace token *after* a prefix, so it needs a token to be
   present; with end of input immediately after the hyphen there is none, and
-  the row is not redacted -- the same outcome as with trailing whitespace. The
+  the row is not redacted — the same outcome as with trailing whitespace. The
   sentence was introduced by the repair recorded two entries above, which fixed
-  the input cell and then stated a reason that did not follow: the second time
-  in this task that a repair created a defect of the class it repaired, after
-  R1-21. The count is two of six, checked by enumerating the defects rather
-  than recalled: an earlier draft of this entry claimed three while naming only
-  two, which is the same defect class again. Found by hosted review, which the
-  reply was explicitly asked to provide for this class on the argument that
-  execution had caught every previous instance. The input is unchanged, so this
-  corrects an explanation rather than a fixture.
+  the input cell and then stated a reason that did not follow: R1-21 was the
+  same pattern earlier in this task, where the repair gave the row a `note`
+  line and the `note` line then closed the value. Those two are named rather
+  than counted, and this entry said "the count is two of six, checked by
+  enumerating the defects" until the figure audit below: the denominator was
+  the retrospective's stale total, not an enumeration, so the sentence claimed
+  a check it had not performed. An earlier draft of it also claimed three
+  repair-created defects while naming only two, which is the same defect class
+  again. Found by hosted review, which the reply was explicitly asked to
+  provide for this class on the argument that execution had caught every
+  previous instance. The input is unchanged, so this corrects an explanation
+  rather than a fixture.
 - (2026-10-16, completion claim) Removed three claims the plan could not keep
   true. The header promised that Progress names the latest green gate run's
   candidate, which is impossible: recording a run moves the head it describes.
@@ -471,7 +477,7 @@ fixed first.
   invariant and says the current head's evidence is supplied in the PR 46
   assessment thread; the entries name the commits they actually describe. Two
   of the three were introduced by the repair for CodeRabbit's completion-claim
-  finding, so the fix for one defect created the next -- the same pattern as
+  finding, so the fix for one defect created the next — the same pattern as
   R1-21.
 - (2026-10-16, figure audit) Audited every countable figure the plan and ADR
   assert about the corpus, by recomputing each from the committed documents
@@ -496,6 +502,30 @@ fixed first.
   this same reason — a figure asserted without a fixed population. Found by an
   audit of the plan's own recorded figures after that third failure, with each
   figure recomputed from the committed text rather than recalled.
+- (2026-10-16, figure audit, second round) Extended the same audit past the
+  corpus to the counts this plan states about defects, and found the largest
+  instance of the class yet: the retrospective's "Five of the six were found
+  the same way and only that way" and its "A sixth defect" ordinal. Both rest
+  on a total that entered as "Five defects were confirmed and repaired" in
+  `a082bbf`, was bumped to six in `a7a7bc9`, and had already been false when it
+  was written: the section it totals grew by narrating each successive round,
+  and the total was never recomputed. It also double-counted, since the
+  paragraph naming five hosted-assessment findings is not the milestone-review
+  five the same sentence invokes. The ordinal is false by more than one, not by
+  rounding: every corpus defect narrated above the paragraph calling R1-02's
+  finding the sixth sits before it, so that paragraph is not the sixth. The
+  repair names the milestone review as the population for the EP-M3 sentence —
+  the Progress entry's own list — and removes the total and the ordinal rather
+  than restating them, because this section also mixes corpus defects with
+  plan-level ones, so no total over it has a fixed set to count. The same edit
+  corrected the Decision log's "the count is two of six, checked by enumerating
+  the defects": the denominator was that stale total and the claimed
+  enumeration had not happened. Also repaired the formatter fixed point, which
+  `make check-fmt` failed: six prose lines in this plan were filled to 76–78
+  columns where `mdtablefix` fills to 79–80, so the committed text was not the
+  formatter's own output. That one is not a figure defect, and it is recorded
+  because it is the same lesson as the fifth claim above — a claim about what a
+  tool produced, asserted without running the tool on the committed bytes.
 
 ## Outcomes & retrospective
 
@@ -523,10 +553,13 @@ later operator to halt already-approved work. The lesson is that a living plan
 accumulates stale imperatives at its tail as its head advances, so a status
 edit belongs wherever the plan states a permission, not only in Progress.
 
-EP-M3 completed on 2026-10-16. Six defects were confirmed and repaired, and two
-genuine gaps were recorded with owners rather than invented away. The review's
-most useful habit was refusing to accept a finding on its assertion: the false
-provenance claim about V-ID/V-TEXT/V-PURGE looked plausible until
+EP-M3 completed on 2026-10-16. Its milestone review confirmed and repaired the
+five defects its Progress entry names, and two genuine gaps were recorded with
+owners rather than invented away. The milestone review is the population here,
+not the whole task: the detector corpus's later rounds are narrated below and
+are counted nowhere, because their total depends on how the class is read. The
+review's most useful habit was refusing to accept a finding on its assertion:
+the false provenance claim about V-ID/V-TEXT/V-PURGE looked plausible until
 `grep -c 'V-ID'` returned zero for both cited documents. Two lessons. First, a
 document that names three models in a guide but defines them nowhere is a
 provenance bug, not a wording bug; the identifiers were introduced in the guide
@@ -716,32 +749,34 @@ terminator without the table ever saying so, so a fixture built from the
 literal cell text would use two characters and state a different input; the
 convention is now stated once, in the preamble that claims every row is
 reproducible. That sentence said "five rows" until this round, and no row set
-satisfies five under any reading of "depends on the convention": four rows
-write `\n`, and two more name a following line in prose without it.
+satisfies five under any reading of "depends on the convention": four rows write
+`\n`, and two more name a following line in prose without it.
 
-A sixth defect, R1-02's withdrawn trailing-space assertion, came from hosted
+One more defect, R1-02's withdrawn trailing-space assertion, came from hosted
 review rather than from this pass, and is recorded in the Decision log above.
 
-Five of the six were found the same way and only that way: by building the input
-the table specifies and running the rule the same document states, rather than
-by reading either one. Reading a row and reading its rule both invite
-agreement; executing one against the other does not. The sixth was found by
-hosted review, as the paragraph above records, and the sentence here claimed
-all six until this round — a tally contradicted by its own neighbouring
-paragraph, which is the defect class this section exists to describe. Two
-lessons generalize past this corpus. A rule and its own counterexample can
-contradict each other, and only execution finds it. And markup is part of the
+Every corpus defect narrated in this section but the last was found the same
+way and only that way: by building the input the table specifies and running
+the rule the same document states, rather than by reading either one. Reading a
+row and reading its rule both invite agreement; executing one against the other
+does not. R1-02's trailing-space assertion was found by hosted review instead,
+as the paragraph above records. This paragraph used to give a total for those
+defects and to divide it into found-by-execution and found-by-review, and the
+total was wrong: it was written when this section had fewer paragraphs and was
+never recomputed as each later round added one. The section also mixes corpus
+defects with plan-level ones — the undeclared `\n` convention is a property of
+the table's preamble, not of any row — so the set a total would count is not
+fixed by the text either. No total is offered here now, and the observation
+that the tally went stale is the point rather than a confession. Two lessons
+generalize past this corpus. A rule and its own counterexample can contradict
+each other, and only execution finds it. And markup is part of the
 specification: a cell's rendered text is the input, so a claim about
 reproducibility must survive rendering, not merely reading. A third lesson is
-about repair rather than detection: in two of the six — R1-21 and R1-02's
-trailing-space assertion — the repair for a defect introduced the next one,
-both times by adding an explanation beside a corrected fixture. A corrected
-fixture is safe; prose offered alongside it is not, and should be held to the
-same execution test as the row. Two of six is worth stating precisely, because
-the first draft of this very sentence claimed three while enumerating only two:
-a count asserted beside an example it does not match is the defect class this
-section exists to describe, and it is how the earlier "five defects" tally went
-stale.
+about repair rather than detection: in R1-21 and in R1-02's trailing-space
+assertion — named rather than counted, for the reason just given — the repair
+introduced the next defect, both times by adding an explanation beside a
+corrected fixture. A corrected fixture is safe; prose offered alongside it is
+not, and should be held to the same execution test as the row.
 
 ## Context and orientation
 
