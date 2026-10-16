@@ -147,9 +147,11 @@ runtime slice implements and verifies them.
   gate run reported that `make fmt` had rewritten six files; that did not
   reproduce, and a hunk-level check found no line-break-only reflow, so no
   formatter damage was present. Edit ordering was wrong, though: a later edit
-  added an 80-character line that `mdtablefix` still re-wrapped, because the
-  em-dash made it 82 bytes. The final gate run caught this, and the corrected
-  text is committed from a verified fixed point rather than an assumed one.
+  added a line that satisfied the 80-column rule and `mdtablefix` re-wrapped it
+  anyway. The final gate run caught the reflow, and the corrected text is
+  committed from a verified fixed point rather than an assumed one. The
+  mechanism first recorded for that reflow was wrong; Outcomes states the
+  corrected one and the measurement that refuted it.
 - [x] (2026-10-16) EP-M3 committed as `a082bbf`, covering all eight tracked
   documents: ADR 015, the users' guide, RFC 0001, the developers' guide, the
   terms of reference, the design document, the roadmap, and this plan. The
@@ -320,15 +322,29 @@ that did not reproduce, and it was correctly dismissed after a hunk-level check
 found no line-break-only reflow. But the dismissal was then over-generalized
 into a claim that the candidate was already a formatter fixed point, and that
 claim was asserted in this plan before the text supporting it had settled. A
-subsequent edit added an 80-character line that `mdtablefix` nevertheless
-re-wrapped, because the em-dash made it 82 bytes, and the final gate run caught
-the mutation. Two habits follow. A formatter claim must be re-established on
-the bytes actually being committed, not carried forward from an earlier run,
-because a fixed-point check only ever describes the snapshot it was taken on.
-And a character-count rule is not the formatter's rule: the tool's budget is
-bytes, so a line can satisfy the documented 80-column limit and still be
-reflowed, making "no line exceeds 80 characters" necessary but not sufficient
-for a fixed point.
+subsequent edit added a line that satisfied the 80-column rule and `mdtablefix`
+re-wrapped it anyway, and the final gate run caught the mutation. Two habits
+follow. A formatter claim must be re-established on the bytes actually being
+committed, not carried forward from an earlier run, because a fixed-point check
+only ever describes the snapshot it was taken on. And a length check is not the
+formatter's rule: `mdtablefix --wrap` re-flows a whole paragraph or list item
+to its own break points, so a line that individually satisfies the limit can
+still be re-wrapped once its neighbours change.
+
+The mechanism recorded here at first was wrong, and the error is worth keeping
+because it was written as a finding when no measurement stood behind it. This
+plan and the commit message for `8d90d02` attributed the reflow to an em-dash
+pushing an 80-character line to 82 bytes, and concluded that `mdtablefix`
+budgets bytes rather than characters. That explanation was inferred from the
+line's width, not from the tool's behaviour; nothing here had measured the
+tool. Direct measurement refutes it. `mdtablefix 0.6.1` wraps at exactly 80
+characters: a list item of 80 characters and 82 bytes was left unchanged while
+one of 81 characters was wrapped, and a paragraph whose lines were 56, 52, and
+13 characters was re-packed to 72 and 50. The byte-budget theory also predicts
+the opposite of what the tree shows, since 41 lines in `docs/` sit within 80
+characters but over 80 bytes, including two in this plan, and `make fmt` leaves
+every one of them alone. The character threshold did not cause the reflow and
+could not have; the paragraph-level re-flow did.
 
 ## Context and orientation
 
