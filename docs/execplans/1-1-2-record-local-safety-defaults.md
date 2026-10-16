@@ -337,6 +337,29 @@ fixed first.
   engine in the corpus: an SSH public key that the class description implies is
   out of scope is in fact redacted by the entropy rule, so it is recorded as an
   accepted over-detection rather than as a negative case.
+- (2026-10-16, corpus completion) Tightened the JWT rule to require that the
+  first segment decodes to a JSON object. Counting dots alone made the rule and
+  its own negative jointly unsatisfiable: `SSH-2.0-OpenSSH_9.6` is three
+  base64url-shaped segments, so R1-10 as written was redacted by the rule it
+  existed to bound. The first-segment test is not a stylistic preference — a
+  JWT header is base64url of a JSON object, and that is the property that
+  distinguishes a token from a dotted version string.
+- (2026-10-16, corpus completion) Gave R1-34 a value with no recognized prefix.
+  The row is the corpus's evidence that the by-name rule fires, but its first
+  value began with `AKIA`, so the prefix rule redacted it too and the cell's
+  attribution of the redaction to the name rule was not exclusive. The
+  replacement value keeps the name rule as the only rule that can fire on it,
+  and the cell now says which rules cannot.
+- (2026-10-16, corpus completion) Moved R1-37's escape inside the matched span.
+  As written, the escape sat after the JWT ended, so the row demonstrated a
+  value-scanning match in a string that merely contained an escape somewhere
+  else, and the stated reason — that a narrow span would split the escape — did
+  not hold for it. With the escape inside the span the naive span genuinely
+  ends part-way through the escape sequence, and the rule's widening is the
+  only correct outcome. The rule text now also states that the widening is
+  triggered by the string carrying an escape at all, not by the escape
+  position, because deciding the latter requires the mapping the rule declines
+  to reconstruct.
 
 ## Outcomes & retrospective
 
@@ -516,6 +539,40 @@ does not show that an earlier run over a different starting state preserved
 anything, and claiming more from it than that was the third finding's real
 content.
 
+A fourth pass, taken by executing every corpus row against the rules the same
+revision states, found three more defects, none of them named by any review.
+The decisive one is a rule and its own negative disagreeing. The JWT rule was
+written as "three dot-separated base64url segments", which is a shape test:
+`SSH-2.0-OpenSSH_9.6` is exactly three base64url-shaped segments, so R1-10 —
+the negative case asserting that an SSH version banner carries no detection —
+was redacted by the rule it existed to bound. The rule now requires the first
+segment to decode to a JSON object, which is what a real JWT header is and what
+the banner is not, so the test is structural rather than a dot count. The
+lesson generalizes the third round's: a corpus row and the rule it exercises
+can contradict each other, and a shape-only detector is the easiest place for
+that to hide, because both sides look right in isolation.
+
+The second defect was a non-exclusive attribution, the same class as the
+`AWS_ACCESS_KEY_ID` fix two rounds earlier. R1-34's evidence is that the name
+rule fires, but its first value began with `AKIA`, so the prefix rule redacted
+it too and the cell credited a redaction it did not exclusively cause. The
+value is now one no prefix rule recognizes, and the cell names the two rules
+that cannot be responsible.
+
+The third was a witness that did not witness. R1-37 exists to exercise the
+widened branch, and its reason is that a narrow span would split an escape
+sequence — but its escape sat after the JWT ended, outside the span, so the
+stated reason did not apply to the case given. The escape is now inside the
+span, where the naive span genuinely ends part-way through an escape sequence,
+and the rule text states that the widening is triggered by the string carrying
+an escape at all rather than by the escape's position, since deciding the
+latter needs the mapping the rule declines to reconstruct.
+
+All three were found the same way and only that way: by building the input the
+table specifies and running the rule the same document states, rather than by
+reading either one. Reading a row and reading its rule both invite agreement;
+executing one against the other does not.
+
 ## Context and orientation
 
 Start with `docs/contents.md` and `docs/repository-layout.md`. The normative
@@ -648,24 +705,25 @@ and sensitive agent/config secrets. The initial prefix table is `sk-`,
 complete non-whitespace token after a prefix, including short or malformed
 tokens. This deliberately favours false positives over retaining partial
 credentials. Recognize case-insensitive `Authorization: Bearer` and
-`Authorization: Basic` values, three dot-separated base64url JWT segments, and
-complete PEM/OpenSSH private key blocks; an unterminated opening block redacts
-through end of record. For assignments, redact the entire value for
-case-insensitive names containing `password`, `passwd`, `secret`, `token`,
-`api_key`, or `private_key`; include `AWS_ACCESS_KEY_ID`,
-`AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN`. Treat quoted assignment
-values as values, including embedded whitespace. Redact entire
-Cookie/Set-Cookie values and entire recognized database URLs carrying userinfo
-(`postgres`, `postgresql`, `mysql`, `mongodb`, `redis`, `rediss`). For JSON,
-inspect keys structurally using the same case-insensitive sensitive name rules
-plus exact `Authorization`, `Cookie`, and `Set-Cookie` keys, replacing the
-entire associated value, including objects and arrays, with the marker; do not
-rely on scanning the value string alone. Unknown fields are recursively
-scanned, including arrays and escaped string content. The ADR must turn these
-rules into a versioned positive/negative corpus and explicit grammar choices,
-including malformed JSON, escaped strings, and multiline values; unresolved
-choices prevent E1 acceptance. Never imply all providers or all secret formats
-are detected.
+`Authorization: Basic` values, three dot-separated base64url JWT segments whose
+first segment decodes to a JSON object, and complete PEM/OpenSSH private key
+blocks; an unterminated opening block redacts through end of record. The
+first-segment test is what keeps a three-part version banner out of the JWT
+rule. For assignments, redact the entire value for case-insensitive names
+containing `password`, `passwd`, `secret`, `token`, `api_key`, or
+`private_key`; include `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and
+`AWS_SESSION_TOKEN`. Treat quoted assignment values as values, including
+embedded whitespace. Redact entire Cookie/Set-Cookie values and entire
+recognized database URLs carrying userinfo (`postgres`, `postgresql`, `mysql`,
+`mongodb`, `redis`, `rediss`). For JSON, inspect keys structurally using the
+same case-insensitive sensitive name rules plus exact `Authorization`,
+`Cookie`, and `Set-Cookie` keys, replacing the entire associated value,
+including objects and arrays, with the marker; do not rely on scanning the
+value string alone. Unknown fields are recursively scanned, including arrays
+and escaped string content. The ADR must turn these rules into a versioned
+positive/negative corpus and explicit grammar choices, including malformed
+JSON, escaped strings, and multiline values; unresolved choices prevent E1
+acceptance. Never imply all providers or all secret formats are detected.
 
 Propose a conservative entropy fallback for maximal ASCII tokens composed of
 letters, digits, `+`, `/`, `_`, `-`, and `=`: at least 32 bytes and empirical

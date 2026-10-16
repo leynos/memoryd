@@ -245,16 +245,20 @@ segments preserve source order from the complement, and a rendered JSON field
 still parses). Owner: roadmap 2.2.3. Witnesses: empty, full, overlapping, and
 adjacent intervals, multibyte text, and a redacted field whose replacement must
 remain valid JSON. Negative control: copy one covered byte and require a
-counterexample or a failed proof, and separately emit the bare marker inside a
-JSON field and require daemon revalidation to reject it. Proof command:
+counterexample or a failed proof; separately emit the bare marker inside a JSON
+field and require daemon revalidation to reject it; and require that
+`SSH-2.0-OpenSSH_9.6` is not matched as a JWT, which fails any implementation
+that counts dot-separated base64url-shaped segments without checking that the
+first decodes to a JSON object. Proof command:
 `prover-tools verus run --repo-root . --proof-file verus/redaction_intervals.rs`.
 Integration test: `tests/redaction_safety.rs`, covering each detector with
 positive, negative, malformed, boundary, and nested-metadata cases; deny
-matches; symlink escapes; policy errors; the escaped-string rule's structural
-and value-scanning branches; a collector-to-daemon round trip in which every
-redacted JSON document must still parse; and the `none`, `redacted`, and
-rejected `encrypted` modes. Detector completeness is an external limitation and
-must not be inferred from this proof.
+matches; symlink escapes; policy errors; all three branches of the
+escaped-string rule, including a value-scanning match whose escape falls inside
+the matched span; a collector-to-daemon round trip in which every redacted JSON
+document must still parse; and the `none`, `redacted`, and rejected `encrypted`
+modes. Detector completeness is an external limitation and must not be inferred
+from this proof.
 
 V-PURGE (deleting a scope preserves every item outside it; a rejected
 authorization or confirmation leaves state unchanged; repeated deletion is
