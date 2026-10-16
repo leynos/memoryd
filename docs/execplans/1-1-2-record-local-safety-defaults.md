@@ -412,6 +412,29 @@ fixed first.
   rendering it settled the question against that dismissal. The `\n` convention
   is now stated because five rows depend on reading it as a line terminator,
   and read literally those rows would each state a different input.
+- (2026-10-16, entropy explanation) Corrected the account of how R1-24 and
+  R1-25 straddle the 4.5 bits/byte threshold. The text said they differ "in the
+  number of equally frequent symbols, 23 against 24", and that is false in two
+  independent ways: the symbols are not equally frequent, and a
+  uniform-alphabet reading computes R1-24 at `log2(23)` = 4.5236, which is
+  *above* the threshold the row exists to sit below. The explanation therefore
+  contradicted the outcome it explained, which is the same class as R1-21 and
+  the JWT rule. The three boundary rows share one length and one alphabet and
+  differ in how often each symbol repeats; the note now gives
+  `sum(v * log2(v))` = 18, 16, 12 and
+  `H = (n * log2(n) - sum(v * log2(v))) / n` yielding 4.4375, 4.5000, 4.6250.
+  Found by recomputing every committed figure rather than re-reading any of
+  them, which is how the previous four defects in this corpus surfaced.
+- (2026-10-16, completion claim) Removed three claims the plan could not keep
+  true. The header promised that Progress names the latest green gate run's
+  candidate, which is impossible: recording a run moves the head it describes.
+  A Progress entry still described the previous header, which named a commit,
+  and the EP-M3 entry named no candidate at all. The header now states the
+  invariant and says the current head's evidence is supplied in the PR 46
+  assessment thread; the entries name the commits they actually describe. Two
+  of the three were introduced by the repair for CodeRabbit's completion-claim
+  finding, so the fix for one defect created the next -- the same pattern as
+  R1-21.
 
 ## Outcomes & retrospective
 

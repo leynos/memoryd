@@ -584,13 +584,19 @@ The entropy boundary rows carry their literals in-cell, so the thresholds are
 testable rather than described. Each is a maximal ASCII token of the alphabet
 the fallback rule defines, and the entropy figure is measured over its bytes.
 
-R1-24 and R1-25 differ only in the number of equally frequent symbols, 23
-against 24 over the same 32 bytes, which is what places them on either side of
-4.5. R1-23 shows that a high-entropy token is still not redacted one byte below
-the floor, so the length test is not redundant; R1-28 shows that length alone
-is not sufficient, since 48 bytes at 2.585 bits per byte stays unredacted.
-R1-27 shows the prefix rule firing below the floor, so a known-format token
-never depends on the entropy rule.
+R1-24, R1-25, and R1-26 share the same 32 bytes and the same alphabet `a`-`z`,
+and differ only in how often each symbol repeats: writing the observed counts as
+`v`, they carry `sum(v * log2(v))` of 18, 16, and 12 respectively. Since
+`H = (n * log2(n) - sum(v * log2(v))) / n` and `n` is 32, those give 4.4375,
+4.5000, and 4.6250 bits per byte -- so R1-24 sits just below the 4.5 threshold,
+R1-25 exactly on the inclusive boundary, and R1-26 just above it. The symbols
+are deliberately _not_ equally frequent: R1-24 carries 14 singletons and 9
+doubled symbols against R1-25's 16 and 8, which is what a uniform-alphabet
+reading would miss. R1-23 shows that a high-entropy token is still not redacted
+one byte below the floor, so the length test is not redundant; R1-28 shows that
+length alone is not sufficient, since 48 bytes at 2.585 bits per byte stays
+unredacted. R1-27 shows the prefix rule firing below the floor, so a
+known-format token never depends on the entropy rule.
 
 ### SAFE-PURGE: confirmation and backup
 
@@ -877,3 +883,17 @@ rule says a quoted value ends at its closing quote however many lines later, so
 that quote closed the password value and the row could not claim the quote
 never closes. Its next line now carries no unescaped quote, and the cell
 records why that is load-bearing rather than incidental.
+
+Entropy-explanation revision (2026-10-16). Corrects how R1-24 and R1-25 are
+said to place the 4.5 bits/byte threshold on either side. The text claimed they
+differ "in the number of equally frequent symbols, 23 against 24", which is
+false twice over: the symbols are not equally frequent (R1-24 carries 14
+singletons and 9 doubled symbols), and a uniform-alphabet reading would give
+`log2(23)` = 4.5236 for R1-24, which is _above_ the threshold the row exists to
+sit below -- the explanation contradicted the outcome it explained. The three
+boundary rows share the same 32 bytes and alphabet and differ in how often each
+symbol repeats, so the note now gives the arithmetic directly:
+`H = (n * log2(n) - sum(v * log2(v))) / n`, with `sum(v * log2(v))` of 18, 16,
+and 12 for R1-24, R1-25, and R1-26, yielding 4.4375, 4.5000, and 4.6250. Every
+value in this note is recomputed from the committed literals rather than
+restated.
