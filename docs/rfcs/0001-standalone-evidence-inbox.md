@@ -183,14 +183,17 @@ deployment path, with Diesel-backed adapters and lockstep migrations.
 [ADR 015](../adr-015-local-safety-defaults.md) resolves the local safety
 defaults this RFC depends on. Ingest outcome is unaffected in the ordinary
 case: the same canonical delta, the same idempotency keys, and the same inbox
-records. What changes is that a record which fails redaction, exceeds a
-processing bound, or matches a deny pattern is rejected and does not advance
-its cursor, so a blocked source surfaces as a sanitized source-health error
-rather than as silent loss. Pull-mode watermarks and tombstones are unaffected
-by this ADR; the collection tombstone that ADR 015 requires after a workspace
-purge is separate from the per-source tombstones named here. Both ingest paths
-apply the same policy, so an adapter that pushes directly cannot bypass the
-checks the collector performs.
+records. What changes is the cursor rule. An **intentional exclusion** — a
+mandatory default exclusion, a deny-pattern match, or an operator's audited
+skip of one source position — is recorded as deliberately skipped and **does
+advance** the cursor. A **processing failure** — a failed redaction, a detector
+or policy error, a breached processing ceiling, or a store error — is not
+acknowledged as captured and its cursor **does not advance**, so a blocked
+source surfaces as a sanitized source-health error rather than as silent loss.
+Pull-mode watermarks and tombstones are unaffected by this ADR; the collection
+tombstone that ADR 015 requires after a workspace purge is separate from the
+per-source tombstones named here. Both ingest paths apply the same policy, so
+an adapter that pushes directly cannot bypass the checks the collector performs.
 
 ## Open questions
 

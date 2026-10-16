@@ -1,6 +1,8 @@
 # Record local safety defaults for workspace, redaction, and purge
 
-Status: IN PROGRESS — EP-M1 complete; EP-M2 and EP-M3 remaining.
+Status: COMPLETE — EP-M1, EP-M2, and EP-M3 delivered, with all gates green on
+the final candidate. Commit and publication handoff are the remaining delivery
+steps and are tracked in Progress.
 
 This ExecPlan is a living document. Keep Constraints, Tolerances, Risks,
 Progress, Surprises & discoveries, Decision log, Outcomes & retrospective,
@@ -33,8 +35,10 @@ graph, theme, or Axinite write-back decision may become a prerequisite.
 
 This slice edits documentation only. Do not add runtime modules, dependencies,
 CLI flags, migrations, executable fixtures, or speculative proof scaffolding.
-Do not mark roadmap 1.1.2 done in the planning PR. Never claim a policy has
-runtime enforcement merely because its decision record is accepted.
+Roadmap 1.1.2 is marked done only in EP-M3, after the accepted ADR, the
+synchronized guides, and the gates exist; it was not marked done in the
+planning PR. Never claim a policy has runtime enforcement merely because its
+decision record is accepted.
 
 Use the requested skills: `execplans`, `codegraph-mcp`,
 `hexagonal-architecture`, and `rust-router`; use `firecrawl-mcp` for external
@@ -113,7 +117,40 @@ runtime slice implements and verifies them.
   witnesses, negative controls, proof commands, and integration tests. The
   contents index reflects both. Both guides label the policy as unenforced and
   keep runnable tooling distinct from planned behaviour.
-- [ ] EP-M3: Reconcile acceptance evidence and mark roadmap 1.1.2 done.
+- [x] (2026-10-15) EP-M2 committed as `75a93e3` with the same six-gate sequence
+  passing on that candidate.
+- [x] (2026-10-16) EP-M3 review ran the six Logisphere perspectives over the
+  whole change. Findings were verified against source before repair rather than
+  accepted on assertion. Confirmed defects: the developers' guide attributed
+  V-ID/V-TEXT/V-PURGE to the ADR and design, neither of which defines those
+  identifiers; the cursor rule differed across ADR 015, the users' guide, and
+  RFC 0001; the roadmap's "See" line cited non-existent RFC 0001 section
+  numbers; terms-of-reference.md §9 still listed the redaction question ADR 015
+  resolves; and the tombstone re-enablement obligation had no roadmap owner.
+  All five are repaired. Two further gaps were recorded rather than resolved:
+  the workspace-registry storage surface and the `line_hash`
+  raw-versus-redacted question, both now in ADR 015's Outstanding decisions and
+  memoryd-design.md §17 with named owners.
+- [x] (2026-10-16) EP-M3 marked roadmap 1.1.2 done in `docs/roadmap.md`. The
+  `mapsplice` skill was loaded as the plan requires and its `replace` and
+  `delete` commands were tested first; both fail with `dangling_dependency` for
+  this anchor because task 1.1.3's `Requires 1.1.1 and 1.1.2` names it, and a
+  step-level replace injects a stray blank line before nested sub-tasks. Since
+  completing a task changes no anchor and needs no renumbering, the edit was
+  made directly, following the `Decided:` note convention that task 1.1.1
+  established. The two `mapsplice` defects are recorded here for the tool's
+  maintainers; they are not this task's scope to fix.
+- [x] (2026-10-16) EP-M3 gates passed on the final candidate. `make fmt`,
+  `make check-fmt`, `make markdownlint` (42 files, 0 issues), `make nixie`,
+  `make typecheck`, `make test-workflow-contracts` (6 passed), and `make lint`
+  all exited zero; `make test` passed 146 tests with zero skipped. The first
+  gate run reported that `make fmt` had rewritten six files; that did not
+  reproduce, and a hunk-level check found no line-break-only reflow, so no
+  formatter damage was present. Edit ordering was wrong, though: a later edit
+  added an 80-character line that `mdtablefix` still re-wrapped, because the
+  em-dash made it 82 bytes. The final gate run caught this, and the corrected
+  text is committed from a verified fixed point rather than an assumed one.
+- [ ] EP-M3: commit and publication handoff.
 
 ## Surprises & discoveries
 
@@ -155,11 +192,22 @@ tombstone semantics, or redaction processing ceilings. ADR 015 originates
 those, which is why it states them as decisions with explicit examples rather
 than as restatements of upstream norms.
 
-The roadmap's "See" line for 1.1.2 cites "RFC 0001 §§3 and 7", but RFC 0001 has
-named headings and no numbered sections, so that citation does not resolve. The
-plan already records the same mismatch for the request that produced it; EP-M3
-decides whether to repair the roadmap citation or leave it, since editing the
-roadmap is a separate tracked artefact from the ADR and guides.
+The roadmap's "See" line for 1.1.2 cited "RFC 0001 §§3 and 7", but RFC 0001 has
+named headings and no numbered sections, so that citation did not resolve.
+EP-M3 repaired it to name the headings. Two adjacent defects surfaced while
+checking the citation: the same line pointed at design §8.4, which is the
+Qdrant layout, not workspace derivation (now §5.4), and `grep -c 'line_hash'`
+shows the Codex and Claude idempotency keys embed a hash whose input is never
+stated.
+
+`mapsplice` 0.1.0 cannot complete a task in this roadmap. It parses the file
+and resolves anchors, but fails closed with `dangling_dependency` when the
+anchor is named by any other task's `Requires` clause, which task 1.1.3 does. A
+step-level replacement also inserts a blank line before the first nested
+sub-task and `mdtablefix` and `markdownlint --fix` both accept it, so the churn
+would have reached the commit. A checkbox flip needs no renumbering, so the
+direct edit costs nothing here; a genuine structural edit would need these
+fixed first.
 
 ## Decision log
 
@@ -189,6 +237,25 @@ roadmap is a separate tracked artefact from the ADR and guides.
   present-tense behaviour it then disclaimed, and the ExecPlan's publication
   paragraph still denied an approval the plan records. Text corrections only;
   no contract changed.
+- (2026-10-16, EP-M3) Reconciled the cursor rule into one wording, reused
+  verbatim in ADR 015, the users' guide, RFC 0001, and this plan: an
+  intentional exclusion advances the cursor, a processing failure does not. The
+  earlier wording left denial and non-advancement entangled, so a reader could
+  conclude that a denied path blocks its source forever.
+- (2026-10-16, EP-M3) Fixed the deny-pattern root rather than deferring it: the
+  root is the workspace's canonical root, so linked worktrees evaluate their
+  own patterns. The ADR already defined that root for the descriptor, so naming
+  it for deny patterns removed an ambiguity without a new decision.
+- (2026-10-16, EP-M3) Recorded the workspace-registry storage surface and the
+  `line_hash` input as open in ADR 015 and memoryd-design.md §17 with owners
+  2.2.4 and 2.2.3, rather than inventing a schema here. Both are storage
+  decisions this documentation slice may not make, and both would otherwise
+  have been discovered as blocking questions by the slices that need them.
+- (2026-10-16, EP-M3) Deferred the tombstone re-enablement obligation to roadmap
+  5.3.1 without editing that task's title or success line. Adding a new roadmap
+  task for it would have widened the approved scope; the ADR already names
+  5.3.1 as the owner of purge execution, and re-enablement is a purge-lifecycle
+  action.
 
 ## Outcomes & retrospective
 
@@ -205,9 +272,9 @@ episode was the ADR-number collision: the plan reserved `adr-014` conditionally
 and the fallback triggered, which also exposed a missing contents entry for the
 ADR that had taken 014.
 
-No runtime behaviour has changed, no proof is claimed, and roadmap 1.1.2
-remains open until EP-M3. Runtime verification stays with roadmap items 2.2.3,
-2.2.4, and 5.3.1, and the ADR states plainly that nothing is enforced yet.
+No runtime behaviour has changed, no proof is claimed, and roadmap 1.1.2 was
+closed by EP-M3. Runtime verification stays with roadmap items 2.2.3, 2.2.4,
+and 5.3.1, and the ADR states plainly that nothing is enforced yet.
 
 EP-M2 completed on 2026-10-15. The milestone review earned its keep: both
 findings were real, and the second one — a stale "execution is not yet
@@ -215,6 +282,42 @@ authorized" sentence left in the publication instructions — would have told a
 later operator to halt already-approved work. The lesson is that a living plan
 accumulates stale imperatives at its tail as its head advances, so a status
 edit belongs wherever the plan states a permission, not only in Progress.
+
+EP-M3 completed on 2026-10-16. Five defects were confirmed and repaired, and
+two genuine gaps were recorded with owners rather than invented away. The
+review's most useful habit was refusing to accept a finding on its assertion:
+the false provenance claim about V-ID/V-TEXT/V-PURGE looked plausible until
+`grep -c 'V-ID'` returned zero for both cited documents. Two lessons. First, a
+document that names three models in a guide but defines them nowhere is a
+provenance bug, not a wording bug; the identifiers had to move into the ADR's
+Outstanding decisions contract instead of being re-attributed. Second, the
+cursor rule was stated three times in three slightly different ways, and only a
+side-by-side comparison exposed that one variant implied a denied path blocks
+its source permanently. Restating a rule in several documents requires one
+canonical wording, copied rather than paraphrased.
+
+A tool limitation was also recorded rather than worked around silently:
+`mapsplice` 0.1.0 fails on this roadmap's task 1.1.2 because it treats a
+`Requires` reference to the edited anchor as a dangling dependency. The plan
+mandated `mapsplice` for structural roadmap edits, so the deviation — a direct
+edit for a checkbox flip that needed no renumbering — is recorded in Progress
+and in the Surprises section with the reproduction.
+
+The gate runs produced a third lesson, about sequencing rather than
+documentation. The first run reported that `make fmt` had rewritten six files;
+that did not reproduce, and it was correctly dismissed after a hunk-level check
+found no line-break-only reflow. But the dismissal was then over-generalized
+into a claim that the candidate was already a formatter fixed point, and that
+claim was asserted in this plan before the text supporting it had settled. A
+subsequent edit added an 80-character line that `mdtablefix` nevertheless
+re-wrapped, because the em-dash made it 82 bytes, and the final gate run caught
+the mutation. Two habits follow. A formatter claim must be re-established on
+the bytes actually being committed, not carried forward from an earlier run,
+because a fixed-point check only ever describes the snapshot it was taken on.
+And a character-count rule is not the formatter's rule: the tool's budget is
+bytes, so a line can satisfy the documented 80-column limit and still be
+reflowed, making "no line exceeds 80 characters" necessary but not sufficient
+for a fixed point.
 
 ## Context and orientation
 
@@ -233,11 +336,12 @@ within one tenant. A deny pattern excludes source material before capture. A
 purge removes a specified scope from active stores; it cannot erase external
 provider transcripts or operator backup copies.
 
-Read `docs/documentation-style-guide.md` before creating the ADR. Reserve
-`docs/adr-014-local-safety-defaults.md` after checking that 014 is still free;
-if another change allocated it, use the next free number and update all links.
-No existing safety abstraction is implemented at the baseline. Future runtime
-work must repeat the repository sweep before adding helpers or ports.
+Read `docs/documentation-style-guide.md` before creating the ADR. This plan
+originally reserved `docs/adr-014-local-safety-defaults.md`, but 014 was
+already allocated by the CodeScene coverage-publication ADR, so the fallback
+applied and the file is `docs/adr-015-local-safety-defaults.md`. No existing
+safety abstraction is implemented at the baseline. Future runtime work must
+repeat the repository sweep before adding helpers or ports.
 
 ## Conformance basis
 
@@ -415,9 +519,14 @@ forbidden source path, suppress that content event, including attached tool
 arguments/results, before capture. If provenance is absent, do not claim path
 exclusion can recognize copied file text; apply secret detectors to all text. A
 source-level deny excludes the whole source. Record only a sanitized skipped
-reason and stable source identity; intentional exclusion may advance its
-cursor, whereas processing failure must not acknowledge successful capture. The
-later cursor contract must make retry versus intentional skip explicit.
+reason and stable source identity. The cursor rule has exactly two cases: an
+intentional exclusion (a mandatory default exclusion, a deny-pattern match, or
+an operator's audited skip of one source position) is deliberately skipped and
+does advance the cursor, while a processing failure (failed redaction, detector
+or policy error, breached processing ceiling, or store error) is not
+acknowledged as captured and the cursor does not advance, so the record is
+retried until it succeeds or an operator skips it. ADR 015 states this in the
+wording every document reuses.
 
 ### SAFE-PURGE: confirmation and backup
 
@@ -517,8 +626,9 @@ These are candidate semantic lemmas, not a fixed proof decomposition. Refine or
 remove them when executable verification conditions exist. No claim is
 discharged in 1.1.2. Do not create solver scaffolding to make prose look
 proved. The future proof milestones must add pinned `tools/verus/VERSION` and
-`tools/verus/SHA256SUMS`, use `rust-prover-tools`, and record zero failed goals
-and the trusted dependency audit. Their explicit acceptance commands are:
+`tools/verus/SHA256SUMS`, use the installed `prover-tools` binary, and record
+zero failed goals and the trusted dependency audit. Their explicit acceptance
+commands are:
 
 ```bash
 prover-tools verus run --repo-root . --proof-file verus/workspace_binding.rs
@@ -669,15 +779,7 @@ explicit expected outcomes. Conformance: SAFE-ID/TEXT/PURGE checked against
 every source in Table 1; no interface, trust, or format expansion was
 introduced beyond the TOR §9 resolution the criteria anticipated. Rollback is a
 normal revert of the documentation commit. Runtime enforcement remains a
-documented later gap.
-
-Acceptance E1: all ten requested defaults have unambiguous decisions, all
-cross-references resolve, and the identity/detector/purge examples have
-explicit expected outcomes. Conformance: check SAFE-ID/TEXT/PURGE against every
-source in Table 1 and reject unapproved interface, trust, or format expansion.
-Run all gates below, record results, and commit this coherent decision plateau.
-Rollback is a normal revert of the documentation commit. Runtime enforcement
-remains a documented later gap. No compatibility layer is needed.
+documented later gap. No compatibility layer is needed.
 
 ### EP-M2: Publish the implementation handoff
 

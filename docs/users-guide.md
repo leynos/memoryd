@@ -78,11 +78,15 @@ keys as well as private ones. Operators may add exclusions but not remove the
 mandatory defaults. Deny patterns are case-sensitive, root-relative globs where
 `*` stops at a path separator and `**` spans directories; a match always denies.
 
-A record that fails redaction, exceeds a processing limit, or matches a deny
-pattern is rejected rather than stored partially, and its source cursor does
-not advance. That surfaces as a source-health error. An operator can fix the
-source or explicitly skip that one source position; skipping is audited and is
-never automatic.
+Always check whether the thing was excluded on purpose: an **intentional
+exclusion** — a mandatory default exclusion, a deny-pattern match, or your own
+audited skip of one source position — is recorded as deliberately skipped and
+does advance the cursor, because re-reading it would only be rejected again. A
+**processing failure** — a failed redaction, a detector or policy error, a
+breached processing ceiling, or a store error — is not stored, partially or
+otherwise, its source cursor does not advance, and it surfaces as a
+source-health error. An operator can then fix the source or explicitly skip
+that one source position; skipping is audited and is never automatic.
 
 ### Purging a workspace
 

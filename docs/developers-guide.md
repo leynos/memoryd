@@ -190,14 +190,15 @@ identifies source positions instead of re-deriving them from rendered output.
 
 ### Obligations, witnesses, and proof-to-test relationships
 
-[ADR 015](adr-015-local-safety-defaults.md) and the design document record the
-abstract models V-ID, V-TEXT, and V-PURGE. No claim is discharged by this
-documentation slice, and the proof files and a project proof target do not
-exist yet. Each obligation below names its later roadmap owner, its witness,
-its negative control, the proof command planned for that owner, and the
-integration test that must accompany it. Refine or remove a lemma once
-executable verification conditions exist; nothing here is a frozen proof
-decomposition.
+The abstract models V-ID, V-TEXT, and V-PURGE are introduced here and stated as
+delivery obligations in the ExecPlan for roadmap task 1.1.2; the design
+document's verification strategy carries the corresponding design-level
+targets. No claim is discharged by this documentation slice, and the proof
+files and a project proof target do not exist yet. Each obligation below names
+its later roadmap owner, its witness, its negative control, the proof command
+planned for that owner, and the integration test that must accompany it. Refine
+or remove a lemma once executable verification conditions exist; nothing here
+is a frozen proof decomposition.
 
 V-ID (workspace registration preserves existing bindings and never adds an
 unapproved descriptor). Owner: roadmap 2.2.4. Witnesses: two distinct

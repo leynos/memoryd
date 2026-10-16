@@ -319,9 +319,15 @@ flag supplied by a caller.
 
 Invalid encoding, an invalid policy, a detector failure, or an exhausted
 processing budget rejects the record without recording its raw payload in
-diagnostics. The proposed processing ceilings are a 1 MiB UTF-8 content budget
-per record, JSON depth 64, and at most 4,096 detected intervals. Exceeding any
-bound rejects the record without advancing its cursor. These are safety
+diagnostics. The processing ceilings are a 1 MiB UTF-8 content budget per
+record, JSON depth 64, and at most 4,096 detected intervals. Each bound applies
+to one record, and no batch ceiling is fixed here. Rejection is also per
+record: the offending record is not stored and the cursor does not advance past
+it, while records already accepted in the same submission keep their own
+idempotency keys and stand. The submission reports a failure naming the blocked
+record, so a batch never fails silently and never discards its valid
+neighbours. Roadmap 2.2.3 owns the concrete batch bound for
+`CollectedConversationBatch` under the same revision rule. These are safety
 ceilings, not performance promises; later profiling may justify an approved
 policy revision.
 
@@ -337,11 +343,15 @@ is used, `literal_separator(true)` and `backslash_escape(true)` must be set
 explicitly on every platform, and patterns containing backslash path separators
 are rejected. Deny patterns support no negation and no allow-pattern
 precedence: any match denies. Absolute patterns, parent traversal, and
-malformed patterns are rejected at startup. Matching considers both the lexical
-root-relative path and the resolved target, so an escaping symlink is denied.
-Configured deny patterns are limited to 256 per workspace and 1,024 UTF-8 bytes
-per pattern, and invalid or excessive policy is rejected at startup rather than
-truncated.
+malformed patterns are rejected at startup. The root that a pattern is relative
+to is the workspace's canonical root, as the workspace definition above fixes
+it: the same root whose digest is part of the workspace descriptor. For a Git
+workspace that is the worktree top level, not the repository's shared common
+directory, so a linked worktree's deny patterns are evaluated against that
+worktree's own root. Matching considers both the lexical root-relative path and
+the resolved target, so an escaping symlink is denied. Configured deny patterns
+are limited to 256 per workspace and 1,024 UTF-8 bytes per pattern, and invalid
+or excessive policy is rejected at startup rather than truncated.
 
 The mandatory default exclusions are `.env`, `.env.*`, `**/.env`, `**/.env.*`,
 `.git/**`, `**/.git/**`, `.ssh/**`, and `**/.ssh/**`. The conservative SSH
@@ -356,15 +366,32 @@ path, that content event is suppressed before capture, including any attached
 tool arguments and results. When provenance is absent, path exclusion cannot
 recognize copied file text, so secret detectors apply to all text instead. A
 source-level deny excludes the whole source. Only a sanitized skipped reason
-and a stable source identity are recorded. An intentional exclusion may advance
-its cursor, whereas a processing failure must not acknowledge successful
-capture; the later cursor contract must make retry versus intentional skip
-explicit.
+and a stable source identity are recorded.
+
+The cursor rule has exactly two cases, and every document that states it must
+use these words:
+
+- an **intentional exclusion** — a mandatory default exclusion, a configured
+  deny-pattern match, or an operator's audited skip of one source position — is
+  recorded as deliberately skipped and **does advance** the cursor, because
+  re-reading it would only be rejected again;
+- a **processing failure** — a failed redaction, a detector or policy error, a
+  breached processing ceiling, or a store error — is not acknowledged as
+  captured, so the cursor **does not advance** and the record is retried until
+  it succeeds or an operator skips it.
+
+"Does not advance" therefore never describes a denial by itself; it describes
+the state that makes an audited skip necessary. The later cursor contract owns
+the persisted representation of both cases.
 
 Detector version changes are explicit and must not silently redefine provider
-idempotency keys. Emitted diagnostics use structured reason codes and aggregate
-counters with bounded labels, never paths, raw origins, tokens, or payload
-labels.
+idempotency keys. The Codex and Claude keys in memoryd-design.md §7 embed a
+`line_hash` without stating whether it hashes the raw or the redacted line, so
+that memoryd-design.md §17 records which input each key hashes; hashing the
+redacted line would rewrite the key for every line whose redaction differs
+between detector versions, which is exactly what this requirement forbids.
+Emitted diagnostics use structured reason codes and aggregate counters with
+bounded labels, never paths, raw origins, tokens, or payload labels.
 
 Table 5 gives worked detector and exclusion examples.
 
@@ -413,10 +440,13 @@ Before purge the operator must explicitly acknowledge that a restorable
 evidence-store backup was made. The acknowledgement is bound to the preview
 scope and to a backup identifier or time, without putting filesystem locations
 into logs. The operator must quiesce writers for the scope before the backup
-and keep them quiesced through the purge, and the scope generation must be
-revalidated after the backup. Any intervening write invalidates the
-acknowledgement and requires a new backup and a new preview. No automatic
-backup and no automatic undo are promised.
+and keep them quiesced through the purge. A scope generation is the
+monotonically increasing counter of accepted writes to the scoped tenant and
+workspace; revalidating it after the backup means re-reading it and refusing
+the purge if it moved. The concrete representation and its storage location are
+owned by roadmap 5.3.1 with the rest of the purge kernel. Any intervening write
+invalidates the acknowledgement and requires a new backup and a new preview. No
+automatic backup and no automatic undo are promised.
 
 For SQLite the backup uses the online backup API or the CLI `.backup` command,
 never a copy of the main database file while WAL writers are running. For
@@ -550,6 +580,16 @@ _Table 6: Purge examples and expected outcomes._
   (memoryd-design.md §17).
 - The transport syntax and confirmation-token mechanics for non-interactive
   purge, owned by a later transport slice.
+- The workspace-registry storage surface (memoryd-design.md §17). This ADR
+  requires registration to persist and compare the full descriptor binding, but
+  the design's evidence schema has no workspace table; roadmap 2.2.4 owns the
+  table, its tenant-scoped uniqueness rule, the configured override and
+  explicit-join configuration surface, and whether the registry is purged with
+  the workspace or retained as control metadata.
+- Whether the Codex and Claude idempotency keys' `line_hash` hashes the raw or
+  the redacted line (memoryd-design.md §§7 and 17). Roadmap 2.2.3 owns the
+  answer, because hashing redacted text would let a detector-version change
+  redefine an idempotency key.
 
 ## Architectural rationale
 
@@ -612,3 +652,10 @@ record, adding worked examples with explicit expected outcomes for identity
 derivation, detector behaviour, and purge confirmation. Runtime enforcement,
 proofs, and verification remain with roadmap items 2.2.3, 2.2.4, and 5.3.1;
 nothing in this ADR is claimed as implemented.
+
+EP-M3 revision (2026-10-16). States the cursor rule once, in the wording the
+users' guide, RFC 0001, and the ExecPlan now reuse. Fixes the deny-pattern root
+to the workspace's canonical root, so linked worktrees evaluate their own
+patterns. Names the scope generation as the scoped-write counter. Records the
+workspace-registry storage surface and the `line_hash` input as outstanding
+decisions with owners, because this slice may not choose a storage schema.

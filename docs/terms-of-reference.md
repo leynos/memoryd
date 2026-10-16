@@ -332,9 +332,9 @@ ADR 013 resolves the standalone evidence inbox store question: v1 uses SQLite
 as the local default and PostgreSQL as a first-class deployment path, with
 Diesel-backed adapters and lockstep migrations across both stores.
 
-ADR 015 resolves the first-release redaction question below by fixing a
-documented default exclusion list, a versioned secret detector corpus, the
-raw-text storage modes, the operator override and explicit-join model, and the
+ADR 015 resolves the first-release redaction question by fixing a documented
+default exclusion list, a versioned secret detector corpus, the raw-text
+storage modes, the operator override and explicit-join model, and the
 workspace-identity derivation those defaults depend on. The encrypted raw-text
 mode stays open and is rejected as unsupported until a key-management decision
 exists.
@@ -342,7 +342,6 @@ exists.
 | Question                                                                                        | Why it matters                                                                           | Criteria for resolution                                                            | Suggested path       |
 | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------- |
 | What is the exact canonical evidence schema for Codex, Claude, Axinite, and manual imports?     | The schema gates adapters, idempotency, redaction, projection, and tests                 | Provider examples round-trip through normalization with stable evidence references | Implementation spike |
-| What redaction policy is sufficient for the first release?                                      | Redaction governs whether transcripts can be stored and embedded safely                  | A documented default deny list, secret detector set, and override model            | Security review      |
 | Should Axinite projection write-back be manual, approved, or automatic by default?              | Write-back can duplicate or strengthen derived facts if loops are not controlled         | A policy that prevents self-reinforcing projection loops                           | ADR                  |
 | Which MCP tools are required in the first public slice?                                         | The MCP surface affects immediate usefulness and implementation order                    | A minimum useful set tied to evidence capture and flat recall                      | Roadmap              |
 | What recall quality signals will decide whether hierarchical recall is better than flat recall? | Without evaluation signals, theme and episode expansion can add complexity without value | A shadow-mode evaluation set with traceable disagreement and token-cost metrics    | Evaluation plan      |
@@ -383,8 +382,9 @@ there when the project creates a ubiquitous language document:
 - Record release 0.1 graph-disabled capability limits and the full v1
   Oxigraph authority boundary.
 - Decide Axinite projection write-back policy and loop prevention.
-- Decide redaction guarantees and whether encrypted raw-text storage is in
-  scope.
+- Decide encrypted raw-text storage key management. ADR 015 fixes the detector
+  corpus, the mandatory exclusions, and the `none` and `redacted` modes, and
+  rejects `encrypted` as unsupported until this decision exists.
 
 ### Appendix C. Downstream design inputs
 

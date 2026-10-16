@@ -1319,6 +1319,18 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
   [ADR 015](adr-015-local-safety-defaults.md) defines the detector corpus and
   closes the `none` and `redacted` modes, but leaves `encrypted` unsupported
   until a key-provisioning, rotation, recovery, and audit decision exists.
+- Define the workspace-registry storage surface. ADR 015 requires a registry
+  that persists the descriptor version, the canonical root path before hashing,
+  and the full descriptor binding, and compares the full canonical descriptor
+  before any registration write, but the evidence schema above has no workspace
+  table and no `workspace_id` foreign key. The table, its tenant-scoped
+  uniqueness rule, and the configured override and explicit-join configuration
+  surface are settled by roadmap 2.2.4, which must also fix whether the
+  registry is purged with the workspace or retained as control metadata. Note
+  that the Codex and Claude idempotency keys above embed `{line_hash}` without
+  saying whether it hashes the raw or the redacted line; roadmap 2.2.3 must
+  state which, because a detector-version change would otherwise redefine an
+  idempotency key for a line whose redaction differs between versions.
 - Define the Chutoro checkpoint format and acceptable theme-ID churn during
   rebuild.
 - Define source-health freshness defaults for each provider.
