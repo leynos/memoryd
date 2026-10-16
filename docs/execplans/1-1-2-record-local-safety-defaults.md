@@ -150,7 +150,12 @@ runtime slice implements and verifies them.
   added an 80-character line that `mdtablefix` still re-wrapped, because the
   em-dash made it 82 bytes. The final gate run caught this, and the corrected
   text is committed from a verified fixed point rather than an assumed one.
-- [ ] EP-M3: commit and publication handoff.
+- [x] (2026-10-16) EP-M3 committed as `a082bbf`, covering all eight tracked
+  documents: ADR 015, the users' guide, RFC 0001, the developers' guide, the
+  terms of reference, the design document, the roadmap, and this plan. The
+  commit message records the five repairs, the two recorded gaps, and the
+  `mapsplice` deviation. Publication handoff to `pr-babysitting` is the
+  remaining step and is tracked there rather than in this plan.
 
 ## Surprises & discoveries
 
