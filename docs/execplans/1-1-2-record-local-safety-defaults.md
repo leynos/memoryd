@@ -349,15 +349,19 @@ review's most useful habit was refusing to accept a finding on its assertion:
 the false provenance claim about V-ID/V-TEXT/V-PURGE looked plausible until
 `grep -c 'V-ID'` returned zero for both cited documents. Two lessons. First, a
 document that names three models in a guide but defines them nowhere is a
-provenance bug, not a wording bug; the identifiers had to move into the ADR's
-Outstanding decisions contract instead of being re-attributed. Second, the
-cursor rule was stated three times in three slightly different ways, and only a
-side-by-side comparison exposed that one variant implied a denied path blocks
-its source permanently. Restating a rule in several documents requires one
-canonical statement to copy from. It does not require identical sentences: a
-guide addresses the reader as "you" while an ADR speaks of "the operator", and
-forcing one voice on both would make one of them read badly. What must not vary
-is the rule — the cases, their outcomes, and which one retries.
+provenance bug, not a wording bug; the identifiers were introduced in the guide
+and their obligations kept in this plan's abstract-model section, with the
+attribution corrected rather than the identifiers relocated. ADR 015 does not
+define them and its Outstanding decisions section does not mention them, so
+sending a reader there would have replaced one false pointer with another.
+Second, the cursor rule was stated three times in three slightly different
+ways, and only a side-by-side comparison exposed that one variant implied a
+denied path blocks its source permanently. Restating a rule in several
+documents requires one canonical statement to copy from. It does not require
+identical sentences: a guide addresses the reader as "you" while an ADR speaks
+of "the operator", and forcing one voice on both would make one of them read
+badly. What must not vary is the rule — the cases, their outcomes, and which
+one retries.
 
 A tool limitation was also recorded rather than worked around silently:
 `mapsplice` 0.1.0 fails on this roadmap's task 1.1.2 because it treats a
@@ -405,6 +409,39 @@ single-column and cannot distinguish the models from one another. Wide
 characters were left alone at 79 display columns and wrapped at 81, which fixes
 the threshold to display columns rather than to any count of characters.
 Neither threshold caused the reflow; the paragraph-level re-flow did.
+
+The first hosted completeness assessment returned five findings, and all five
+held when checked against source, so the repair commit `9964001` addressed
+them. The follow-up assessment resolved three and re-opened two, which is the
+useful outcome: a partly-resolved verdict is evidence that the first repair was
+aimed at the words rather than at the defect. The detector corpus finding is
+the clearest case. Its first repair added a corpus table, but several rows
+described their input instead of stating it, so the rows that needed a literal
+most were the rows a reader could not test. The repair here moves every literal
+into its cell, adds the class negatives that were missing, and states the
+corpus's three row groups rather than claiming a uniform positive/negative pair
+for rows that sit on different axes. That was found by writing the pairing
+claim as a check and running it: cloud credentials had no pair at all, and
+basic, cookie, and key-block negatives were absent. A claim about a table is
+cheap to make true by editing the table and cheap to make false by editing only
+the sentence.
+
+One defect was found here rather than by any review. The assignment rule said
+the entire value is redacted for names containing six substrings, "including
+`AWS_ACCESS_KEY_ID`". Running the rule shows `AWS_ACCESS_KEY_ID` contains none
+of those six substrings, so the normative sentence named a value its own rule
+left in the clear. It was verified by extracting the substrings from the
+sentence and testing them against the name, not by reading. The rule now has an
+exact-name list alongside the substring list, and the text says why the two are
+not redundant, so a future editor does not delete one as duplication.
+
+The follow-up assessment also rejected the method used to argue content
+preservation across the formatter reflows: positive word-count deltas do not
+show that no text was lost. The replacement is a textual comparison of the
+formatter's input and output, which is the right instrument because it observes
+the actual rewrite instead of a proxy that a loss and a gain could cancel out.
+Positive deltas are kept only as a lopsided-loss guard, which is all they can
+support.
 
 ## Context and orientation
 

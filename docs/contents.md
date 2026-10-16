@@ -15,7 +15,9 @@ set.
 - [Project-design ExecPlan](execplans/project-design.md) records the live
   remediation plan for the Logisphere design-stage review.
 - [Local safety defaults ExecPlan](execplans/1-1-2-record-local-safety-defaults.md)
-  proposes the approval-gated decision work for roadmap item 1.1.2.
+  records the completed decision work for roadmap item 1.1.2: the accepted
+  workspace-identity, redaction, and purge defaults in ADR 015, and the runtime
+  work they defer to later roadmap items.
 - [Users' guide](users-guide.md) explains how to use Memoryd, the planned local
   safety defaults for workspace identity, redaction, and purge, and its public
   build and test commands.

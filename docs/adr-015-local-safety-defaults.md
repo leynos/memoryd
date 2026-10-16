@@ -113,7 +113,7 @@ provider fields cannot supply authority (ADR 006, memoryd-design.md §5.4).
 | Option                                          | Consequence                                                                                                                                                                                                                |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Origin URL only                                 | Simple, but collapses two checkouts of the same repository on one machine, and gives no identity at all for non-Git roots.                                                                                                 |
-| Root path only                                  | Distinguishes local checkouts by path, but ignores the remote that makes the workspace shared, so two clones of one repository never join and no meaning survives a move.                                                  |
+| Root path only                                  | Distinguishes checkouts at different canonical paths, but merges checkouts that present the same canonical path regardless of origin or machine; moving the root changes identity.                                         |
 | Origin URL, root digest, and profile (selected) | Separates checkouts by path and non-Git roots by root digest, and gives operators an explicit join mechanism instead of an implicit merge. It does not guarantee machine separation: a machine identifier is not an input. |
 | Auto-merge on digest collision                  | Recovers the rare collision automatically, but cannot distinguish a true collision from two genuinely different projects, so it risks silent evidence mixing.                                                              |
 
@@ -291,9 +291,12 @@ memoryd-design.md §13:
   keys are public material, but whole private-key blocks are still redacted;
 - dotenv assignments and password assignments: the entire value is redacted for
   case-insensitive names containing `password`, `passwd`, `secret`, `token`,
-  `api_key`, or `private_key`, including `AWS_ACCESS_KEY_ID`,
-  `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN`. Quoted assignment values
-  are values, including embedded whitespace;
+  `api_key`, or `private_key`, and for the exact name `AWS_ACCESS_KEY_ID`,
+  which contains none of those six substrings and would therefore be left in
+  the clear by the substring rule alone. That one name carries the whole list:
+  `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` are already covered, by
+  `secret` and `token` respectively. Quoted assignment values are values,
+  including embedded whitespace;
 - cookies: entire `Cookie` and `Set-Cookie` values;
 - cloud access and secret credentials;
 - credential-bearing database URLs: entire recognized URLs carrying userinfo,
@@ -466,70 +469,68 @@ Table 5 gives worked detector and exclusion examples.
 _Table 5: Redaction and exclusion examples and expected outcomes._
 
 The named corpus revision `memoryd.redaction.v1` is the synthetic case set in
-Table 6. Each class carries at least one positive case that must be redacted
-and one negative case that must not, so a detector that over-matches fails the
-corpus as loudly as one that under-matches. Entropy values in the table are
-empirical Shannon entropy over the token's bytes, and the boundary rows are
-chosen so that each sits on one side of exactly one threshold.
+Table 6. It carries three row groups. The class rows give every declared
+detector class at least one positive that must be redacted and at least one
+negative that must not, so a detector that over-matches fails the corpus as
+loudly as one that under-matches. The grammar rows exercise the three decided
+grammar cases. The boundary rows vary one entropy-rule input at a time against
+a case that satisfies both, so the 32-byte floor and the 4.5 bits/byte
+threshold are each exercised independently of the other, and the ceiling rows
+cover the processing, interval-count, and JSON-depth limits. Entropy values in
+the table are empirical Shannon entropy over the token's bytes.
 
-| Case ID | Class and input                                                                                                  | Expected outcome                                                                     |
-| ------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| R1-01   | Positive, provider key: `sk-ant-abc123` in assistant text                                                        | Redacted.                                                                            |
-| R1-02   | Negative, provider key: the text `` `sk-` `` alone, with whitespace on both sides                                | Not redacted: no non-whitespace token follows the prefix.                            |
-| R1-03   | Positive, OAuth: `Authorization: Bearer eyJhbGciOi...`                                                           | Value redacted, header name retained.                                                |
-| R1-04   | Negative, OAuth: `Bearer` alone on a line                                                                        | Not redacted: no value follows.                                                      |
-| R1-05   | Positive, basic: `Authorization: Basic dTpw` and `authorization: basic dTpw`                                     | Both redacted: the header and scheme match case-insensitively.                       |
-| R1-06   | Positive, JWT: three dot-separated base64url segments                                                            | Redacted as one interval.                                                            |
-| R1-07   | Negative, JWT-like: two dot-separated segments                                                                   | Not redacted by the JWT rule.                                                        |
-| R1-08   | Positive, key block: `-----BEGIN OPENSSH PRIVATE KEY-----` with an end marker                                    | The complete block is redacted.                                                      |
-| R1-09   | Positive, unterminated: an opening key block with no end marker                                                  | Redacted through the end of the record.                                              |
-| R1-10   | Negative, SSH: a `known_hosts` comment line carrying no key material                                             | Not redacted.                                                                        |
-| R1-11   | Accepted over-detection, SSH public key: an `ssh-ed25519 AAAA...` body in text                                   | Redacted by the entropy rule even though the key is public.                          |
-| R1-12   | Positive, assignment: `password = "hunter two"`                                                                  | Entire quoted value redacted, including the space.                                   |
-| R1-13   | Negative, assignment: `author = "ada lovelace"`                                                                  | Not redacted: the name contains none of the sensitive substrings.                    |
-| R1-14   | Positive, cookie: `Set-Cookie: session=abc; HttpOnly`                                                            | The entire value is redacted.                                                        |
-| R1-15   | Positive, database URL: `postgres://user:pw@host/db`                                                             | The whole URL is redacted.                                                           |
-| R1-16   | Negative, database URL: `postgres://host/db` with no userinfo                                                    | Not redacted by the database-URL rule.                                               |
-| R1-17   | Grammar, malformed JSON: a JSON-declared field whose text does not parse                                         | Record rejected as a processing failure; no store write; cursor does not advance.    |
-| R1-18   | Grammar, unescaped: a JWT detector match inside a JSON string with no escape sequence, under a non-sensitive key | Exactly the matched raw sub-interval is redacted, quotes excluded.                   |
-| R1-19   | Grammar, escaped: `{"password": "a\"b"}`                                                                         | The whole raw string literal is redacted, quotes included.                           |
-| R1-20   | Grammar, multiline: a quoted assignment whose value spans three lines                                            | The complete value is redacted across the newlines.                                  |
-| R1-21   | Grammar, unterminated quote: an opening quote with no closing quote                                              | Redacted through the end of the record.                                              |
-| R1-22   | Grammar, unquoted trailing: `password =` at end of line, followed by an unrelated next line                      | The value is empty, so no characters are redacted and the next line is not consumed. |
-| R1-23   | Boundary, length: 31 bytes, entropy 4.95 bits/byte                                                               | Not redacted: one byte below the 32-byte floor.                                      |
-| R1-24   | Boundary, entropy below: 32 bytes, entropy 4.4375 bits/byte                                                      | Not redacted: below the 4.5 bits/byte threshold.                                     |
-| R1-25   | Boundary, entropy at: 32 bytes, entropy exactly 4.5 bits/byte                                                    | Redacted: the threshold is inclusive.                                                |
-| R1-26   | Boundary, entropy above: 32 bytes, entropy 4.625 bits/byte                                                       | Redacted.                                                                            |
-| R1-27   | Boundary, known format below the floor: a short `ghp_`-prefixed token, 16 bytes                                  | Redacted: the prefix rule applies independently of the entropy rule.                 |
-| R1-28   | Boundary, long and low entropy: 48 bytes, entropy 2.585 bits/byte                                                | Not redacted by the entropy rule.                                                    |
-| R1-29   | Boundary, processing ceiling: a record one byte over the 1 MiB content budget                                    | Record rejected without advancing the cursor and without logging the payload.        |
-| R1-30   | Boundary, interval count: a record with 4,097 detected intervals                                                 | Record rejected on the interval ceiling.                                             |
-| R1-31   | Boundary, JSON depth: nesting one level beyond depth 64                                                          | Record rejected on the depth ceiling.                                                |
+| Case ID | Class and input                                                                                                                                     | Expected outcome                                                                                                                                                                                                      |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1-01   | Positive, provider key: `sk-ant-abc123` in assistant text                                                                                           | Redacted.                                                                                                                                                                                                             |
+| R1-02   | Negative, provider key: the text `` `sk-` `` alone, with whitespace on both sides                                                                   | Not redacted: no non-whitespace token follows the prefix.                                                                                                                                                             |
+| R1-03   | Positive, OAuth: `Authorization: Bearer eyJhbGciOi...`                                                                                              | Value redacted, header name retained.                                                                                                                                                                                 |
+| R1-04   | Negative, OAuth: `Bearer` alone on a line                                                                                                           | Not redacted: no value follows.                                                                                                                                                                                       |
+| R1-05   | Positive, basic: `Authorization: Basic dTpw` and `authorization: basic dTpw`                                                                        | Both redacted: the header and scheme match case-insensitively.                                                                                                                                                        |
+| R1-32   | Negative, basic: `Authorization: Basic` with whitespace and no value                                                                                | Not redacted: the scheme is present but no value follows it.                                                                                                                                                          |
+| R1-06   | Positive, JWT: `eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk`                                                    | Redacted as one interval.                                                                                                                                                                                             |
+| R1-07   | Negative, JWT-like: `eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0`, two dot-separated segments                                                              | Not redacted: the JWT rule needs three segments, and no segment reaches the entropy floor.                                                                                                                            |
+| R1-18   | Grammar, unescaped: `{"note": "see eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abc for details"}`                                                          | The JWT span is redacted; its quotes and the surrounding text are retained. The third segment is deliberately short: the JWT rule requires three dot-separated base64url segments and sets no minimum segment length. |
+| R1-08   | Positive, key block: `-----BEGIN OPENSSH PRIVATE KEY-----\nU1lOVEhFVElDLU5PVC1BLVJFQUwtS0VZ\n-----END OPENSSH PRIVATE KEY-----`                     | The complete block, markers included, is redacted.                                                                                                                                                                    |
+| R1-09   | Positive, unterminated: `-----BEGIN OPENSSH PRIVATE KEY-----\nU1lOVEhFVElDLU5PVC1BLVJFQUwtS0VZ` with no end marker                                  | Redacted through the end of the record.                                                                                                                                                                               |
+| R1-36   | Negative, key block: `-----BEGIN CERTIFICATE-----\nTUlJQmR3SUJBREJHQWxVQUFRQVE\n-----END CERTIFICATE-----`                                          | Not redacted: a certificate is public material, not private-key material.                                                                                                                                             |
+| R1-10   | Negative, SSH: `# github.com:22 SSH-2.0-OpenSSH_9.6` as a `known_hosts` comment carrying no key material                                            | Not redacted: no key material of any kind is present.                                                                                                                                                                 |
+| R1-11   | Accepted over-detection, SSH public key: `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL4kQ0Z8d0mN1pQxR7vJ2wY6sT3bG5hK9cV0fE8aD2mZ` in text                 | The 68-byte body is redacted by the entropy rule even though the key is public.                                                                                                                                       |
+| R1-12   | Positive, assignment: `password = "hunter two"`                                                                                                     | Entire quoted value redacted, including the space.                                                                                                                                                                    |
+| R1-13   | Negative, assignment: `author = "ada lovelace"`                                                                                                     | Not redacted: the name contains none of the sensitive substrings.                                                                                                                                                     |
+| R1-14   | Positive, cookie: `Set-Cookie: session=abc; HttpOnly`                                                                                               | The entire value is redacted.                                                                                                                                                                                         |
+| R1-33   | Negative, cookie: `Cookie preferences saved` in ordinary prose                                                                                      | Not redacted: the `Set-Cookie` header form is absent.                                                                                                                                                                 |
+| R1-34   | Positive-by-name, cloud credential: `AWS_ACCESS_KEY_ID = "example-id-not-a-real-key"`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` assignments | Each whole value is redacted: the first by the exact-name rule, the other two by the `secret` and `token` substrings respectively.                                                                                    |
+| R1-35   | Negative, cloud: `AWS_REGION = "eu-west-2"`                                                                                                         | Not redacted: the name is not a credential name and the value is below both bounds.                                                                                                                                   |
+| R1-15   | Positive, database URL: `postgres://user:pw@host/db`                                                                                                | The whole URL is redacted.                                                                                                                                                                                            |
+| R1-16   | Negative, database URL: `postgres://host/db` with no userinfo                                                                                       | Not redacted by the database-URL rule.                                                                                                                                                                                |
+| R1-17   | Grammar, malformed JSON: the schema-declared JSON field `{"key": "value"` (unclosed)                                                                | Record rejected as a processing failure; no store write; cursor does not advance.                                                                                                                                     |
+| R1-19   | Grammar, escaped: `{"password": "a\"b"}`                                                                                                            | The whole raw string literal is redacted, quotes included.                                                                                                                                                            |
+| R1-20   | Grammar, multiline: `password = "two\nlines"` with the value spanning both lines                                                                    | The complete value, embedded newline included, is redacted.                                                                                                                                                           |
+| R1-21   | Grammar, unterminated quote: `password = "three` with no closing quote, followed by an unrelated `note` line                                        | Redacted through the end of the record, `note` line included.                                                                                                                                                         |
+| R1-22   | Grammar, unquoted trailing: `password =` at end of line, followed by an unrelated next line                                                         | The value is empty, so no characters are redacted and the next line is not consumed.                                                                                                                                  |
+| R1-23   | Boundary, length: `aB3dE7gH1jK4mN6pQ9rS2tU5vW8xY0z`, 31 bytes at 4.9542 bits/byte                                                                   | Not redacted: one byte below the 32-byte floor.                                                                                                                                                                       |
+| R1-24   | Boundary, entropy below: `abcdefghijklmnopqrstuvwabcdefghi`, 32 bytes at 4.4375 bits/byte                                                           | Not redacted: below the 4.5 bits/byte threshold.                                                                                                                                                                      |
+| R1-25   | Boundary, entropy at: `abcdefghijklmnopqrstuvwxabcdefgh`, 32 bytes at 4.5000 bits/byte                                                              | Redacted: the threshold is inclusive.                                                                                                                                                                                 |
+| R1-26   | Boundary, entropy above: `abcdefghijklmnopqrstuvwxyzabcdef`, 32 bytes at 4.6250 bits/byte                                                           | Redacted.                                                                                                                                                                                                             |
+| R1-27   | Boundary, known format below the floor: `ghp_0123456789ab`, 16 bytes                                                                                | Redacted: the prefix rule applies independently of the entropy rule.                                                                                                                                                  |
+| R1-28   | Boundary, long and low entropy: `abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef`, 48 bytes at 2.5850 bits/byte                                    | Not redacted by the entropy rule.                                                                                                                                                                                     |
+| R1-29   | Boundary, processing ceiling: a record one byte over the 1 MiB content budget                                                                       | Record rejected without advancing the cursor and without logging the payload.                                                                                                                                         |
+| R1-30   | Boundary, interval count: a record with 4,097 detected intervals                                                                                    | Record rejected on the interval ceiling.                                                                                                                                                                              |
+| R1-31   | Boundary, JSON depth: nesting one level beyond depth 64                                                                                             | Record rejected on the depth ceiling.                                                                                                                                                                                 |
 
 _Table 6: Initial detector corpus revision `memoryd.redaction.v1`._
 
-The entropy boundary rows have concrete inputs, so the thresholds are testable
-rather than described. Each is a maximal ASCII token of the alphabet the
-fallback rule defines, and the entropy figure is measured over its bytes:
-
-- **R1-23**, 31 bytes, 4.9542 bits/byte: `aB3dE7gH1jK4mN6pQ9rS2tU5vW8xY0z`.
-- **R1-24**, 32 bytes, 4.4375 bits/byte:
-  `abcdefghijklmnopqrstuvwabcdefghi`.
-- **R1-25**, 32 bytes, 4.5000 bits/byte:
-  `abcdefghijklmnopqrstuvwxabcdefgh`.
-- **R1-26**, 32 bytes, 4.6250 bits/byte:
-  `abcdefghijklmnopqrstuvwxyzabcdef`.
-- **R1-27**: `ghp_0123456789ab`, 16 bytes, redacted by the prefix rule alone:
-  the complete non-whitespace token after `ghp_` is removed however short it
-  is, so the entropy floor never comes into play.
-- **R1-28**, 48 bytes, 2.5850 bits/byte:
-  `abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef`.
+The entropy boundary rows carry their literals in-cell, so the thresholds are
+testable rather than described. Each is a maximal ASCII token of the alphabet
+the fallback rule defines, and the entropy figure is measured over its bytes.
 
 R1-24 and R1-25 differ only in the number of equally frequent symbols, 23
 against 24 over the same 32 bytes, which is what places them on either side of
 4.5. R1-23 shows that a high-entropy token is still not redacted one byte below
 the floor, so the length test is not redundant; R1-28 shows that length alone
 is not sufficient, since 48 bytes at 2.585 bits per byte stays unredacted.
+R1-27 shows the prefix rule firing below the floor, so a known-format token
+never depends on the entropy rule.
 
 ### SAFE-PURGE: confirmation and backup
 
