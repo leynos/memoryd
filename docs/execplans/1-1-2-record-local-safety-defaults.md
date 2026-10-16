@@ -360,6 +360,15 @@ fixed first.
   triggered by the string carrying an escape at all, not by the escape
   position, because deciding the latter requires the mapping the rule declines
   to reconstruct.
+- (2026-10-16, corpus completion) Repaired R1-02 and stated the cell
+  convention for `\n`. R1-02 marked its input with double backticks, which
+  render as a code span around a backtick-quoted token rather than the bare
+  token the cell's reason assumed, so a non-whitespace character did follow the
+  prefix and the row contradicted itself in rendered form. This is the row an
+  earlier automated check flagged and I dismissed as a checker artifact;
+  rendering it settled the question against that dismissal. The `\n` convention
+  is now stated because five rows depend on reading it as a line terminator,
+  and read literally those rows would each state a different input.
 
 ## Outcomes & retrospective
 
@@ -568,10 +577,27 @@ and the rule text states that the widening is triggered by the string carrying
 an escape at all rather than by the escape's position, since deciding the
 latter needs the mapping the rule declines to reconstruct.
 
-All three were found the same way and only that way: by building the input the
+Two more came out of the same pass once the rows were read as a reader sees
+them rather than as source text. R1-02 marked its input with double backticks,
+which render a code span around a backtick-quoted token, so the input was four
+characters and a backtick did follow the prefix — contradicting the cell's own
+reason that nothing non-whitespace does. An earlier automated check had flagged
+this row and I dismissed the finding as a checker artifact; rendering the cell
+settled it against me, which is the second time in this task that dismissing a
+finding unexamined has cost a round. And five rows write `\n` for a line
+terminator without the table ever saying so, so a fixture built from the
+literal cell text would use two characters and state a different input; the
+convention is now stated once, in the preamble that claims every row is
+reproducible.
+
+All five were found the same way and only that way: by building the input the
 table specifies and running the rule the same document states, rather than by
 reading either one. Reading a row and reading its rule both invite agreement;
-executing one against the other does not.
+executing one against the other does not. Two lessons generalize past this
+corpus. A rule and its own counterexample can contradict each other, and only
+execution finds it. And markup is part of the specification: a cell's rendered
+text is the input, so a claim about reproducibility must survive rendering, not
+merely reading.
 
 ## Context and orientation
 
