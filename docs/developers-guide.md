@@ -149,13 +149,26 @@ provider-specific branch into the shared pipeline to reach a provider's own
 normalization or redaction helper.
 
 Composition order is fixed: establish authority, resolve the workspace, apply
-exclusions and deny patterns, redact, then persist or project. Every stage
-either passes the record on unchanged or rejects it. Rejecting is the only
-failure mode: no stage may persist, project, or embed partial output, and no
-stage may advance a source cursor for a rejected record. Authority comes from
-the authenticated request context; the pair of authenticated tenant and
-workspace is the authority, and a workspace string, a provider field, or a
-descriptor alone is not.
+exclusions and deny patterns, redact, then persist or project. A stage may
+transform a record — redaction replaces matched intervals — but no stage may
+persist, project, or embed partial output. Each stage resolves a record to
+exactly one of three outcomes:
+
+- **accepted**, possibly transformed, and carried to the next stage;
+- an **intentional exclusion** — a mandatory default exclusion, a deny-pattern
+  match, or an operator's audited skip of one source position — recorded as
+  deliberately skipped, which **does advance** the source cursor, because
+  re-reading it would only be excluded again;
+- a **processing failure** — a failed redaction, a detector or policy error, a
+  breached processing ceiling, or a store error — which stores nothing, partial
+  or otherwise, **does not advance** the source cursor, and surfaces as a
+  source-health error for an operator to repair or explicitly skip.
+
+[ADR 015](adr-015-local-safety-defaults.md) states this cursor rule canonically
+and in full; the three outcomes above restate it for implementers and must not
+diverge from it. Authority comes from the authenticated request context; the
+pair of authenticated tenant and workspace is the authority, and a workspace
+string, a provider field, or a descriptor alone is not.
 
 Validated inputs: workspace registration requires a structurally valid
 versioned descriptor, and the daemon rejects an unsupported version rather than
@@ -169,14 +182,19 @@ purge capability before it produces a preview, and the confirmation must match
 that preview's scope and policy revision.
 
 Semantic errors: use the envelope from [Error Contracts](#error-contracts) and
-prefer specific codes over string matching. The safety surface must at least
-distinguish an unsupported descriptor version, a workspace registration
-conflict, a cross-tenant scope violation, a denied-path reject, a redaction
-failure, a processing-bound failure, insufficient capability, a stale or
-mismatched purge preview, a missing or invalidated backup acknowledgement, and
-a partial purge with pending cleanup. Diagnostics carry the exclusion reason,
-never the matched content: report a sanitized reason and a bounded location,
-not the payload, the pattern text, or a raw filesystem path.
+prefer specific codes over string matching. A breach of the policy is an error;
+a deliberate exclusion is not, though it is reported so operators and callers
+can see what was skipped and why. The safety surface must at least distinguish
+an unsupported descriptor version, a workspace registration conflict, a
+cross-tenant scope violation, a redaction failure, a processing-bound failure,
+insufficient capability, a stale or mismatched purge preview, a missing or
+invalidated backup acknowledgement, and a partial purge with pending cleanup.
+It must also report an intentional exclusion — a denied path, a mandatory
+default exclusion, or an audited skip — as a distinct skipped outcome carrying
+its sanitized reason code, not as an error and not as a silent drop.
+Diagnostics carry the exclusion reason, never the matched content: report a
+sanitized reason and a bounded location, not the payload, the pattern text, or
+a raw filesystem path.
 
 These rules constrain storage bindings. The tombstone recorded after a
 successful purge is control metadata holding tenant and workspace identifiers

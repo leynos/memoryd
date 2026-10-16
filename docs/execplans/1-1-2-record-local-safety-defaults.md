@@ -158,8 +158,32 @@ runtime slice implements and verifies them.
   commit message records the five repairs, the two recorded gaps, and the
   `mapsplice` deviation. Publication handoff to `pr-babysitting` is the
   remaining step and is tracked there rather than in this plan.
+- [x] (2026-10-16) Hosted assessment `EPM-1-1-2-B473C17-20261016` returned five
+  findings, all confirmed against source before any edit. The developers' guide
+  cursor rule contradicted ADR 015; the detector corpus did not meet this
+  plan's own E1 requirement for a versioned corpus and settled grammar; the
+  operator backup procedure omitted the graph store; the users' guide
+  overstated machine separation; and the formatter correction recorded
+  characters where the tool measures display columns. All five are repaired in
+  this revision, and the repairs follow the reply's explicit constraints: no
+  machine identifier is added, and no executable fixture is added in this
+  documentation-only slice.
 
 ## Surprises & discoveries
+
+`mdtablefix --wrap` budgets Unicode display columns, and the first two
+explanations recorded for its reflow were both wrong in different ways. The
+byte theory was refuted by measurement, as Outcomes records. The character
+theory that replaced it was also wrong, and was itself unmeasured: it rested on
+examples where characters and columns coincide. Separating the models needs
+lines chosen so the counts disagree, and the discriminating pair is a line of
+Cyrillic prose, which is heavy in bytes and light in columns, against a line of
+wide characters, which is the reverse. The Cyrillic line survived at 46
+characters over 86 bytes; the wide line was wrapped at 46 characters, 126
+bytes, and 86 display columns; and wide lines were left alone at 79 columns and
+wrapped at 81. The general lesson is narrower than "measure the tool": measure
+it with inputs that separate the competing hypotheses, because a probe whose
+models all agree cannot fail and therefore cannot inform.
 
 The checked-out baseline already marks 1.1.1 complete and contains accepted ADR
 013. The application is still `src/main.rs` with a greeting and
@@ -266,6 +290,32 @@ fixed first.
   task for it would have widened the approved scope; the ADR already names
   5.3.1 as the owner of purge execution, and re-enablement is a purge-lifecycle
   action.
+- (2026-10-16, assessment) Distinguished three outcomes in the developers'
+  guide rather than two: accepted and possibly transformed, intentional
+  exclusion, and processing failure. This follows from ADR 015's cursor rule,
+  which advances the cursor for an intentional exclusion. It also removes
+  "unchanged" as a requirement for a successful redaction, which transforms the
+  record by definition, and it separates an intentional exclusion from the
+  error list while still requiring it to be reported with a sanitized reason.
+- (2026-10-16, assessment) Named the initial detector corpus
+  `memoryd.redaction.v1` and added its case table, because E1 requires a
+  versioned corpus and resolved grammar and the ADR supplied neither. The three
+  grammar cases are decided in prose, and the entropy boundaries are given as
+  measured tokens rather than as descriptions, so a detector is testable
+  against them. This is a decision record, not an implementation: no executable
+  fixture is added, and roadmap 2.2.3 still owns the corpus code.
+- (2026-10-16, assessment) Corrected machine separation by describing what the
+  derivation actually does, and added no machine identifier, because adding one
+  would change the accepted derivation contract. The guide now states the
+  consequence directly, and the ADR states both the cross-machine case and the
+  failure mode, that equal descriptors from different machines register as one
+  workspace.
+- (2026-10-16, assessment) Replaced the character-count claim about
+  `mdtablefix` with the display-column measurement, and kept the rejection of
+  the byte theory and the paragraph re-flow mechanism. One table row changed
+  engine in the corpus: an SSH public key that the class description implies is
+  out of scope is in fact redacted by the entropy rule, so it is recorded as an
+  accepted over-detection rather than as a negative case.
 
 ## Outcomes & retrospective
 
@@ -337,14 +387,24 @@ plan and the commit message for `8d90d02` attributed the reflow to an em-dash
 pushing an 80-character line to 82 bytes, and concluded that `mdtablefix`
 budgets bytes rather than characters. That explanation was inferred from the
 line's width, not from the tool's behaviour; nothing here had measured the
-tool. Direct measurement refutes it. `mdtablefix 0.6.1` wraps at exactly 80
-characters: a list item of 80 characters and 82 bytes was left unchanged while
-one of 81 characters was wrapped, and a paragraph whose lines were 56, 52, and
-13 characters was re-packed to 72 and 50. The byte-budget theory also predicts
-the opposite of what the tree shows, since 41 lines in `docs/` sit within 80
-characters but over 80 bytes, including two in this plan, and `make fmt` leaves
-every one of them alone. The character threshold did not cause the reflow and
-could not have; the paragraph-level re-flow did.
+tool. Direct measurement refutes it. `mdtablefix 0.6.1` targets 80 Unicode
+display columns, not bytes and not a plain character count: a list item of 80
+characters and 82 bytes was left unchanged while one of 81 characters was
+wrapped, and a paragraph whose lines were 56, 52, and 13 characters was
+re-packed to 72 and 50. The byte-budget theory also predicts the opposite of
+what the tree shows, since 41 lines in `docs/` sit within 80 characters but
+over 80 bytes, including two in this plan, and `make fmt` leaves every one of
+them alone.
+
+The three width models are separable, and measurement separates them. A line of
+Cyrillic prose was left unchanged at 46 characters over 86 bytes, which rules
+out a byte budget. A line of wide characters was wrapped at 46 characters over
+126 bytes and 86 display columns, which rules out a character budget; it is
+also why the em-dash row above is no evidence either way, since an em dash is
+single-column and cannot distinguish the models from one another. Wide
+characters were left alone at 79 display columns and wrapped at 81, which fixes
+the threshold to display columns rather than to any count of characters.
+Neither threshold caused the reflow; the paragraph-level re-flow did.
 
 ## Context and orientation
 

@@ -110,12 +110,12 @@ provider fields cannot supply authority (ADR 006, memoryd-design.md §5.4).
 
 ### Workspace identity
 
-| Option                                          | Consequence                                                                                                                                                   |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Origin URL only                                 | Simple, but collapses two checkouts of the same repository on one machine, and gives no identity at all for non-Git roots.                                    |
-| Root path only                                  | Distinguishes local checkouts, but merges a repository cloned into two machines' divergent paths and ignores the remote that makes the workspace shared.      |
-| Origin URL, root digest, and profile (selected) | Separates checkouts and machines by default, supports non-Git roots, and gives operators an explicit join mechanism instead of an implicit merge.             |
-| Auto-merge on digest collision                  | Recovers the rare collision automatically, but cannot distinguish a true collision from two genuinely different projects, so it risks silent evidence mixing. |
+| Option                                          | Consequence                                                                                                                                                                                                                |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Origin URL only                                 | Simple, but collapses two checkouts of the same repository on one machine, and gives no identity at all for non-Git roots.                                                                                                 |
+| Root path only                                  | Distinguishes local checkouts by path, but ignores the remote that makes the workspace shared, so two clones of one repository never join and no meaning survives a move.                                                  |
+| Origin URL, root digest, and profile (selected) | Separates checkouts by path and non-Git roots by root digest, and gives operators an explicit join mechanism instead of an implicit merge. It does not guarantee machine separation: a machine identifier is not an input. |
+| Auto-merge on digest collision                  | Recovers the rare collision automatically, but cannot distinguish a true collision from two genuinely different projects, so it risks silent evidence mixing.                                                              |
 
 _Table 1: Workspace identity options._
 
@@ -202,7 +202,13 @@ roots are explicit errors in the first implementation. Lossy strings are never
 hashed, and no case folding or Unicode normalization of local paths is imposed
 beyond the platform's canonical path result. Cross-machine identity stability
 is not promised, and hashing a path does not protect a guessable path from
-disclosure.
+disclosure. No machine identifier is an input, so two machines are not
+separated by virtue of being two machines: separation follows the canonical
+path. Descriptors that differ only by machine, with the same tenant, normalized
+origin, canonical path string, and profile, are equal and register as one
+workspace, which is the intended reading of "identity is not bound to a host".
+An operator who needs per-machine workspaces must use distinct canonical paths
+or an explicit mapping.
 
 A root move, a different worktree, an origin change, or a profile change all
 yield a new descriptor. Symlinks that resolve to the same worktree root yield
@@ -394,6 +400,49 @@ between detector versions, which is exactly what this requirement forbids.
 Emitted diagnostics use structured reason codes and aggregate counters with
 bounded labels, never paths, raw origins, tokens, or payload labels.
 
+**Initial corpus revision.** The initial detector corpus revision is
+`memoryd.redaction.v1`, and it is the detector version recorded with every
+redaction decision alongside the descriptor and policy versions. A detector
+change therefore becomes a new revision rather than an edit in place. Table 5
+gives worked detector and exclusion examples, and Table 6 gives the revision's
+synthetic corpus of positive, negative, grammar, and boundary cases with exact
+expected outcomes. The classes listed above and the grammar choices below are
+the normative description; the two tables are the worked evidence for them.
+
+**Grammar choices.** Three cases are decided here rather than left to the
+implementation:
+
+- **Malformed JSON.** A field that the provider schema declares as JSON, and
+  that does not parse, is an invalid declaration of that record's input type.
+  It is therefore a processing failure, consistent with the rejection rule
+  above: the record is rejected, nothing is stored, the cursor does not
+  advance, and a sanitized source-health error names the field without its
+  content. It is never downgraded to a plain-text scan, because that would
+  silently drop the key-based detection the structural pass exists to provide.
+  A field the schema does not declare as JSON is text, and anything that looks
+  like malformed JSON inside it is scanned as ordinary text.
+- **Escaped strings.** Which interval to redact depends on what matched. A
+  structural match — a sensitive key or assignment name — already spans the
+  value's syntactic unit, so the whole raw literal is redacted with its quotes,
+  as Table 5 shows for `password = "hunter two"`. A value-scanning detector
+  match, such as a prefix or JWT found inside an ordinary string, is located in
+  the string's decoded content and must be mapped back to the original input.
+  When that string contains no escape sequence, decoded and raw offsets agree
+  and exactly the matched sub-interval is redacted. When it does contain one,
+  the decoded-to-raw mapping is not one-to-one across the escaped region, so
+  the whole raw string literal is redacted, quotes included, rather than
+  reconstructing a partial mapping that could split an escape sequence. Every
+  case replaces a span of the original input, so the interval bounds land on
+  UTF-8 boundaries without a separate repair step.
+- **Multiline values.** A value ends at its delimiter, never at a line
+  terminator, except for an unquoted assignment. A quoted value ends at its
+  closing quote, however many lines later, and its embedded newlines are part
+  of the value. An unquoted assignment value ends at the first line terminator,
+  so a trailing `password =` with nothing after it is the empty value and does
+  not consume the following line. A PEM or private-key block ends at its end
+  marker. An unterminated quoted value, like an unterminated key block, redacts
+  through the end of the record.
+
 Table 5 gives worked detector and exclusion examples.
 
 | Input                                                    | Expected outcome                                                                            |
@@ -415,6 +464,72 @@ Table 5 gives worked detector and exclusion examples.
 | A record exceeding the 1 MiB content budget              | Rejected without advancing the cursor and without logging the payload.                      |
 
 _Table 5: Redaction and exclusion examples and expected outcomes._
+
+The named corpus revision `memoryd.redaction.v1` is the synthetic case set in
+Table 6. Each class carries at least one positive case that must be redacted
+and one negative case that must not, so a detector that over-matches fails the
+corpus as loudly as one that under-matches. Entropy values in the table are
+empirical Shannon entropy over the token's bytes, and the boundary rows are
+chosen so that each sits on one side of exactly one threshold.
+
+| Case ID | Class and input                                                                                                  | Expected outcome                                                                     |
+| ------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| R1-01   | Positive, provider key: `sk-ant-abc123` in assistant text                                                        | Redacted.                                                                            |
+| R1-02   | Negative, provider key: the text `` `sk-` `` alone, with whitespace on both sides                                | Not redacted: no non-whitespace token follows the prefix.                            |
+| R1-03   | Positive, OAuth: `Authorization: Bearer eyJhbGciOi...`                                                           | Value redacted, header name retained.                                                |
+| R1-04   | Negative, OAuth: `Bearer` alone on a line                                                                        | Not redacted: no value follows.                                                      |
+| R1-05   | Positive, basic: `Authorization: Basic dTpw` and `authorization: basic dTpw`                                     | Both redacted: the header and scheme match case-insensitively.                       |
+| R1-06   | Positive, JWT: three dot-separated base64url segments                                                            | Redacted as one interval.                                                            |
+| R1-07   | Negative, JWT-like: two dot-separated segments                                                                   | Not redacted by the JWT rule.                                                        |
+| R1-08   | Positive, key block: `-----BEGIN OPENSSH PRIVATE KEY-----` with an end marker                                    | The complete block is redacted.                                                      |
+| R1-09   | Positive, unterminated: an opening key block with no end marker                                                  | Redacted through the end of the record.                                              |
+| R1-10   | Negative, SSH: a `known_hosts` comment line carrying no key material                                             | Not redacted.                                                                        |
+| R1-11   | Accepted over-detection, SSH public key: an `ssh-ed25519 AAAA...` body in text                                   | Redacted by the entropy rule even though the key is public.                          |
+| R1-12   | Positive, assignment: `password = "hunter two"`                                                                  | Entire quoted value redacted, including the space.                                   |
+| R1-13   | Negative, assignment: `author = "ada lovelace"`                                                                  | Not redacted: the name contains none of the sensitive substrings.                    |
+| R1-14   | Positive, cookie: `Set-Cookie: session=abc; HttpOnly`                                                            | The entire value is redacted.                                                        |
+| R1-15   | Positive, database URL: `postgres://user:pw@host/db`                                                             | The whole URL is redacted.                                                           |
+| R1-16   | Negative, database URL: `postgres://host/db` with no userinfo                                                    | Not redacted by the database-URL rule.                                               |
+| R1-17   | Grammar, malformed JSON: a JSON-declared field whose text does not parse                                         | Record rejected as a processing failure; no store write; cursor does not advance.    |
+| R1-18   | Grammar, unescaped: a JWT detector match inside a JSON string with no escape sequence, under a non-sensitive key | Exactly the matched raw sub-interval is redacted, quotes excluded.                   |
+| R1-19   | Grammar, escaped: `{"password": "a\"b"}`                                                                         | The whole raw string literal is redacted, quotes included.                           |
+| R1-20   | Grammar, multiline: a quoted assignment whose value spans three lines                                            | The complete value is redacted across the newlines.                                  |
+| R1-21   | Grammar, unterminated quote: an opening quote with no closing quote                                              | Redacted through the end of the record.                                              |
+| R1-22   | Grammar, unquoted trailing: `password =` at end of line, followed by an unrelated next line                      | The value is empty, so no characters are redacted and the next line is not consumed. |
+| R1-23   | Boundary, length: 31 bytes, entropy 4.95 bits/byte                                                               | Not redacted: one byte below the 32-byte floor.                                      |
+| R1-24   | Boundary, entropy below: 32 bytes, entropy 4.4375 bits/byte                                                      | Not redacted: below the 4.5 bits/byte threshold.                                     |
+| R1-25   | Boundary, entropy at: 32 bytes, entropy exactly 4.5 bits/byte                                                    | Redacted: the threshold is inclusive.                                                |
+| R1-26   | Boundary, entropy above: 32 bytes, entropy 4.625 bits/byte                                                       | Redacted.                                                                            |
+| R1-27   | Boundary, known format below the floor: a short `ghp_`-prefixed token, 16 bytes                                  | Redacted: the prefix rule applies independently of the entropy rule.                 |
+| R1-28   | Boundary, long and low entropy: 48 bytes, entropy 2.585 bits/byte                                                | Not redacted by the entropy rule.                                                    |
+| R1-29   | Boundary, processing ceiling: a record one byte over the 1 MiB content budget                                    | Record rejected without advancing the cursor and without logging the payload.        |
+| R1-30   | Boundary, interval count: a record with 4,097 detected intervals                                                 | Record rejected on the interval ceiling.                                             |
+| R1-31   | Boundary, JSON depth: nesting one level beyond depth 64                                                          | Record rejected on the depth ceiling.                                                |
+
+_Table 6: Initial detector corpus revision `memoryd.redaction.v1`._
+
+The entropy boundary rows have concrete inputs, so the thresholds are testable
+rather than described. Each is a maximal ASCII token of the alphabet the
+fallback rule defines, and the entropy figure is measured over its bytes:
+
+- **R1-23**, 31 bytes, 4.9542 bits/byte: `aB3dE7gH1jK4mN6pQ9rS2tU5vW8xY0z`.
+- **R1-24**, 32 bytes, 4.4375 bits/byte:
+  `abcdefghijklmnopqrstuvwabcdefghi`.
+- **R1-25**, 32 bytes, 4.5000 bits/byte:
+  `abcdefghijklmnopqrstuvwxabcdefgh`.
+- **R1-26**, 32 bytes, 4.6250 bits/byte:
+  `abcdefghijklmnopqrstuvwxyzabcdef`.
+- **R1-27**: `ghp_0123456789ab`, 16 bytes, redacted by the prefix rule alone:
+  the complete non-whitespace token after `ghp_` is removed however short it
+  is, so the entropy floor never comes into play.
+- **R1-28**, 48 bytes, 2.5850 bits/byte:
+  `abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef`.
+
+R1-24 and R1-25 differ only in the number of equally frequent symbols, 23
+against 24 over the same 32 bytes, which is what places them on either side of
+4.5. R1-23 shows that a high-entropy token is still not redacted one byte below
+the floor, so the length test is not redundant; R1-28 shows that length alone
+is not sufficient, since 48 bytes at 2.585 bits per byte stays unredacted.
 
 ### SAFE-PURGE: confirmation and backup
 
@@ -480,7 +595,7 @@ filesystem secure erasure, deletion of provider originals, or removal from
 external backups. Only minimal content-free operation status is kept for retry;
 scoped evidence and recall audits are deleted.
 
-Table 6 gives worked purge examples.
+Table 7 gives worked purge examples.
 
 | Situation                                               | Expected outcome                                                                                    |
 | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -496,7 +611,7 @@ Table 6 gives worked purge examples.
 | Ingestion runs after a successful purge                 | Blocked by the content-free tombstone until an operator explicitly re-enables the scope.            |
 | Operator inspects a backup made before purge            | The backup may still contain the removed evidence; deletion is a separate manual step.              |
 
-_Table 6: Purge examples and expected outcomes._
+_Table 7: Purge examples and expected outcomes._
 
 ## Goals and non-goals
 
@@ -566,9 +681,13 @@ _Table 6: Purge examples and expected outcomes._
 - A documentation decision can be mistaken for shipped behaviour. The
   mitigation is labelling user-facing defaults as planned until the owning
   runtime slice implements and verifies them.
-- Cross-machine identity stability is not promised, so two machines with
-  different local roots will register different workspaces for the same
-  repository. The mitigation is the explicit operator join.
+- Cross-machine identity stability is not promised, and because no machine
+  identifier is an input, two machines are not separated by themselves. Two
+  machines with different canonical roots will register different workspaces
+  for the same repository; two machines that present the same canonical root
+  string will register one. The mitigation for the second case is to keep one
+  source per workspace or to separate the paths; the explicit operator join
+  covers the first.
 
 ## Outstanding decisions
 
@@ -660,3 +779,11 @@ to the workspace's canonical root, so linked worktrees evaluate their own
 patterns. Names the scope generation as the scoped-write counter. Records the
 workspace-registry storage surface and the `line_hash` input as outstanding
 decisions with owners, because this slice may not choose a storage schema.
+
+Assessment revision (2026-10-16). Names the initial detector corpus revision
+`memoryd.redaction.v1` and adds Table 6, its positive, negative, grammar, and
+boundary cases with exact expected outcomes, including the malformed-JSON,
+escaped-string, and multiline grammar decisions and measured entropy boundary
+inputs. Corrects the workspace-identity options table and states that different
+canonical paths separate workspaces while different machines alone do not,
+because no machine identifier is an input.

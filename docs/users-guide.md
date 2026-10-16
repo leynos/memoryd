@@ -34,9 +34,15 @@ Consequences to plan for:
 - **Linked worktrees are separate workspaces.** Git's shared common directory
   does not merge them, so a checkout and its linked worktree do not share
   evidence by default.
-- **Cross-machine stability is not promised.** The root path is part of the
-  identity, so the same repository cloned to two machines registers as two
-  workspaces.
+- **Cross-machine identity depends on the path, not the machine.** The root
+  path is part of the identity, so different canonical paths always give
+  different workspaces. Two different machines are not separated by themselves:
+  if the same repository is cloned to the *same* canonical path under the same
+  tenant, origin, and profile, the two clones derive the same descriptor and
+  register as one workspace. Nothing in the identity records which machine it
+  came from. To keep two machines separate, give them different canonical
+  paths; to share evidence between divergent paths deliberately, use an
+  explicit operator mapping rather than relying on the paths happening to match.
 
 Operators can map an exact descriptor to a chosen workspace identifier, scoped
 to one tenant. An intentional merge requires listing the descriptors
@@ -104,9 +110,20 @@ and a confirmation bound to that exact preview.
 Before purging you must acknowledge that a restorable backup was taken. Stop
 writers for the scope before the backup and leave them stopped through the
 purge; a write in between invalidates the acknowledgement and requires a fresh
-backup and preview. Use SQLite's online backup API or `.backup` command rather
-than copying the database file while writers run, and a consistent custom-format
-`pg_dump` for PostgreSQL. There is no automatic backup and no automatic undo.
+backup and preview. Back up every active store for the scope:
+
+- Use SQLite's online backup API or `.backup` command rather than copying the
+  database file while writers run, and a consistent custom-format `pg_dump` for
+  PostgreSQL.
+- Where graph storage exists, back up its directory under that store's own
+  documented quiescence procedure. Graph and theme stores can be absent from a
+  minimum deployment; their absence is neither an error nor a reason to start
+  those services.
+- Separate SQL and graph backups are not an atomic snapshot of each other.
+  Sequence them under the same quiesced window and never describe the result as
+  a single coordinated point-in-time copy.
+
+There is no automatic backup and no automatic undo.
 
 What purge cannot do: it does not securely erase filesystem blocks, it does not
 delete the provider's original transcripts, and it does not reach backups you
