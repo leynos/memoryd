@@ -206,14 +206,18 @@ runtime slice implements and verifies them.
   confirmed the corrected entropy arithmetic, with E3 recorded as closed. It
   raised one new defect: R1-02's outcome cell, which asserted that the trailing
   space was required to prevent redaction. That was verified by construction
-  before repair and is genuine, so the assertion is withdrawn in `4e8e7ae`; the
+  before repair and is genuine, so the assertion is withdrawn in `32418ea`; the
   prefix rule needs a non-whitespace token to be present, and end of input
   after the hyphen supplies none, exactly as trailing whitespace does. The
   input cell is unchanged, so an explanation was corrected rather than a
   fixture. The reply was also asked to name a surviving defect of the class
   that keeps recurring, and this is what it named; a sweep of every normative
-  word in all 37 outcome cells was run afterwards, and the five remaining hits
-  were each verified against the rule rather than dismissed.
+  word in all 37 outcome cells was run afterwards, and the six remaining hits
+  across four rows — R1-18, R1-21, R1-31, and R1-34 — were each verified
+  against the rule rather than dismissed. The first draft of this sentence said
+  "five remaining hits" while naming only four rows, and omitted R1-18 from
+  the list entirely; the count and the enumeration were both wrong, and both
+  are corrected here.
 
 ## Surprises & discoveries
 
@@ -423,8 +427,12 @@ fixed first.
   prefix and the row contradicted itself in rendered form. This is the row an
   earlier automated check flagged and I dismissed as a checker artifact;
   rendering it settled the question against that dismissal. The `\n` convention
-  is now stated because five rows depend on reading it as a line terminator,
-  and read literally those rows would each state a different input.
+  is now stated because four rows write it and depend on reading it as a line
+  terminator — R1-08, R1-09, R1-36, and R1-20 — and read literally those rows
+  would each state a different input. R1-21 and R1-22 also span two lines, but
+  they name the second line in prose rather than writing `\n`, so they need no
+  convention. This entry first said "five rows", which no row set satisfies
+  under either reading.
 - (2026-10-16, entropy explanation) Corrected the account of how R1-24 and
   R1-25 straddle the 4.5 bits/byte threshold. The text said they differ "in the
   number of equally frequent symbols, 23 against 24", and that is false in two
@@ -465,6 +473,29 @@ fixed first.
   of the three were introduced by the repair for CodeRabbit's completion-claim
   finding, so the fix for one defect created the next -- the same pattern as
   R1-21.
+- (2026-10-16, figure audit) Audited every countable figure the plan and ADR
+  assert about the corpus, by recomputing each from the committed documents
+  rather than re-reading it. Five claims failed. The normative-word sweep was
+  recorded as "five remaining hits" and is six hits across four rows; the
+  enumeration beside it named R1-32 and R1-33, which carry no normative word at
+  all, and omitted R1-18, which does — so the tally and its example list were
+  each wrong, in the defect class this plan keeps recording. The `\n`
+  convention was said to govern five rows and governs four; R1-21 and R1-22 do
+  span two lines but state both in prose, so they never needed the convention.
+  Both ADR statements of that class list named the unterminated-quote and
+  unquoted-trailing rows as dependants of the convention, which they are not,
+  and those are two separate failed claims rather than one, since the preamble
+  and the revision note are separate sites that each needed its own correction.
+  And the retrospective's "All six were found the same way and only that way"
+  was contradicted by the paragraph two lines above it, which records that the
+  sixth came from hosted review. The last of these was introduced by the commit
+  that repaired the others. This entry deliberately does not restate how many
+  repair-created defects the task now has: the retrospective counts corpus
+  defects, this audit found a plan defect, and the two sets are not the same
+  set. Three successive hand-tallied counts in this task were wrong, each for
+  this same reason — a figure asserted without a fixed population. Found by an
+  audit of the plan's own recorded figures after that third failure, with each
+  figure recomputed from the committed text rather than recalled.
 
 ## Outcomes & retrospective
 
@@ -680,31 +711,37 @@ characters and a backtick did follow the prefix — contradicting the cell's own
 reason that nothing non-whitespace does. An earlier automated check had flagged
 this row and I dismissed the finding as a checker artifact; rendering the cell
 settled it against me, which is the second time in this task that dismissing a
-finding unexamined has cost a round. And five rows write `\n` for a line
+finding unexamined has cost a round. And four rows write `\n` for a line
 terminator without the table ever saying so, so a fixture built from the
 literal cell text would use two characters and state a different input; the
 convention is now stated once, in the preamble that claims every row is
-reproducible.
+reproducible. That sentence said "five rows" until this round, and no row set
+satisfies five under any reading of "depends on the convention": four rows
+write `\n`, and two more name a following line in prose without it.
 
 A sixth defect, R1-02's withdrawn trailing-space assertion, came from hosted
 review rather than from this pass, and is recorded in the Decision log above.
 
-All six were found the same way and only that way: by building the input the
-table specifies and running the rule the same document states, rather than by
-reading either one. Reading a row and reading its rule both invite agreement;
-executing one against the other does not. Two lessons generalize past this
-corpus. A rule and its own counterexample can contradict each other, and only
-execution finds it. And markup is part of the specification: a cell's rendered
-text is the input, so a claim about reproducibility must survive rendering, not
-merely reading. A third lesson is about repair rather than detection: in two of
-the six -- R1-21 and R1-02's trailing-space assertion -- the repair for a
-defect introduced the next one, both times by adding an explanation beside a
-corrected fixture. A corrected fixture is safe; prose offered alongside it is
-not, and should be held to the same execution test as the row. Two of six is
-worth stating precisely, because the first draft of this very sentence claimed
-three while enumerating only two: a count asserted beside an example it does
-not match is the defect class this section exists to describe, and it is how
-the earlier "five defects" tally went stale.
+Five of the six were found the same way and only that way: by building the input
+the table specifies and running the rule the same document states, rather than
+by reading either one. Reading a row and reading its rule both invite
+agreement; executing one against the other does not. The sixth was found by
+hosted review, as the paragraph above records, and the sentence here claimed
+all six until this round — a tally contradicted by its own neighbouring
+paragraph, which is the defect class this section exists to describe. Two
+lessons generalize past this corpus. A rule and its own counterexample can
+contradict each other, and only execution finds it. And markup is part of the
+specification: a cell's rendered text is the input, so a claim about
+reproducibility must survive rendering, not merely reading. A third lesson is
+about repair rather than detection: in two of the six — R1-21 and R1-02's
+trailing-space assertion — the repair for a defect introduced the next one,
+both times by adding an explanation beside a corrected fixture. A corrected
+fixture is safe; prose offered alongside it is not, and should be held to the
+same execution test as the row. Two of six is worth stating precisely, because
+the first draft of this very sentence claimed three while enumerating only two:
+a count asserted beside an example it does not match is the defect class this
+section exists to describe, and it is how the earlier "five defects" tally went
+stale.
 
 ## Context and orientation
 

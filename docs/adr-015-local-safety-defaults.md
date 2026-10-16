@@ -535,8 +535,11 @@ Where a row names several assignments or a following line, every such value is
 given in the cell, because an unspecified neighbour could be redacted by
 another rule and change the expected outcome. Within a cell, `\n` denotes a
 line terminator rather than the two characters a backslash and an `n`; the
-multiline, unterminated-quote, and key-block rows are only meaningful on that
-reading, and read literally they would state a different input.
+key-block and multiline rows — R1-08, R1-09, R1-36, and R1-20 — are only
+meaningful on that reading, and read literally they would state a different
+input. The rows that name a following line without writing `\n` — the
+unterminated-quote and unquoted-trailing rows, R1-21 and R1-22 — state both
+lines in the cell itself, so no convention is needed to read them.
 
 | Case ID | Class and input                                                                                                                                                                                                   | Expected outcome                                                                                                                                                                                                                                                                                                                                                                                               |
 | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -877,12 +880,13 @@ carries an escape rather than only within the span. Repairs R1-02, whose
 double-backtick markup rendered the stated input as a backtick-quoted token, so
 a non-whitespace character did follow the prefix and the row's own reason did
 not hold for the input it gave. States the cell convention that `\n` denotes a
-line terminator, which the multiline, unterminated-quote, and key-block rows
-all depend on. Repairs R1-21, whose `note` line carried a quote of its own: the
-rule says a quoted value ends at its closing quote however many lines later, so
-that quote closed the password value and the row could not claim the quote
-never closes. Its next line now carries no unescaped quote, and the cell
-records why that is load-bearing rather than incidental.
+line terminator, which the four rows that write it — R1-08, R1-09, R1-36, and
+R1-20 — depend on; R1-21 and R1-22 name a following line without it, because
+they spell both lines out in the cell. Repairs R1-21, whose `note` line carried
+a quote of its own: the rule says a quoted value ends at its closing quote
+however many lines later, so that quote closed the password value and the row
+could not claim the quote never closes. Its next line now carries no unescaped
+quote, and the cell records why that is load-bearing rather than incidental.
 
 Entropy-explanation revision (2026-10-16). Corrects how R1-24 and R1-25 are
 said to place the 4.5 bits/byte threshold on either side. The text claimed they
