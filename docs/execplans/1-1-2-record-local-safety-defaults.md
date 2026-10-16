@@ -506,26 +506,28 @@ fixed first.
   corpus to the counts this plan states about defects, and found the largest
   instance of the class yet: the retrospective's "Five of the six were found
   the same way and only that way" and its "A sixth defect" ordinal. Both rest
-  on a total that entered as "Five defects were confirmed and repaired" in
-  `a082bbf`, was bumped to six in `a7a7bc9`, and had already been false when it
-  was written: the section it totals grew by narrating each successive round,
-  and the total was never recomputed. It also double-counted, since the
-  paragraph naming five hosted-assessment findings is not the milestone-review
-  five the same sentence invokes. The ordinal is false by more than one, not by
-  rounding: every corpus defect narrated above the paragraph calling R1-02's
-  finding the sixth sits before it, so that paragraph is not the sixth. The
-  repair names the milestone review as the population for the EP-M3 sentence —
-  the Progress entry's own list — and removes the total and the ordinal rather
-  than restating them, because this section also mixes corpus defects with
-  plan-level ones, so no total over it has a fixed set to count. The same edit
-  corrected the Decision log's "the count is two of six, checked by enumerating
-  the defects": the denominator was that stale total and the claimed
-  enumeration had not happened. Also repaired the formatter fixed point, which
-  `make check-fmt` failed: six prose lines in this plan were filled to 76–78
-  columns where `mdtablefix` fills to 79–80, so the committed text was not the
-  formatter's own output. That one is not a figure defect, and it is recorded
-  because it is the same lesson as the fifth claim above — a claim about what a
-  tool produced, asserted without running the tool on the committed bytes.
+  on the sentence "Five defects were confirmed and repaired", which entered in
+  `a082bbf` and was bumped to six in `a7a7bc9`. Five was true of what it named
+  — the milestone-review defects the Progress entry lists are five — but the
+  two later sentences read it as a total over the whole task, and by then this
+  section had grown to narrate later rounds as well. No round recomputed it,
+  which is how a true sentence became a false one without being edited. It also
+  double-counted, since the paragraph naming five hosted-assessment findings is
+  not the milestone-review five the same sentence invokes. The ordinal is false
+  by more than one, not by rounding: every corpus defect narrated above the
+  paragraph calling R1-02's finding the sixth sits before it, so that paragraph
+  is not the sixth. The repair names the milestone review as the population for
+  the EP-M3 sentence — the Progress entry's own list — and removes the total
+  and the ordinal rather than restating them, because this section also mixes
+  corpus defects with plan-level ones, so no total over it has a fixed set to
+  count. The same edit corrected the Decision log's "the count is two of six,
+  checked by enumerating the defects": the denominator was that stale total and
+  the claimed enumeration had not happened. Also repaired the formatter fixed
+  point, which `make check-fmt` failed on `c7997dd`: the committed paragraphs
+  were under-filled, so `mdtablefix` re-wrapped them, 8 lines across 2 hunks.
+  That one is not a figure defect, and it is the lesson the Outcomes section
+  already states — a formatter claim must be established on the bytes actually
+  being committed, not carried forward from a run that has since gone stale.
 
 ## Outcomes & retrospective
 
