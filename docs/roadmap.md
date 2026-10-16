@@ -62,14 +62,21 @@ and RFC 0006.
   - See terms-of-reference.md §9, memoryd-design.md §7, and RFC 0001 §7.
   - Success: one accepted ADR defines the default store, migration format,
     backup expectations, and first-slice test matrix for the evidence inbox.
-- [ ] 1.1.2. Record local safety defaults for workspace, redaction, and purge.
+- [x] 1.1.2. Record local safety defaults for workspace, redaction, and purge.
   - Requires 1.1.1.
-  - Define repository-origin normalization, repository-root path hashing,
-    non-Git workspace hashing, collision handling, operator overrides, first
-    redaction detectors, deny-pattern behaviour, raw-text storage mode, purge
-    confirmation defaults, and pre-purge backup expectations.
-  - See terms-of-reference.md §§7-9, memoryd-design.md §§8.4 and 13, and RFC
-    0001 §§3 and 7.
+  - Decided: ADR 015 accepts all ten defaults named below, with worked
+    examples. Workspace identity is a versioned descriptor over normalized
+    origin, root digest, and profile, compared in full on registration, with
+    typed collision errors and explicit operator joins instead of implicit
+    merges. Redaction stores `redacted` text by default behind mandatory
+    exclusions and a versioned detector corpus, and rejects `encrypted` as
+    unsupported. Purge requires a scope-bound confirmation and a pre-purge
+    backup acknowledgement, and leaves a content-free tombstone that blocks
+    recapture until an operator re-enables the scope. Enforcement stays with
+    roadmap 2.2.3, 2.2.4, and 5.3.1.
+  - See terms-of-reference.md §§7-9, memoryd-design.md §§5.4, 8.4, and 13, and
+    RFC 0001's Goals and non-goals, Proposed design, and Compatibility and
+    migration headings.
   - Success: provider adapters can ingest safely without waiting for graph,
     theme, or Axinite write-back decisions.
 - [ ] 1.1.3. Accept or revise the hexagonal, tenant, and ingestion boundaries.

@@ -103,6 +103,17 @@ canonical deltas. Both ingest commands create the same evidence inbox records;
 their trust, capability, sequencing, cursor, and idempotency checks differ at
 the application-command boundary.
 
+Redaction, path exclusion, and raw-text storage are not specified here.
+[ADR 015](../adr-015-local-safety-defaults.md) records those defaults: what the
+collector and daemon each redact, the mandatory deny patterns, the `none` and
+`redacted` raw-text modes, and the processing limits that make a failed
+redaction an explicit rejection. Three consequences belong to this RFC's scope.
+No redaction, deny-pattern, or raw-text policy may reintroduce a
+provider-specific branch into the core pipeline; the daemon revalidates push
+and worker inputs rather than trusting a caller-supplied redacted flag; and
+because provider idempotency keys are derived from provider line and request
+identities, a detector-version change must not alter those keys.
+
 ### Evidence inbox tables
 
 The logical entities are:
@@ -168,6 +179,21 @@ track watermarks and tombstones carefully.
 ADR 013 resolves the evidence-store engine policy for this RFC. The standalone
 evidence inbox uses SQLite as the local default and PostgreSQL as a first-class
 deployment path, with Diesel-backed adapters and lockstep migrations.
+
+[ADR 015](../adr-015-local-safety-defaults.md) resolves the local safety
+defaults this RFC depends on. Ingest outcome is unaffected in the ordinary
+case: the same canonical delta, the same idempotency keys, and the same inbox
+records. What changes is the cursor rule. An **intentional exclusion** — a
+mandatory default exclusion, a deny-pattern match, or an operator's audited
+skip of one source position — is recorded as deliberately skipped and **does
+advance** the cursor. A **processing failure** — a failed redaction, a detector
+or policy error, a breached processing ceiling, or a store error — is not
+acknowledged as captured and its cursor **does not advance**, so a blocked
+source surfaces as a sanitized source-health error rather than as silent loss.
+Pull-mode watermarks and tombstones are unaffected by this ADR; the collection
+tombstone that ADR 015 requires after a workspace purge is separate from the
+per-source tombstones named here. Both ingest paths apply the same policy, so
+an adapter that pushes directly cannot bypass the checks the collector performs.
 
 ## Open questions
 
