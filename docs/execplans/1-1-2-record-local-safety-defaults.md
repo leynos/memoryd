@@ -1,11 +1,14 @@
 # Record local safety defaults for workspace, redaction, and purge
 
-Status: COMPLETE — EP-M1, EP-M2, and EP-M3 delivered. All eight commit gates
-are green on commit `ba5b12401f6504659879a849b19635d6d0d38cf5`; see Progress
-for the per-gate results and for the earlier candidates each gate run belongs
-to. Publication handoff to `pr-babysitting` owns hosted CI and the review
-conversations, so a local gate run is evidence about the local candidate only
-and is not a claim about CI.
+Status: COMPLETE — EP-M1, EP-M2, and EP-M3 delivered. Progress names the
+candidate carrying the latest green gate run and lists every earlier run with
+the commit it belongs to. A gate run is evidence about the commit it names and
+nothing else; publication handoff to `pr-babysitting` owns hosted CI and the
+review conversations, so no local result here is a claim about CI.
+
+This header deliberately names no commit. Naming one would invalidate itself on
+the next commit that touches this plan, which is how the earlier "green on the
+final candidate" wording went stale.
 
 This ExecPlan is a living document. Keep Constraints, Tolerances, Risks,
 Progress, Surprises & discoveries, Decision log, Outcomes & retrospective,
@@ -171,6 +174,14 @@ runtime slice implements and verifies them.
   remain true of those commits and are not evidence for this one; the Rust
   gates spent most of their wall time queued on the shared compile-admission
   pool with sccache unreachable, which is an environment fact and not a result.
+- [x] (2026-10-16) All eight commit gates passed again on commit `b0647dd`,
+  the head carrying the R1-21 repair and the rescoped status header, run
+  strictly sequentially with the head verified before and after: `make fmt` (no
+  tracked file changed), `make check-fmt` (42 files unchanged),
+  `make markdownlint` (42 files, 0 issues), `make nixie`, `make lint`,
+  `make test` (146 passed, 0 skipped), `make typecheck`, and
+  `make test-workflow-contracts` (6 passed). The Rust gates paid uncached
+  compile cost rather than slot-wait cost, and no admission refusal occurred.
 - [x] (2026-10-16) Reconciled the assessment findings against `ba5b124` and
   repaired two. R1-21 stated a `note` line containing a quote, which closes the
   password value under the same document's rule that a quoted value ends at its
