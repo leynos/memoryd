@@ -177,9 +177,18 @@ never an implicit join. A descriptor joins an existing workspace only through
 an explicitly configured mapping scoped to one tenant, and the registry never
 learns a join from provider payloads. Redaction requires in-bounds, valid UTF-8
 intervals; an invalid interval is an error, not an empty or pass-through
-result. Purge requires an authenticated tenant, an allowed workspace, and a
-purge capability before it produces a preview, and the confirmation must match
-that preview's scope and policy revision.
+result. Inside a field the schema declares as JSON, the renderer emits the
+marker as a valid JSON string rather than pasting bare marker bytes over the
+matched span, so a redacted document still parses and the daemon's
+malformed-JSON rule is not tripped by the renderer's own output. The marker is
+one logical value with two serialized forms, `[REDACTED]` in text and
+`"[REDACTED]"` in JSON, and a consumer compares it by value. The replacement is
+a string even where it stands in for an object or an array, because preserving
+the shape of a secret would preserve the secret, so callers must not rely on
+the JSON type of a field redaction may have touched. Purge requires an
+authenticated tenant, an allowed workspace, and a purge capability before it
+produces a preview, and the confirmation must match that preview's scope and
+policy revision.
 
 Semantic errors: use the envelope from [Error Contracts](#error-contracts) and
 prefer specific codes over string matching. A breach of the policy is an error;
@@ -231,15 +240,19 @@ forced root and final-digest collisions, different SSH usernames, and override
 conflicts, plus `proptest` for deterministic serialization and field-boundary
 separation.
 
-V-TEXT (no output segment copies a covered source byte position, and copied
-segments preserve source order from the complement). Owner: roadmap 2.2.3.
-Witnesses: empty, full, overlapping, and adjacent intervals, and multibyte
-text. Negative control: copy one covered byte and require a counterexample or a
-failed proof. Proof command:
+V-TEXT (no output segment copies a covered source byte position, copied
+segments preserve source order from the complement, and a rendered JSON field
+still parses). Owner: roadmap 2.2.3. Witnesses: empty, full, overlapping, and
+adjacent intervals, multibyte text, and a redacted field whose replacement must
+remain valid JSON. Negative control: copy one covered byte and require a
+counterexample or a failed proof, and separately emit the bare marker inside a
+JSON field and require daemon revalidation to reject it. Proof command:
 `prover-tools verus run --repo-root . --proof-file verus/redaction_intervals.rs`.
 Integration test: `tests/redaction_safety.rs`, covering each detector with
 positive, negative, malformed, boundary, and nested-metadata cases; deny
-matches; symlink escapes; policy errors; and the `none`, `redacted`, and
+matches; symlink escapes; policy errors; the escaped-string rule's structural
+and value-scanning branches; a collector-to-daemon round trip in which every
+redacted JSON document must still parse; and the `none`, `redacted`, and
 rejected `encrypted` modes. Detector completeness is an external limitation and
 must not be inferred from this proof.
 

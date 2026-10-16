@@ -310,6 +310,27 @@ fixed first.
   consequence directly, and the ADR states both the cross-machine case and the
   failure mode, that equal descriptors from different machines register as one
   workspace.
+- (2026-10-16, reassessment) Added the JSON rendering contract to ADR 015,
+  because the structural replacement rule and the malformed-JSON rejection rule
+  were jointly unsatisfiable: the bare marker does not parse, so a collector
+  following both rules produced a record the daemon had to reject. The marker's
+  logical value and its serialized JSON form are now distinguished, and the
+  replacement is a JSON string even where it stands in for an object, so a
+  redacted document stays valid without preserving a secret's shape.
+- (2026-10-16, reassessment) Completed the corpus rows that still described
+  their inputs. R1-34's three assignments carry their values, R1-21's and
+  R1-22's following lines are stated, the ceiling rows are given constructions
+  that exceed exactly one bound each, and R1-37 adds the value-scanning branch
+  of the escaped-string rule, which the corpus did not previously exercise.
+  Constructing R1-30 and R1-31 as first written showed both would have failed
+  for the wrong reason: sub-floor tokens are never detected, and an unvalued
+  innermost level is malformed rather than deep.
+- (2026-10-16, reassessment) Removed the retained word-count guard from this
+  plan, which contradicted the replacement evidence stated elsewhere. The
+  instruments are now separated by the question each answers, and the
+  perturbation test is limited to what it shows: padding is the formatter's
+  only effect on the committed document, not that an earlier run preserved its
+  own input.
 - (2026-10-16, assessment) Replaced the character-count claim about
   `mdtablefix` with the display-column measurement, and kept the rejection of
   the byte theory and the paragraph re-flow mechanism. One table row changed
@@ -437,11 +458,63 @@ not redundant, so a future editor does not delete one as duplication.
 
 The follow-up assessment also rejected the method used to argue content
 preservation across the formatter reflows: positive word-count deltas do not
-show that no text was lost. The replacement is a textual comparison of the
-formatter's input and output, which is the right instrument because it observes
-the actual rewrite instead of a proxy that a loss and a gain could cancel out.
-Positive deltas are kept only as a lopsided-loss guard, which is all they can
-support.
+show that no text was lost. Word-count deltas are no longer used as evidence at
+all, not even as a lopsided-loss guard, because a delta cannot distinguish a
+preserved document from one whose losses and gains happen to cancel.
+
+Two instruments replace them, and each answers a different question. To show
+that a formatter run preserved its own input, compare the pre-run and post-run
+text after normalizing table padding and line-break placement; that comparison
+observes the actual rewrite, and it is the evidence for the earlier runs whose
+inputs still exist. To show that the committed document is a fixed point, run
+the formatter again and require an empty diff.
+
+The perturbation test answers a third question and must not be read as
+answering the first. Reducing every table row's padding to a minimum and then
+reformatting recovers the committed file byte-for-byte. That demonstrates the
+padding is the formatter's only effect *on this committed document*: it cannot
+show that some earlier run, from a different starting state, preserved its own
+input. Only the before/after text comparison can speak to that.
+
+A third assessment round left three findings open, and all three were real. The
+first was a genuine logical defect rather than a missing example: the
+structural JSON rule replaces a field's whole raw value with the bare marker,
+the daemon rejects malformed JSON without a text fallback, and those two rules
+are unsatisfiable together, because `{"password": [REDACTED]}` does not parse.
+R1-19's own expected outcome was an unparseable document that the ADR required
+the daemon to reject. The fix is a JSON rendering contract that separates the
+marker's logical value from its serialized form, fixed at the layer where the
+rules meet rather than left to an adapter. Two lessons. A rule set can be
+individually consistent and jointly impossible, and only replaying one rule's
+output through the next rule's precondition exposes it. And an "expected
+outcome" column is a place where such contradictions surface, so a corpus row
+is worth writing even before its fixture exists.
+
+The second finding was the same defect as the round before, one level down: the
+rows that had been given literals were the ones short enough to quote, while
+the rows that named several values, or referred to a following line, or
+described a megabyte-scale boundary still described their input. The repair
+gives every remaining row a construction that a fixture can be generated from
+without guessing. Verifying those constructions caught two more defects of my
+own that no reviewer named. R1-30 specified 4,097 one-character tokens, which
+fall below the 32-byte entropy floor and are never detected at all, so the row
+would have failed to trip the interval ceiling it exists to test. R1-31 nested
+65 `{"k":` units without a value at the innermost level, so the document fails
+to parse and the malformed-JSON rule rejects it before depth is evaluated. Both
+were found by constructing the stated input and running the stated rule against
+it, which is the same method that found the `AWS_ACCESS_KEY_ID` defect, and
+both are now constructions that exceed exactly one bound.
+
+The third finding was an inconsistency I introduced in this very plan while
+repairing the previous round's methodology criticism. The published text said
+the word-count guard had been dropped, while the plan still described retaining
+it as a lopsided-loss guard. Both could not be true. The repair removes the
+guard from the plan and separates the instruments by the question each answers.
+The perturbation test is recorded as evidence about the committed document
+only: it recovers this file byte-for-byte from a padding-collapsed state, which
+does not show that an earlier run over a different starting state preserved
+anything, and claiming more from it than that was the third finding's real
+content.
 
 ## Context and orientation
 
@@ -483,7 +556,7 @@ below are local trace labels, not invented upstream IDs.
 | SAFE-VERIFY: proof/testing relationship      | design §15; AGENTS; this request                        | EP-M2: obligations, witnesses, negative controls, and commands recorded |
 | SAFE-CLOSE: decision completion              | roadmap 1.1.2                                           | EP-M3: accepted ADR, consistent guides, gates, then done marker         |
 
-_Table 1: Requirements traced to decision and acceptance evidence._
+*Table 1: Requirements traced to decision and acceptance evidence.*
 
 ## Proposed safety contracts
 
@@ -731,12 +804,21 @@ segment copies that position; all copied segments preserve source order and
 come from its complement. Preconditions require in-bounds UTF-8 intervals;
 invalid intervals return an error. This is provenance exclusion, not a claim
 that an equal byte value cannot occur elsewhere. Sketch coverage preservation
-by interval union, complement partition, and ordered rendering. Prove the
-unbounded interval transformation in Verus during 2.2.3, then connect runtime
-byte offsets and renderer branches to the model. Detector completeness is an
-external limitation, not a premise claiming all secrets were found. Witnesses:
-empty/full/overlapping/adjacent intervals and multibyte text; negative control:
-copy one covered byte and require a counterexample or failed proof.
+by interval union, complement partition, and ordered rendering. The rendering
+obligation extends past the interval transformation to its output: where the
+surrounding input is a field the schema declares as JSON, the marker is
+serialized in its JSON form, so the rendered document still parses and the
+daemon's malformed-JSON rule is not tripped by the renderer itself. That is a
+separate obligation from provenance exclusion, because a replacement can
+preserve every source position's exclusion and still emit a document the next
+stage must reject. Prove the unbounded interval transformation in Verus during
+2.2.3, then connect runtime byte offsets and renderer branches to the model.
+Detector completeness is an external limitation, not a premise claiming all
+secrets were found. Witnesses: empty/full/overlapping/adjacent intervals,
+multibyte text, and a redacted JSON field that must remain parseable; negative
+controls: copy one covered byte and require a counterexample or failed proof,
+and separately emit the bare marker inside a schema-declared JSON field and
+require daemon revalidation to reject it.
 
 V-PURGE: deleting P preserves every item outside P; rejected authorization or
 confirmation leaves state unchanged; repeated deletion has the same result as

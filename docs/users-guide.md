@@ -77,6 +77,12 @@ positives: a random-looking 32-byte string can become `[REDACTED]` when it is
 not a secret. Redaction is a mitigation, not a guarantee, so do not treat
 Memoryd as making a sensitive workspace safe to store.
 
+A redacted value is a marker, not a masked copy of the original: inside JSON it
+is the string `"[REDACTED]"`, even where the value it replaces was an object or
+an array. Preserving the shape of a secret would preserve the secret, so do not
+write code that depends on the JSON type of a field redaction may have touched,
+and compare the marker by value rather than by raw bytes.
+
 These paths are excluded by default and cannot be re-enabled in the first
 release: `.env`, `.env.*`, `**/.env`, `**/.env.*`, `.git/**`, `**/.git/**`,
 `.ssh/**`, and `**/.ssh/**`. The `.ssh` exclusion deliberately covers public
