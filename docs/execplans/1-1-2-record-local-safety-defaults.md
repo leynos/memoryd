@@ -528,6 +528,26 @@ fixed first.
   That one is not a figure defect, and it is the lesson the Outcomes section
   already states — a formatter claim must be established on the bytes actually
   being committed, not carried forward from a run that has since gone stale.
+- (2026-10-16, hosted reassessment) Hosted reassessment of `6b6fa70` closed the
+  R1-02 finding and named two further explanation defects, both in ADR 015 and
+  both verified here by recomputation before being applied. The entropy
+  discussion said the three boundary literals "share the same 32 bytes", which
+  asserts identity where only length holds: the three literals are distinct
+  byte strings, each 32 bytes long, and the stated arithmetic (18, 16, 12
+  yielding 4.4375, 4.5000, 4.6250) was already correct. R1-31's outcome cell
+  called the depth construction's innermost level "an empty value"; the
+  construction ends in `null`, which is a present value with no content rather
+  than an absent one, and it parses at 65 levels, so depth remains the only
+  bound exceeded. The same false phrasing recurred in the ADR's own entropy
+  revision note, so it was corrected at both sites — the same defect at a
+  second location rather than a new one, and the reason that note is now
+  recorded as corrected twice. Neither edit changes a rule, a construction, or
+  an expected outcome; both were prose written to explain a correct fixture,
+  which is the shape every explanation defect on this branch has taken. The
+  reviewer's method note is the useful part and is worth keeping: check
+  implications as well as figures, by extracting each "because", "only",
+  "same", and "would" claim, constructing the variant it describes, and testing
+  that variant against the rule independently of the fixture's expected result.
 
 ## Outcomes & retrospective
 

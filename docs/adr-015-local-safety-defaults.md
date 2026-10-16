@@ -579,7 +579,7 @@ lines in the cell itself, so no convention is needed to read them.
 | R1-28   | Boundary, long and low entropy: `abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef`, 48 bytes at 2.5850 bits/byte                                                                                                  | Not redacted by the entropy rule.                                                                                                                                                                                                                                                                                                                                                                              |
 | R1-29   | Boundary, processing ceiling: `A` repeated 1,048,577 times, one byte over the 1 MiB UTF-8 content budget                                                                                                          | Record rejected without advancing the cursor and without logging the payload.                                                                                                                                                                                                                                                                                                                                  |
 | R1-30   | Boundary, interval count: the token `ghp_0123456789ab` repeated 4,097 times, separated by single spaces                                                                                                           | Record rejected on the interval ceiling. Each copy is a detected interval by the prefix rule, which applies below the entropy floor.                                                                                                                                                                                                                                                                           |
-| R1-31   | Boundary, JSON depth: `{"k":` repeated 65 times, then `null`, then `}` repeated 65 times                                                                                                                          | Record rejected on the depth ceiling, since 65 nested levels exceeds the limit of 64. The document is valid JSON with an empty value at the innermost level, so depth is the only bound it exceeds.                                                                                                                                                                                                            |
+| R1-31   | Boundary, JSON depth: `{"k":` repeated 65 times, then `null`, then `}` repeated 65 times                                                                                                                          | Record rejected on the depth ceiling, since 65 nested levels exceeds the limit of 64. The document is valid JSON with a `null` value at the innermost level, so depth is the only bound it exceeds.                                                                                                                                                                                                            |
 
 _Table 6: Initial detector corpus revision `memoryd.redaction.v1`._
 
@@ -587,7 +587,7 @@ The entropy boundary rows carry their literals in-cell, so the thresholds are
 testable rather than described. Each is a maximal ASCII token of the alphabet
 the fallback rule defines, and the entropy figure is measured over its bytes.
 
-R1-24, R1-25, and R1-26 share the same 32 bytes and the same alphabet `a`-`z`,
+R1-24, R1-25, and R1-26 each contain 32 bytes and share the alphabet `a`-`z`,
 and differ only in how often each symbol repeats: writing the observed counts as
 `v`, they carry `sum(v * log2(v))` of 18, 16, and 12 respectively. Since
 `H = (n * log2(n) - sum(v * log2(v))) / n` and `n` is 32, those give 4.4375,
@@ -895,8 +895,8 @@ false twice over: the symbols are not equally frequent (R1-24 carries 14
 singletons and 9 doubled symbols), and a uniform-alphabet reading would give
 `log2(23)` = 4.5236 for R1-24, which is _above_ the threshold the row exists to
 sit below — the explanation contradicted the outcome it explained. The three
-boundary rows share the same 32 bytes and alphabet and differ in how often each
-symbol repeats, so the note now gives the arithmetic directly:
+boundary rows each contain 32 bytes and share the alphabet and differ in how
+often each symbol repeats, so the note now gives the arithmetic directly:
 `H = (n * log2(n) - sum(v * log2(v))) / n`, with `sum(v * log2(v))` of 18, 16,
 and 12 for R1-24, R1-25, and R1-26, yielding 4.4375, 4.5000, and 4.6250. Every
 value in this note is recomputed from the committed literals rather than
@@ -915,3 +915,16 @@ was corrected then, but the explanation added alongside it overreached. The
 cell now states the correct reason and records that the trailing space is not
 load-bearing, and the input is unchanged, so this revision alters an
 explanation and not a fixture.
+
+Byte-length and innermost-value revision (2026-10-16). Two asides were
+corrected after hosted reassessment, both of the same shape: an explanation
+asserting more than its construction supports. The entropy discussion said the
+three boundary literals "share the same 32 bytes", which claims identity where
+only length is shared — the three literals are distinct, and all three are 32
+bytes long. The R1-31 outcome cell described the depth construction's innermost
+level as "an empty value", but the construction ends in `null`, which is a
+present JSON value with no content rather than an absent one; it parses, at 65
+levels, so depth remains the only bound the row exceeds. Neither correction
+changes a rule, a construction, or an expected outcome. Both arose the same way
+this ADR's other explanation defects did: prose added to explain a correct
+fixture, held to no test of its own.
