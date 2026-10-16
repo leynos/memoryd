@@ -1,14 +1,15 @@
 # Record local safety defaults for workspace, redaction, and purge
 
-Status: COMPLETE — EP-M1, EP-M2, and EP-M3 delivered. Progress names the
-candidate carrying the latest green gate run and lists every earlier run with
-the commit it belongs to. A gate run is evidence about the commit it names and
-nothing else; publication handoff to `pr-babysitting` owns hosted CI and the
-review conversations, so no local result here is a claim about CI.
+Status: COMPLETE — EP-M1, EP-M2, and EP-M3 delivered. Every gate result in
+Progress names the commit it gated and is evidence about that commit alone.
+Recording a result moves the head it would describe, so the current head's run
+is deliberately not recorded here; that evidence is supplied in the PR 46
+assessment thread instead. Publication handoff to `pr-babysitting` owns hosted
+CI and the review conversations, so no local result here is a claim about CI.
 
-This header deliberately names no commit. Naming one would invalidate itself on
-the next commit that touches this plan, which is how the earlier "green on the
-final candidate" wording went stale.
+This header deliberately names no commit and no "final candidate". Naming
+either would invalidate itself on the next commit that touches this plan, which
+is how the earlier wording went stale.
 
 This ExecPlan is a living document. Keep Constraints, Tolerances, Risks,
 Progress, Surprises & discoveries, Decision log, Outcomes & retrospective,
@@ -146,7 +147,7 @@ runtime slice implements and verifies them.
   made directly, following the `Decided:` note convention that task 1.1.1
   established. The two `mapsplice` defects are recorded here for the tool's
   maintainers; they are not this task's scope to fix.
-- [x] (2026-10-16) EP-M3 gates passed on the final candidate. `make fmt`,
+- [x] (2026-10-16) EP-M3 gates passed on `a082bbf`. `make fmt`,
   `make check-fmt`, `make markdownlint` (42 files, 0 issues), `make nixie`,
   `make typecheck`, `make test-workflow-contracts` (6 passed), and `make lint`
   all exited zero; `make test` passed 146 tests with zero skipped. The first
@@ -187,8 +188,9 @@ runtime slice implements and verifies them.
   password value under the same document's rule that a quoted value ends at its
   closing quote however many lines later, so the row contradicted the grammar
   it exists to test; its next line now carries no quote. The status header no
-  longer claims green gates on an unnamed "final candidate" and names the
-  commit the evidence belongs to.
+  longer claims green gates on an unnamed "final candidate", and it names no
+  commit in its place: a header that pins a SHA is invalidated by the next
+  commit touching this plan, which is how the old wording went stale.
 - [x] (2026-10-16) Hosted assessment `EPM-1-1-2-B473C17-20261016` returned five
   findings, all confirmed against source before any edit. The developers' guide
   cursor rule contradicted ADR 015; the detector corpus did not meet this
