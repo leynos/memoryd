@@ -201,6 +201,19 @@ runtime slice implements and verifies them.
   this revision, and the repairs follow the reply's explicit constraints: no
   machine identifier is added, and no executable fixture is added in this
   documentation-only slice.
+- [x] (2026-10-16) Hosted assessment `EPM-1-1-2-0BCD857-20261016` closed both
+  outstanding findings -- R1-21 and the completion claim -- and independently
+  confirmed the corrected entropy arithmetic, with E3 recorded as closed. It
+  raised one new defect: R1-02's outcome cell, which asserted that the trailing
+  space was required to prevent redaction. That was verified by construction
+  before repair and is genuine, so the assertion is withdrawn in `4e8e7ae`; the
+  prefix rule needs a non-whitespace token to be present, and end of input
+  after the hyphen supplies none, exactly as trailing whitespace does. The
+  input cell is unchanged, so an explanation was corrected rather than a
+  fixture. The reply was also asked to name a surviving defect of the class
+  that keeps recurring, and this is what it named; a sweep of every normative
+  word in all 37 outcome cells was run afterwards, and the five remaining hits
+  were each verified against the rule rather than dismissed.
 
 ## Surprises & discoveries
 
@@ -424,7 +437,24 @@ fixed first.
   `sum(v * log2(v))` = 18, 16, 12 and
   `H = (n * log2(n) - sum(v * log2(v))) / n` yielding 4.4375, 4.5000, 4.6250.
   Found by recomputing every committed figure rather than re-reading any of
-  them, which is how the previous four defects in this corpus surfaced.
+  them, which is how four of the five earlier corpus defects surfaced; the
+  sixth, recorded below, came from hosted review instead, but it is the same
+  class -- a rule and a stated case that cannot both hold.
+- (2026-10-16, R1-02 explanation) Withdrew R1-02's assertion that the trailing
+  space is required to prevent redaction. The cell claimed a variant ending at
+  the hyphen "would state an input the rule redacts", but the prefix rule
+  redacts the non-whitespace token *after* a prefix, so it needs a token to be
+  present; with end of input immediately after the hyphen there is none, and
+  the row is not redacted -- the same outcome as with trailing whitespace. The
+  sentence was introduced by the repair recorded two entries above, which fixed
+  the input cell and then stated a reason that did not follow: the second time
+  in this task that a repair created a defect of the class it repaired, after
+  R1-21. The count is two of six, checked by enumerating the defects rather
+  than recalled: an earlier draft of this entry claimed three while naming only
+  two, which is the same defect class again. Found by hosted review, which the
+  reply was explicitly asked to provide for this class on the argument that
+  execution had caught every previous instance. The input is unchanged, so this
+  corrects an explanation rather than a fixture.
 - (2026-10-16, completion claim) Removed three claims the plan could not keep
   true. The header promised that Progress names the latest green gate run's
   candidate, which is impossible: recording a run moves the head it describes.
@@ -462,10 +492,10 @@ later operator to halt already-approved work. The lesson is that a living plan
 accumulates stale imperatives at its tail as its head advances, so a status
 edit belongs wherever the plan states a permission, not only in Progress.
 
-EP-M3 completed on 2026-10-16. Five defects were confirmed and repaired, and
-two genuine gaps were recorded with owners rather than invented away. The
-review's most useful habit was refusing to accept a finding on its assertion:
-the false provenance claim about V-ID/V-TEXT/V-PURGE looked plausible until
+EP-M3 completed on 2026-10-16. Six defects were confirmed and repaired, and two
+genuine gaps were recorded with owners rather than invented away. The review's
+most useful habit was refusing to accept a finding on its assertion: the false
+provenance claim about V-ID/V-TEXT/V-PURGE looked plausible until
 `grep -c 'V-ID'` returned zero for both cited documents. Two lessons. First, a
 document that names three models in a guide but defines them nowhere is a
 provenance bug, not a wording bug; the identifiers were introduced in the guide
@@ -656,14 +686,25 @@ literal cell text would use two characters and state a different input; the
 convention is now stated once, in the preamble that claims every row is
 reproducible.
 
-All five were found the same way and only that way: by building the input the
+A sixth defect, R1-02's withdrawn trailing-space assertion, came from hosted
+review rather than from this pass, and is recorded in the Decision log above.
+
+All six were found the same way and only that way: by building the input the
 table specifies and running the rule the same document states, rather than by
 reading either one. Reading a row and reading its rule both invite agreement;
 executing one against the other does not. Two lessons generalize past this
 corpus. A rule and its own counterexample can contradict each other, and only
 execution finds it. And markup is part of the specification: a cell's rendered
 text is the input, so a claim about reproducibility must survive rendering, not
-merely reading.
+merely reading. A third lesson is about repair rather than detection: in two of
+the six -- R1-21 and R1-02's trailing-space assertion -- the repair for a
+defect introduced the next one, both times by adding an explanation beside a
+corrected fixture. A corrected fixture is safe; prose offered alongside it is
+not, and should be held to the same execution test as the row. Two of six is
+worth stating precisely, because the first draft of this very sentence claimed
+three while enumerating only two: a count asserted beside an example it does
+not match is the defect class this section exists to describe, and it is how
+the earlier "five defects" tally went stale.
 
 ## Context and orientation
 
