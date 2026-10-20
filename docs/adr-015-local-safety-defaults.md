@@ -754,10 +754,13 @@ _Table 7: Purge examples and expected outcomes._
 - Cross-machine identity stability is not promised, and because no machine
   identifier is an input, two machines are not separated by themselves. Two
   machines with different canonical roots will register different workspaces
-  for the same repository; two machines that present the same canonical root
-  string will register one. The mitigation for the second case is to keep one
-  source per workspace or to separate the paths; the explicit operator join
-  covers the first.
+  for the same repository. Equal canonical paths alone do not establish
+  descriptor equality: under the same tenant, two checkouts with the same
+  descriptor version, normalized origin, canonical root string, and profile
+  derive equal descriptors and register as one workspace, while a difference in
+  any of those fields yields a separate workspace. The mitigation for the
+  shared-path case is to keep one source per workspace or to separate the
+  paths; the explicit operator join covers the different-path case.
 
 ## Outstanding decisions
 
@@ -944,3 +947,19 @@ false rationale had propagated to the users' guide and the developers' guide,
 which restated this paragraph in their own voice; both were corrected with it.
 No rule, rendering, or expected outcome changes, and the obligation that
 consumers must not rely on a redacted field's original JSON type is untouched.
+
+Descriptor-equality risk-summary revision (2026-10-20). The cross-machine risk
+summary said that "two machines that present the same canonical root string
+will register one", which makes canonical-path equality sufficient for
+descriptor equality. It is only necessary. Under one tenant, a checkout whose
+descriptor is version `memoryd.workspace.v1` with the same normalized origin
+and the same canonical root still yields a different descriptor if its profile
+differs, so nothing joins the two without an explicit operator mapping. The
+summary now names every condition the rule requires — tenant, descriptor
+version, normalized origin, canonical root string, and profile — and states
+plainly that equal canonical paths alone do not establish descriptor equality.
+This is the same defect class as the shape-preservation revision: an
+explanation that dropped conditions the rule it summarised actually requires.
+The rule at SAFE-ID and the users' guide both already carried the full set, so
+neither needed changing; the developers' guide makes no equality claim and was
+checked and left alone.

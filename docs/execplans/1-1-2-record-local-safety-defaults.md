@@ -569,6 +569,24 @@ fixed first.
   that "restated in another document's voice" is a reliable way for an
   explanation defect to travel, and that a correction should be swept for
   across the documentation set rather than applied where it was named.
+- (2026-10-20, hosted reassessment) The reviewer closed the shape-preservation
+  finding and named one more, in the cross-machine risk summary, and it is the
+  same defect class in a different disguise. The summary said "two machines
+  that present the same canonical root string will register one", making
+  canonical-path equality sufficient for descriptor equality when it is only
+  necessary: under one tenant, the same versioned descriptor, normalized
+  origin, and canonical root with a different profile yields a different
+  descriptor. The counterexample is a two-line comparison — copy the field
+  bindings, change `profile` from `work` to `personal`, and the descriptors are
+  unequal. The summary now names every condition the rule requires and says
+  plainly that equal canonical paths alone do not establish equality. The rule
+  at SAFE-ID and the users' guide already carried the full condition set, and
+  the developers' guide makes no equality claim, so this was a single-site
+  defect rather than another propagation. It generalises the lesson from the
+  previous round: the failure mode is not only repeated wording but a summary
+  that drops conditions the rule it summarises requires, so an explanation
+  should be checked against the rule for missing preconditions as well as for
+  false connectives.
 
 ## Outcomes & retrospective
 
