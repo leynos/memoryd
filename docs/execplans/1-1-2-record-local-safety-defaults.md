@@ -242,6 +242,20 @@ runtime slice implements and verifies them.
   `wafflecat-df12`, and the CodeRabbit reply at issue comment 6301540274 by
   `buzzybee-df12`. Each used a separately selected pool token, and neither was
   posted as the lifecycle account.
+- [x] (2026-10-20) CodeRabbit's reconciliation replies reached opposite
+  conclusions on the two reviews, and both were read in full. For the eleven
+  findings of review 5591223691 it declared all eleven resolved at `5a97b3e`
+  and said not to reopen them. For review 5591162111 it found both original
+  findings resolved but the repair account still wrong about which `b` the
+  R1-37 escape decodes to: the escape produces the first `b`, the middle
+  character of `abb`, not the second. That is the third iteration of this same
+  error in this entry, so it was settled by measurement rather than by
+  rereading: resolving the fixture with a JSON decoder and comparing the
+  escaped character's decoded index against the match's end shows the escape
+  producing decoded index 42, with the match ending at 44 and its last
+  character at 43. The entry now names both withdrawn misstatements and records
+  that a correct reading took three attempts. The recorded offsets were not
+  touched, and CodeRabbit's AI prompt asked explicitly that they not be.
 
 ## Surprises & discoveries
 
@@ -663,20 +677,22 @@ fixed first.
   tag an error, `git-absent` carrying the empty origin, and the non-Git
   descriptor carrying no origin field at all. Carried to this plan's SAFE-ID.
 - (2026-10-20, formal review) Codex also found that the escaped-string rule's
-  reason was false as stated. The `\u0062` escape in R1-37 decodes to the second
-  `b` of the trailing `abb`, and the match runs on past that escape to a
-  literal `b`, so a correct decoded-to-raw map ends at a defined boundary after
-  the complete escape, not part-way through it. Verified by building an offset
-  map: the true boundary is raw 59, after the escape at [52:58]; a naive
-  length-preserving map lands at 54, inside the escape payload. The widening
-  rule is therefore correct as a decision not to reconstruct the map, and wrong
-  when justified as an unmappable boundary. Rewrote the rule to say the former,
-  kept the widening, and corrected the R1-37 cell and the rule's statement in
-  this plan. A first revision of this entry then said the escape produces "the
-  `b` that ends the JWT", which is not what the measurement shows either: the
-  escape decodes to the middle `b` of `abb`, and the final `b` is literal.
-  Corrected here without erasing the mistake, because a record that tidies its
-  own overreach away is worth less than one that shows it.
+  reason was false as stated. The `\u0062` escape in R1-37 decodes to the
+  middle character of the trailing `abb`, the first `b`, and the match runs on
+  past that escape to the literal final `b`, so a correct decoded-to-raw map
+  ends at a defined boundary after the complete escape, not part-way through
+  it. Verified by building an offset map: the true boundary is raw 59, after
+  the escape at [52:58]; a naive length-preserving map lands at 54, inside the
+  escape payload. The widening rule is therefore correct as a decision not to
+  reconstruct the map, and wrong when justified as an unmappable boundary.
+  Rewrote the rule to say the former, kept the widening, and corrected the
+  R1-37 cell and the rule's statement in this plan. A first revision of this
+  entry said the escape produces "the `b` that ends the JWT", and the revision
+  that replaced it said "the second `b` of the trailing `abb`". Neither is what
+  the measurement shows: the escape produces the middle character, the first
+  `b`, and the final `b` is literal. Corrected twice here without erasing
+  either mistake, because a record that tidies its own overreach away is worth
+  less than one that shows it.
 - (2026-10-20, formal review) CodeRabbit named eleven further findings. All
   eleven were verified against source and all eleven were valid; two earlier
   revisions of this entry said four and then nine, each an undercount of the
