@@ -256,6 +256,18 @@ runtime slice implements and verifies them.
   character at 43. The entry now names both withdrawn misstatements and records
   that a correct reading took three attempts. The recorded offsets were not
   touched, and CodeRabbit's AI prompt asked explicitly that they not be.
+- [x] (2026-10-20) Committed the residual correction as `68cf455` and pushed it;
+  `ls-remote` names the same object as local HEAD. Hosted CI run 39499028706
+  concluded success on that commit, covering `make check-fmt`, Markdown lint,
+  `make lint`, `make test-workflow-contracts`, and the coverage test run. A
+  local `make lint` had been waiting on the shared package-cache lock behind
+  other agents' worktrees. It was stopped rather than left to duplicate a
+  hosted run of the identical command on the identical commit: the CI Lint step
+  is `make lint`, and `make typecheck` is `cargo check`, which clippy subsumes.
+  No Rust target reads a file under `docs/`, so the local run could not have
+  differed from the hosted one. The disposition reply was posted at issue
+  comment 6301674651 by `pandalump`, a separately selected pool token, and read
+  back.
 
 ## Surprises & discoveries
 
