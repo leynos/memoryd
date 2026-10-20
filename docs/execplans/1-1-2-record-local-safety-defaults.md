@@ -268,6 +268,20 @@ runtime slice implements and verifies them.
   differed from the hosted one. The disposition reply was posted at issue
   comment 6301674651 by `pandalump`, a separately selected pool token, and read
   back.
+- [x] (2026-10-20) CodeRabbit resolved the last residual at `68cf455` (issue
+  comment 6301688718), independently decoding the committed fixture and
+  reproducing every measurement: escape at decoded index 42, final literal `b`
+  at 43, match end 44, raw escape [52:58), correct boundary 59, naive 54. It
+  confirmed the diff changed no rule, fixture, outcome, descriptor encoding, or
+  table cell, and directed that both withdrawn descriptions be kept as labelled
+  history, which they are. It closed the eleven findings of review 5591223691 a
+  second time and asked that none be reopened. All thirteen formal-review
+  findings are therefore resolved, with the two original Codex findings
+  resolved by both reviewers. It noted again that the four documentation-gate
+  results remain author-reported rather than independently verified: the logs
+  named in the Verification record are local files a reviewer would have to ask
+  for, so that limitation stands until someone re-runs the gates against the
+  head.
 
 ## Surprises & discoveries
 
