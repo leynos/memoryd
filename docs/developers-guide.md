@@ -183,12 +183,13 @@ matched span, so a redacted document still parses and the daemon's
 malformed-JSON rule is not tripped by the renderer's own output. The marker is
 one logical value with two serialized forms, `[REDACTED]` in text and
 `"[REDACTED]"` in JSON, and a consumer compares it by value. The replacement is
-a string even where it stands in for an object or an array, because preserving
-the shape of a secret would preserve the secret, so callers must not rely on
-the JSON type of a field redaction may have touched. Purge requires an
-authenticated tenant, an allowed workspace, and a purge capability before it
-produces a preview, and the confirmation must match that preview's scope and
-policy revision.
+a string even where it stands in for an object or an array: whole-value
+replacement avoids retaining the original value's internal structure, which can
+itself disclose sensitive information, so callers must not rely on the JSON
+type of a field redaction may have touched. Purge requires an authenticated
+tenant, an allowed workspace, and a purge capability before it produces a
+preview, and the confirmation must match that preview's scope and policy
+revision.
 
 Semantic errors: use the envelope from [Error Contracts](#error-contracts) and
 prefer specific codes over string matching. A breach of the policy is an error;

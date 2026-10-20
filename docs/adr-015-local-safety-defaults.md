@@ -339,9 +339,9 @@ the bare `[REDACTED]`. The two are the same logical value observed at different
 layers, so a consumer compares the marker by value rather than by raw bytes.
 
 The replacement is a JSON string even where it stands in for an object or an
-array, because preserving the shape of a secret would preserve the secret. A
-consumer must therefore not rely on the JSON type of a field that redaction may
-have touched.
+array. Whole-value replacement avoids retaining the original value's internal
+structure, which can itself disclose sensitive information. A consumer must
+therefore not rely on the JSON type of a field that redaction may have touched.
 
 This does not weaken the interval rule. An interval still records the span of
 the original input that it replaces, and the quotes introduced by JSON
@@ -928,3 +928,19 @@ levels, so depth remains the only bound the row exceeds. Neither correction
 changes a rule, a construction, or an expected outcome. Both arose the same way
 this ADR's other explanation defects did: prose added to explain a correct
 fixture, held to no test of its own.
+
+Shape-preservation rationale revision (2026-10-20). The JSON rendering contract
+gave the wrong reason for replacing a whole value with a string: it said the
+replacement is a string "because preserving the shape of a secret would
+preserve the secret". A shape-preserving rendering refutes that as stated.
+Rendering `{"password":["example-secret-one","example-secret-two"]}` as
+`{"password":["[REDACTED]","[REDACTED]"]}` keeps the array type and its length
+while retaining neither secret value, so preserving structure does not entail
+preserving secret content. The rule stands, because whole-value replacement is
+still the tighter choice: retained structure can itself disclose sensitive
+information — here, that the field held a two-element array — so the contract
+now gives that reason instead of the implication it cannot support. The same
+false rationale had propagated to the users' guide and the developers' guide,
+which restated this paragraph in their own voice; both were corrected with it.
+No rule, rendering, or expected outcome changes, and the obligation that
+consumers must not rely on a redacted field's original JSON type is untouched.

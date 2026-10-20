@@ -548,6 +548,27 @@ fixed first.
   implications as well as figures, by extracting each "because", "only",
   "same", and "would" claim, constructing the variant it describes, and testing
   that variant against the rule independently of the fixture's expected result.
+- (2026-10-20, hosted reassessment) The reviewer applied its own method note
+  and named one more explanation overreach, in the ADR's JSON rendering
+  contract: the replacement was said to be a string "because preserving the
+  shape of a secret would preserve the secret". Constructing the variant
+  refutes it — rendering
+  `{"password":["example-secret-one","example-secret-two"]}` as
+  `{"password":["[REDACTED]","[REDACTED]"]}` keeps the array type and its
+  length while retaining neither secret value — so preserving structure does
+  not entail preserving secret content, and the implication was false as
+  stated. The rule is unchanged and still correct; whole-value replacement is
+  tighter because retained structure can itself disclose sensitive information,
+  and the contract now gives that reason. The same false rationale had
+  propagated to the users' guide and the developers' guide, which restated the
+  ADR paragraph in their own voice, so all three sites were corrected together;
+  the reviewer named one. The obligation that consumers must not rely on a
+  redacted field's original JSON type is untouched, and no rule, rendering, or
+  expected outcome changes. This is the eighth round of explanation repair on
+  this branch and the third distinct site for a single rationale — evidence
+  that "restated in another document's voice" is a reliable way for an
+  explanation defect to travel, and that a correction should be swept for
+  across the documentation set rather than applied where it was named.
 
 ## Outcomes & retrospective
 

@@ -79,7 +79,8 @@ Memoryd as making a sensitive workspace safe to store.
 
 A redacted value is a marker, not a masked copy of the original: inside JSON it
 is the string `"[REDACTED]"`, even where the value it replaces was an object or
-an array. Preserving the shape of a secret would preserve the secret, so do not
+an array. Whole-value replacement avoids retaining the original value's
+internal structure, which can itself disclose sensitive information, so do not
 write code that depends on the JSON type of a field redaction may have touched,
 and compare the marker by value rather than by raw bytes.
 
