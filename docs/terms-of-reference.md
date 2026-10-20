@@ -300,8 +300,9 @@ retrieve, corrupt, or delete another tenant's memory.
   the canonical configured root path hash and profile name. Collisions inside a
   tenant require an auditable operator override rather than automatic merge.
   ADR 015 fixes the normalization, descriptor, and collision rules; it accepts
-  that full path and origin fidelity means a moved root or a changed origin
-  yields a new workspace rather than silently reusing the old one.
+  that full path and origin fidelity means a moved root or a change to the
+  normalized origin yields a new workspace rather than silently reusing the old
+  one.
 - Tenant identity is available from authenticated callers, capability tokens,
   or a configured local default. If tenant context is missing in Corbusier
   mode, the request must fail before application use cases run.

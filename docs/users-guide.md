@@ -28,9 +28,13 @@ Consequences to plan for:
 - **A moved root is a new workspace.** Renaming or moving the local directory
   changes the derived workspace, and existing evidence stays with the old one.
   Use an explicit operator mapping when the two must line up.
-- **A changed origin is a new workspace.** Changing `remote.origin.url`, or
-  switching between SSH and HTTPS forms of the same repository, yields a
-  different workspace unless an operator maps them explicitly.
+- **A changed normalized origin is a new workspace.** Changing
+  `remote.origin.url` changes the derived workspace only if its normalized
+  identity changes. Rotating HTTP credentials does not change that identity,
+  because authentication userinfo is omitted; switching between SSH and HTTPS
+  forms of the same repository does. Different bindings do not merge
+  implicitly; an authorized join can associate them with one configured
+  workspace, and a collision causes registration to fail.
 - **Linked worktrees are separate workspaces.** Git's shared common directory
   does not merge them, so a checkout and its linked worktree do not share
   evidence by default.

@@ -350,8 +350,10 @@ detail: a versioned, length-prefixed descriptor, the origin normalization
 rules, the separate Git and non-Git tags, the digest and canonical-root binding
 that registration persists, and the explicit descriptor join that an
 intentional merge requires. Because full origin and root-path fidelity is part
-of identity, a root move, a different worktree, or an origin change yields a
-new workspace rather than silently reusing an existing one.
+of identity, a root move, a different worktree, or a change to the normalized
+origin yields a new workspace rather than silently reusing an existing one.
+Changing the raw origin without changing its normalized identity — rotating
+HTTP credentials, which normalization omits — does not.
 
 Driven adapters enforce tenant context using the strongest mechanism available
 for their store:

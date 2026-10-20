@@ -210,10 +210,12 @@ workspace, which is the intended reading of "identity is not bound to a host".
 An operator who needs per-machine workspaces must use distinct canonical paths
 or an explicit mapping.
 
-A root move, a different worktree, an origin change, or a profile change all
-yield a new descriptor. Symlinks that resolve to the same worktree root yield
-the same root digest. Git's shared common directory is not used to collapse
-linked worktrees.
+A root move, a different worktree, a change to the normalized origin, or a
+profile change all yield a new descriptor. A change to the raw
+`remote.origin.url` yields a new descriptor only when normalization alters the
+identity, so rotating HTTP credentials does not. Symlinks that resolve to the
+same worktree root yield the same root digest. Git's shared common directory is
+not used to collapse linked worktrees.
 
 Registration persists the descriptor version and the descriptor binding,
 including the canonical root path as it was hashed. Equality checks compare
@@ -985,3 +987,18 @@ overreach created another by summarising a rule more tightly than the rule
 allows. The reviewer had also proposed wording that omitted the join case, and
 said so; the correction below is not a revert to either version but a
 restatement that keeps all three outcomes.
+
+Normalized-origin revision (2026-10-20). Several summaries said an origin
+change "yields a new descriptor" or "yields a different workspace", compressing
+"the normalized identity changed" into "the configured text changed". Those
+differ: the normalization rule removes authentication userinfo for HTTP URLs,
+and Table 4's credential row already shows `https://user:token@host/path.git`
+equalling the credential-free form, so rotating an HTTP token changes
+`remote.origin.url` without changing the descriptor. The summaries in SAFE-ID,
+the users' guide, the design document, and the terms of reference now say a
+change to the _normalized_ origin, and the ADR states explicitly that a raw
+origin change matters only when normalization alters the identity. Switching
+between SSH and HTTPS still changes the descriptor, because the two carry
+different tags. No normalization rule, descriptor field, or expected outcome
+changes; the rule and its worked examples were already correct, and only the
+summaries that restated them were not.

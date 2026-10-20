@@ -607,6 +607,25 @@ fixed first.
   authority to copy. Lesson for the next round: after repairing an overreach,
   re-check the replacement text against the full rule, because the compression
   that causes these defects is also what a repair tends to do.
+- (2026-10-20, hosted reassessment) The reviewer closed the join-scope finding
+  and upheld the revision-note distinction, then named a fourth summary
+  overreach: a changed origin was said to yield a new descriptor, when only a
+  change to the *normalized* origin does. HTTP authentication userinfo is
+  omitted by normalization and Table 4's credential row already equates the
+  credentialed and credential-free forms, so rotating a token changes
+  `remote.origin.url` without changing the descriptor. Verified by running the
+  normalizer over two URLs differing only in token. Fixed in SAFE-ID, the
+  users' guide, and this plan, and — found by sweeping rather than by the
+  reviewer — in `docs/memoryd-design.md` and `docs/terms-of-reference.md`,
+  which restated the same shorthand. That makes five documents carrying one
+  compressed claim, the widest propagation on this branch, and the sweep was
+  the only reason two of the five were found. The rule, the normalization
+  steps, and Table 4 were all correct throughout; every affected sentence was a
+  summary of them. Consecutive rounds have now found: a false connective, a
+  dropped precondition, a repair-introduced scope error, and a configuration-
+  versus-identity conflation. All four are the same underlying failure — an
+  explanation that is tighter than the rule — so the standing check is to
+  compare each summary against the full rule, not against other summaries.
 
 ## Outcomes & retrospective
 
@@ -917,9 +936,11 @@ For non-Git, fields are root digest and profile. Root digests use domain
 separator `memoryd.root.v1` and the length-prefixed canonical absolute path.
 Absent profile is the empty string; an explicitly empty profile means the same
 thing. Preserve profile case and Unicode code points. A root move, different
-worktree, origin change, or profile change yields a new descriptor. Symlinks
-resolving to the same worktree root yield the same root. Do not use Git's
-shared common directory to collapse linked worktrees.
+worktree, a change to the normalized origin, or a profile change yields a new
+descriptor; a change to the raw origin yields one only when normalization
+alters the identity. Symlinks resolving to the same worktree root yield the
+same root. Do not use Git's shared common directory to collapse linked
+worktrees.
 
 Obtain `remote.origin.url` locally without fetching, executing remote helpers,
 or resolving network aliases. For URL forms, lowercase ASCII scheme and DNS
