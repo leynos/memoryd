@@ -1330,9 +1330,11 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
   surface are settled by roadmap 2.2.4, which must also fix whether the
   registry is purged with the workspace or retained as control metadata. Note
   that the Codex and Claude idempotency keys above embed `{line_hash}` without
-  saying whether it hashes the raw or the redacted line; roadmap 2.2.3 must
-  state which, because a detector-version change would otherwise redefine an
-  idempotency key for a line whose redaction differs between versions.
+  saying what input it covers. The input must be detector-independent, so the
+  redacted line is excluded: a detector-version change would otherwise redefine
+  an idempotency key for a line whose redaction differs between versions.
+  Roadmap 2.2.3 must state the precise detector-independent encoding. No key
+  has been derived yet, so no earlier derivation needs migrating.
 - Define the Chutoro checkpoint format and acceptable theme-ID churn during
   rebuild.
 - Define source-health freshness defaults for each provider.

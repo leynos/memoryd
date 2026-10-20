@@ -112,7 +112,11 @@ No redaction, deny-pattern, or raw-text policy may reintroduce a
 provider-specific branch into the core pipeline; the daemon revalidates push
 and worker inputs rather than trusting a caller-supplied redacted flag; and
 because provider idempotency keys are derived from provider line and request
-identities, a detector-version change must not alter those keys.
+identities, a detector-version change must not alter those keys. That
+requirement in turn fixes a property of the key inputs: every component must be
+detector-independent, so a provider line that a detector would redact is
+represented in the key by its source identity and not by its redacted form. The
+remaining choice of encoding belongs to roadmap 2.2.3.
 
 ### Evidence inbox tables
 

@@ -229,9 +229,12 @@ retrieve, corrupt, or delete another tenant's memory.
 - Ingestion is idempotent across restarts, repeated file observations, hook
   retries, and manual imports.
 - Redaction happens before storage and before embedding for configured secret
-  classes and deny patterns. ADR 015 fixes the first detector corpus, the
-  mandatory default exclusions, and the raw-text modes, and states plainly that
-  detection is a mitigation rather than a guarantee.
+  classes. Path exclusion is a separate control that runs earlier: a deny
+  pattern match denies access before file contents are opened, so denied
+  content is never read and therefore never redacted, stored, or embedded. ADR
+  015 fixes the first detector corpus, the mandatory default exclusions, and
+  the raw-text modes, and states plainly that detection is a mitigation rather
+  than a guarantee.
 - Purging a workspace removes raw evidence rows, graph namespaces, Qdrant
   collections or workspace-scoped payloads, and Chutoro checkpoints. ADR 015
   requires an explicit scope-bound confirmation and a pre-purge backup

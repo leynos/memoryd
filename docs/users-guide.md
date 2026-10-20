@@ -98,13 +98,13 @@ mandatory defaults. Deny patterns are case-sensitive, root-relative globs where
 `*` stops at a path separator and `**` spans directories; a match always denies.
 
 Always check whether the thing was excluded on purpose: an **intentional
-exclusion** — a mandatory default exclusion, a deny-pattern match, or your own
-audited skip of one source position — is recorded as deliberately skipped and
-does advance the cursor, because re-reading it would only be rejected again. A
-**processing failure** — a failed redaction, a detector or policy error, a
-breached processing ceiling, or a store error — is not stored, partially or
-otherwise, its source cursor does not advance, and it surfaces as a
-source-health error. An operator can then fix the source or explicitly skip
+exclusion** — a mandatory default exclusion, a deny-pattern match, or an
+operator's audited skip of one source position — is recorded as deliberately
+skipped and does advance the cursor, because re-reading it would only be
+rejected again. A **processing failure** — a failed redaction, a detector or
+policy error, a breached processing ceiling, or a store error — is not stored,
+partially or otherwise, its source cursor does not advance, and it surfaces as
+a source-health error. An operator can then fix the source or explicitly skip
 that one source position; skipping is audited and is never automatic.
 
 ### Purging a workspace
@@ -120,10 +120,12 @@ retyping the complete displayed scope; empty input, end of input, a mismatch,
 or cancellation changes nothing. Non-interactive use requires an explicit scope
 and a confirmation bound to that exact preview.
 
-Before purging you must acknowledge that a restorable backup was taken. Stop
-writers for the scope before the backup and leave them stopped through the
-purge; a write in between invalidates the acknowledgement and requires a fresh
-backup and preview. Back up every active store for the scope:
+Before purging, an operator must acknowledge that a restorable backup was
+taken. The acknowledgement is bound to the preview scope and records the
+backup's identifier or creation time. Writers must stop for the scope before
+the backup and stay stopped through the purge; a write in between invalidates
+the acknowledgement and requires a fresh backup and preview. Back up every
+active store for the scope:
 
 - Use SQLite's online backup API or `.backup` command rather than copying the
   database file while writers run, and a consistent custom-format `pg_dump` for
@@ -139,14 +141,15 @@ backup and preview. Back up every active store for the scope:
 There is no automatic backup and no automatic undo.
 
 What purge cannot do: it does not securely erase filesystem blocks, it does not
-delete the provider's original transcripts, and it does not reach backups you
-made earlier. A pre-purge backup still contains the removed evidence, so its
-access controls, retention, and deletion are your responsibility. After a
-successful purge, Memoryd keeps a content-free tombstone for that workspace and
-blocks re-collection until an operator explicitly re-enables the scope; that
-re-enabling is a separate action, not a side effect of a retry or a restart. If
-a purge cannot finish, it reports the incomplete cleanup without exposing
-payloads, and retrying over the same scope is safe to repeat.
+delete the provider's original transcripts, and it does not reach backups an
+operator made earlier. A pre-purge backup still contains the removed evidence,
+so its access controls, retention, and deletion remain the operator's
+responsibility. After a successful purge, Memoryd keeps a content-free
+tombstone for that workspace and blocks re-collection until an operator
+explicitly re-enables the scope; that re-enabling is a separate action, not a
+side effect of a retry or a restart. If a purge cannot finish, it reports the
+incomplete cleanup without exposing payloads, and retrying over the same scope
+is safe to repeat.
 
 ## Generated Tooling
 

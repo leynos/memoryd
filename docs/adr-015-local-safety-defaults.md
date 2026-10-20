@@ -147,21 +147,32 @@ Three contracts are accepted together because they share one authority model.
 
 ### SAFE-ID: workspace derivation
 
-A workspace descriptor is versioned and tagged. Git and non-Git descriptors
-carry distinct tags so a non-Git root can never collide with a Git descriptor
-by construction. The descriptor is serialized as UTF-8 bytes with explicit
-unsigned 64-bit big-endian byte lengths for every field, preceded by the ASCII
-domain separator `memoryd.workspace.v1` and the descriptor tag. Length
-prefixing removes delimiter ambiguity; a length that overflows the encoding is
-an error, not a truncation. The authenticated tenant stays a separate key field
-and is never hashed into the descriptor.
+A workspace descriptor is versioned and tagged. The descriptor is serialized as
+UTF-8 bytes with explicit unsigned 64-bit big-endian byte lengths for every
+field, preceded by the ASCII domain separator `memoryd.workspace.v1` followed
+by the tag, itself length-prefixed under the same rule. Length prefixing
+removes delimiter ambiguity; a length that overflows the encoding is an error,
+not a truncation. The authenticated tenant stays a separate key field and is
+never hashed into the descriptor.
 
-For a Git workspace the fields are the normalized origin, the root digest, and
-the profile. For a non-Git workspace the fields are the root digest and the
-profile. A root digest uses the domain separator `memoryd.root.v1` followed by
-the length-prefixed canonical absolute path. Absent profile is the empty
-string, and an explicitly empty profile means the same thing. Profile case and
-Unicode code points are preserved.
+The tag is one ASCII token drawn from a closed set, and the set is exhaustive:
+`git-url`, `git-scp`, `git-absent`, `git-local`, and `nongit`. The whole token
+is the tag; there is no separate version suffix, because the domain separator
+already carries the version. Nothing outside this set is conforming, and an
+unrecognized tag is an error rather than a value to be hashed. Because the
+tokens are distinct and length-prefixed at a fixed position, `nongit` cannot
+collide with any Git descriptor by construction, rather than by inspection of
+the fields that follow.
+
+For every Git tag the fields are the normalized origin, the root digest, and
+the profile. For `git-absent` the origin field is the empty string: the tag,
+not the field, records that no origin is configured, and no remote is guessed.
+For a non-Git workspace the fields are the root digest and the profile; there
+is no origin field at all, so `nongit` and a Git tag cannot be made to agree by
+supplying an empty origin. A root digest uses the domain separator
+`memoryd.root.v1` followed by the length-prefixed canonical absolute path.
+Absent profile is the empty string, and an explicitly empty profile means the
+same thing. Profile case and Unicode code points are preserved.
 
 Identity uses SHA-256 and retains the full 256-bit digest in lowercase
 hexadecimal. The digest is not truncated for storage or authorization. A hash
@@ -432,12 +443,14 @@ the persisted representation of both cases.
 
 Detector version changes are explicit and must not silently redefine provider
 idempotency keys. The Codex and Claude keys in memoryd-design.md §7 embed a
-`line_hash` without stating whether it hashes the raw or the redacted line, so
-that memoryd-design.md §17 records which input each key hashes; hashing the
-redacted line would rewrite the key for every line whose redaction differs
-between detector versions, which is exactly what this requirement forbids.
-Emitted diagnostics use structured reason codes and aggregate counters with
-bounded labels, never paths, raw origins, tokens, or payload labels.
+`line_hash`, and every component of such a key must be detector-independent:
+hashing the redacted line would rewrite the key for every line whose redaction
+differs between detector versions, which is exactly what this requirement
+forbids. memoryd-design.md §17 therefore excludes the redacted form and leaves
+the precise encoding to roadmap 2.2.3. No key has been derived yet, so there is
+no earlier derivation to migrate. Emitted diagnostics use structured reason
+codes and aggregate counters with bounded labels, never paths, raw origins,
+tokens, or payload labels.
 
 **Initial corpus revision.** The initial detector corpus revision is
 `memoryd.redaction.v1`, and it is the detector version recorded with every
@@ -468,17 +481,19 @@ implementation:
   ordinary string, is located in the string's decoded content and must be
   mapped back to the original input. When that string contains no escape
   sequence, decoded and raw offsets agree and exactly the matched sub-interval
-  is redacted; R1-18 is that branch. When it does contain one, the
-  decoded-to-raw mapping is not one-to-one across the escaped region, so the
-  whole raw string literal is redacted, quotes included, rather than
-  reconstructing a partial mapping that could split an escape sequence; R1-37
-  is that branch, and its escape lies inside the matched span, where a narrow
-  span would end part-way through the escape sequence. The widening is applied
-  whenever the string carries an escape at all, not only when the escape falls
-  inside the span, because deciding otherwise requires the very mapping the
-  rule declines to reconstruct. Every case replaces a span of the original
-  input, so the interval bounds land on UTF-8 boundaries without a separate
-  repair step.
+  is redacted; R1-18 is that branch. When it does contain one, decoded and raw
+  offsets no longer agree, so the whole raw string literal is redacted, quotes
+  included, rather than reconstructing an offset map to carry the span back
+  through the escapes; R1-37 is that branch, and its escape lies inside the
+  matched span. Deciding whether a given escape does or does not obstruct a
+  particular span requires that offset map, and an escape can change the length
+  of the raw text relative to the decoded text, so the widening is applied
+  whenever the string carries an escape at all rather than only when a simple
+  length-preserving reading places the span over one. A correct decoded-to-raw
+  map does have a defined boundary after a complete escape, so this is a rule
+  about not reconstructing the map, not a claim that the boundary is
+  unmappable. Every case replaces a span of the original input, so the interval
+  bounds land on UTF-8 boundaries without a separate repair step.
 - **Multiline values.** A value ends at its delimiter, never at a line
   terminator, except for an unquoted assignment. A quoted value ends at its
   closing quote, however many lines later, and its embedded newlines are part
@@ -569,7 +584,7 @@ lines in the cell itself, so no convention is needed to read them.
 | R1-16   | Negative, database URL: `postgres://host/db` with no userinfo                                                                                                                                                     | Not redacted by the database-URL rule.                                                                                                                                                                                                                                                                                                                                                                         |
 | R1-17   | Grammar, malformed JSON: the schema-declared JSON field `{"key": "value"` (unclosed)                                                                                                                              | Record rejected as a processing failure; no store write; cursor does not advance.                                                                                                                                                                                                                                                                                                                              |
 | R1-19   | Grammar, escaped: `{"password": "a\"b"}`                                                                                                                                                                          | Structural match: the whole raw value is replaced, so the result is `{"password": "[REDACTED]"}`, which parses.                                                                                                                                                                                                                                                                                                |
-| R1-37   | Grammar, escaped value scan: `{"note": "see eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.a\u0062b for details"}`                                                                                                          | Value-scanning match: the JWT is found in the decoded string. The `\u0062` escape lies inside the matched span, so the decoded-to-raw mapping is not one-to-one there and a narrow span would end part-way through the escape sequence; the whole value is therefore replaced, giving `{"note": "[REDACTED]"}`, which parses.                                                                                  |
+| R1-37   | Grammar, escaped value scan: `{"note": "see eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.a\u0062b for details"}`                                                                                                          | Value-scanning match: the JWT is found in the decoded string. The `\u0062` escape lies inside the matched span, so decoded and raw offsets differ within it and carrying the span back would require an offset map the rule declines to reconstruct; the whole value is therefore replaced, giving `{"note": "[REDACTED]"}`, which parses.                                                                     |
 | R1-20   | Grammar, multiline: `password = "two\nlines"` with the value spanning both lines                                                                                                                                  | The complete value, embedded newline included, is redacted.                                                                                                                                                                                                                                                                                                                                                    |
 | R1-21   | Grammar, unterminated quote: `password = "three` with no closing quote, followed by the unrelated line `note = handbook index`, which carries no quote of its own                                                 | Redacted through the end of the record, giving `password = [REDACTED]`. The quote never closes, so no delimiter bounds the value, the `note` line is included, and the whole remainder is the value. The next line must carry no unescaped quote: a quoted value ends at its closing quote however many lines later, so a quote there would close the value and the row would contradict the grammar it tests. |
 | R1-22   | Grammar, unquoted trailing: `password =` at end of line, followed by the unrelated line `note = "handbook index"`                                                                                                 | The value is empty, so no characters are redacted and the `note` line is not consumed. The `note` line is a separate record line and is not itself redacted by the assignment rule.                                                                                                                                                                                                                            |
@@ -606,10 +621,13 @@ known-format token never depends on the entropy rule.
 ### SAFE-PURGE: confirmation and backup
 
 Purge is disabled by default. Read-only MCP capabilities expose no purge path,
-and tenant-wide purge remains administratively disabled in local mode, matching
-memoryd-design.md §12. Workspace purge requires an authenticated tenant, an
-allowed workspace, and a purge capability before any preview is computed. Scope
-is never inferred from the current directory and never defaults to all tenants.
+and tenant-wide purge remains administratively disabled in local mode. This is
+stricter than memoryd-design.md §12, which permits enabling `PurgeTenant` for
+migration or offboarding tests: no such configuration is part of this contract,
+so an operator cannot enable tenant-wide purge in local mode. Workspace purge
+requires an authenticated tenant, an allowed workspace, and a purge capability
+before any preview is computed. Scope is never inferred from the current
+directory and never defaults to all tenants.
 
 Before asking for confirmation, the preview shows the canonical tenant and
 workspace identifiers, the affected active stores, the irreversible semantics,
@@ -672,7 +690,7 @@ Table 7 gives worked purge examples.
 | Situation                                               | Expected outcome                                                                                    |
 | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | Purge attempted through a read-only MCP capability      | Denied before any preview is computed.                                                              |
-| Tenant-wide purge in local mode                         | Administratively disabled unless explicitly configured for migration or offboarding.                |
+| Tenant-wide purge in local mode                         | Denied: administratively disabled, with no configured exception.                                    |
 | Confirmation input left empty                           | No store is mutated.                                                                                |
 | Confirmation input ends before a value is read          | No store is mutated.                                                                                |
 | Confirmation does not match the displayed scope         | No store is mutated.                                                                                |
@@ -784,10 +802,12 @@ _Table 7: Purge examples and expected outcomes._
   table, its tenant-scoped uniqueness rule, the configured override and
   explicit-join configuration surface, and whether the registry is purged with
   the workspace or retained as control metadata.
-- Whether the Codex and Claude idempotency keys' `line_hash` hashes the raw or
-  the redacted line (memoryd-design.md §§7 and 17). Roadmap 2.2.3 owns the
-  answer, because hashing redacted text would let a detector-version change
-  redefine an idempotency key.
+- Which detector-independent input the Codex and Claude idempotency keys'
+  `line_hash` covers (memoryd-design.md §§7 and 17). The choice is already
+  bounded above: hashing the redacted line is excluded, because a
+  detector-version change would then redefine an idempotency key. What remains
+  open is only the precise detector-independent encoding. Roadmap 2.2.3 owns
+  that answer.
 
 ## Architectural rationale
 
@@ -983,7 +1003,7 @@ workspaces" carried the same omission and is corrected, and the 2026-10-16
 assessment note's "different canonical paths separate workspaces" is qualified
 with "by default" so the revision record does not restate the defect it
 describes. This one is worth noting for how it arose: the repair for one
-overreach created another by summarising a rule more tightly than the rule
+overreach created another by summarizing a rule more tightly than the rule
 allows. The reviewer had also proposed wording that omitted the join case, and
 said so; the correction below is not a revert to either version but a
 restatement that keeps all three outcomes.

@@ -1,9 +1,10 @@
 # Record local safety defaults for workspace, redaction, and purge
 
-Status: COMPLETE — EP-M1, EP-M2, and EP-M3 delivered. Every gate result in
-Progress names the commit it gated and is evidence about that commit alone.
-Recording a result moves the head it would describe, so the current head's run
-is deliberately not recorded here; that evidence is supplied in the PR 46
+Status: COMPLETE — EP-M1, EP-M2, and EP-M3 delivered. Each gate result in
+Progress that names a commit is evidence about that commit alone; the two
+earliest entries, from before the first commit, record only that the checks
+ran. Recording a result moves the head it would describe, so the current head's
+run is deliberately not recorded here; that evidence is supplied in the PR 46
 assessment thread instead. Publication handoff to `pr-babysitting` owns hosted
 CI and the review conversations, so no local result here is a claim about CI.
 
@@ -17,7 +18,7 @@ Conformance basis, and Verification plan current at every milestone.
 
 ## Purpose / big picture
 
-Record the decisions required by roadmap item 1.1.2 so provider implementors
+Record the decisions required by roadmap item 1.1.2, so provider implementors
 can resolve a workspace, exclude forbidden content, redact evidence, and refuse
 unsafe purge requests without waiting for graph, theme, or Axinite write-back
 policy. Success is an accepted, internally consistent local-safety ADR and
@@ -135,9 +136,11 @@ runtime slice implements and verifies them.
   numbers; terms-of-reference.md §9 still listed the redaction question ADR 015
   resolves; and the tombstone re-enablement obligation had no roadmap owner.
   All five are repaired. Two further gaps were recorded rather than resolved:
-  the workspace-registry storage surface and the `line_hash`
-  raw-versus-redacted question, both now in ADR 015's Outstanding decisions and
-  memoryd-design.md §17 with named owners.
+  the workspace-registry storage surface and the `line_hash` input, both now in
+  ADR 015's Outstanding decisions and memoryd-design.md §17 with named owners.
+  The `line_hash` question is bounded rather than open: the
+  detector-independent requirement excludes the redacted form, leaving only the
+  encoding to roadmap 2.2.3.
 - [x] (2026-10-16) EP-M3 marked roadmap 1.1.2 done in `docs/roadmap.md`. The
   `mapsplice` skill was loaded as the plan requires and its `replace` and
   `delete` commands were tested first; both fail with `dangling_dependency` for
@@ -218,6 +221,20 @@ runtime slice implements and verifies them.
   "five remaining hits" while naming only four rows, and omitted R1-18 from the
   list entirely; the count and the enumeration were both wrong, and both are
   corrected here.
+- [x] (2026-10-20) Repaired all thirteen findings from the two formal reviews of
+  `3046f0c`: two from Codex and eleven from CodeRabbit. The documentation gates
+  were re-run on the repaired tree and passed: `make fmt` (no tracked change),
+  `make check-fmt` (42 files unchanged), `make markdownlint` (42 files, 0
+  issues), and `make nixie` (all diagrams validated). The Rust gates were not
+  re-run for this commit. No Rust target reads a file under `docs/` — every
+  `include_str!` in `src/` and `tests/` names `Cargo.toml`, `Makefile`,
+  `.cargo/config.toml`, `rust-toolchain.toml`, or a workflow — so a
+  documentation-only diff cannot change their result. Two further defects were
+  caught while re-checking this work against measurement rather than prose: the
+  escape entry's account of which `b` the escape decodes to, and a pronoun
+  repair that dropped the agent the following sentence depends on. Both are
+  corrected, and the first is recorded as a mistake rather than quietly
+  rewritten.
 
 ## Surprises & discoveries
 
@@ -323,9 +340,10 @@ fixed first.
   an intentional exclusion advances the cursor, a processing failure does not.
   The earlier wording left denial and non-advancement entangled, so a reader
   could conclude that a denied path blocks its source forever. The documents
-  keep their own voice — the guide says "your own audited skip" where the ADR
-  says "an operator's audited skip" — but the two cases and their outcomes are
-  identical everywhere, and no document may restate only one of them.
+  keep their own voice — the guide uses reader-directed wording for an audited
+  skip where the ADR attributes it to an operator — but the two cases and their
+  outcomes are identical everywhere, and no one document may restate only one
+  of them.
 - (2026-10-16, EP-M3) Fixed the deny-pattern root rather than deferring it: the
   root is the workspace's canonical root, so linked worktrees evaluate their
   own patterns. The ADR already defined that root for the descriptor, so naming
@@ -404,12 +422,11 @@ fixed first.
   As written, the escape sat after the JWT ended, so the row demonstrated a
   value-scanning match in a string that merely contained an escape somewhere
   else, and the stated reason — that a narrow span would split the escape — did
-  not hold for it. With the escape inside the span the naive span genuinely
-  ends part-way through the escape sequence, and the rule's widening is the
-  only correct outcome. The rule text now also states that the widening is
-  triggered by the string carrying an escape at all, not by the escape
-  position, because deciding the latter requires the mapping the rule declines
-  to reconstruct.
+  not hold for it. With the escape inside the span, decoded and raw offsets
+  differ within the matched region, so carrying the span back needs an offset
+  map the rule declines to reconstruct. The rule text now also states that the
+  widening is triggered by the string carrying an escape at all, not by the
+  escape position, because deciding the latter requires that map.
 - (2026-10-16, corpus completion) Made R1-21 genuinely unterminated. The row
   gave its following line a quote of its own, and the same document's rule says
   a quoted value ends at its closing quote however many lines later, so that
@@ -582,9 +599,9 @@ fixed first.
   plainly that equal canonical paths alone do not establish equality. The rule
   at SAFE-ID and the users' guide already carried the full condition set, and
   the developers' guide makes no equality claim, so this was a single-site
-  defect rather than another propagation. It generalises the lesson from the
+  defect rather than another propagation. It generalizes the lesson from the
   previous round: the failure mode is not only repeated wording but a summary
-  that drops conditions the rule it summarises requires, so an explanation
+  that drops conditions the rule it summarizes requires, so an explanation
   should be checked against the rule for missing preconditions as well as for
   false connectives.
 - (2026-10-20, hosted reassessment) The reviewer confirmed the
@@ -595,7 +612,7 @@ fixed first.
   configured workspace, and ignores the collision outcome, which is an error
   rather than a separate workspace. That is the most useful kind of finding on
   this branch because it is not a pre-existing defect — it is one I created
-  while fixing another, by summarising a rule more tightly than the rule
+  while fixing another, by summarizing a rule more tightly than the rule
   allows. The summary now states all three outcomes: equal bindings register as
   one workspace; different bindings never merge implicitly but may share a
   configured workspace through an authorized join; a collision is an error. The
@@ -626,6 +643,71 @@ fixed first.
   versus-identity conflation. All four are the same underlying failure — an
   explanation that is tighter than the rule — so the standing check is to
   compare each summary against the full rule, not against other summaries.
+- (2026-10-20, formal review) The PR became ready and two reviewers then
+  inspected `3046f0c`. Codex found that SAFE-ID fixed the descriptor's byte
+  order, length width, and domain separators but never the tag values, so two
+  conforming implementations could derive different identifiers from identical
+  inputs and the "by construction" separation of Git and non-Git descriptors
+  rested on an undefined token. Verified: the ADR named no tag value anywhere,
+  and the Outstanding-decisions list did not defer the question, so the default
+  was silence rather than a recorded deferral. SAFE-ID now fixes a closed,
+  exhaustive tag set — `git-url`, `git-scp`, `git-absent`, `git-local`,
+  `nongit` — with the tag length-prefixed at a fixed position, an unrecognized
+  tag an error, `git-absent` carrying the empty origin, and the non-Git
+  descriptor carrying no origin field at all. Carried to this plan's SAFE-ID.
+- (2026-10-20, formal review) Codex also found that the escaped-string rule's
+  reason was false as stated. The `\u0062` escape in R1-37 decodes to the second
+  `b` of the trailing `abb`, and the match runs on past that escape to a
+  literal `b`, so a correct decoded-to-raw map ends at a defined boundary after
+  the complete escape, not part-way through it. Verified by building an offset
+  map: the true boundary is raw 59, after the escape at [52:58]; a naive
+  length-preserving map lands at 54, inside the escape payload. The widening
+  rule is therefore correct as a decision not to reconstruct the map, and wrong
+  when justified as an unmappable boundary. Rewrote the rule to say the former,
+  kept the widening, and corrected the R1-37 cell and the rule's statement in
+  this plan. A first revision of this entry then said the escape produces "the
+  `b` that ends the JWT", which is not what the measurement shows either: the
+  escape decodes to the middle `b` of `abb`, and the final `b` is literal.
+  Corrected here without erasing the mistake, because a record that tidies its
+  own overreach away is worth less than one that shows it.
+- (2026-10-20, formal review) CodeRabbit named eleven further findings. All
+  eleven were verified against source and all eleven were valid; two earlier
+  revisions of this entry said four and then nine, each an undercount of the
+  kind the entry describes, corrected against the review's own comment list
+  before the repair was committed. Two further findings came from Codex, for
+  thirteen in total. The purge table added a migration-or-offboarding exception
+  that contradicted the normative requirement in three places; the design
+  document's own exception is scoped to tests, and the row had dropped that
+  qualifier, so the row now denies tenant-wide purge outright and the
+  SAFE-PURGE text states plainly that it is stricter than the design rather
+  than claiming to match it. The Progress header claimed every gate result
+  names its commit while the two pre-commit entries do not, so it now scopes
+  the claim. Two second-person quotes were removed under the `**/*.md` rule
+  with the guide-versus-ADR distinction preserved, and one comma was added
+  before `so`. The plan's verification block listed six gates while its own
+  Progress entries record eight, so it now lists all eight. Five `-ise`
+  spellings became `-ize` under the oxendict rule. The terms of reference made
+  deny patterns an input to redaction, which the ADR contradicts by denying
+  before file contents are opened; the two controls are now stated separately.
+  Four second-person pronouns in the users' guide became operator
+  constructions, and the guide's purge acknowledgement now records the backup
+  identifier or creation time that the ADR already binds it to. The `line_hash`
+  question was recorded as an open raw-versus-redacted choice while the ADR's
+  own detector-independence requirement already excludes the redacted form; it
+  is now bounded at all four sites, leaving only the encoding to roadmap 2.2.3.
+- (2026-10-20, formal review, pattern) Thirteen defects from two reviewers on
+  one head, and the two that mattered were not wording: an undefined encoding
+  and a false rationale. Both were invisible to every cross-document
+  consistency check that caught the five earlier overreaches, because in each
+  case every document agreed. Consistency between documents is necessary and
+  not sufficient; a claim also has to be checked against the world, by building
+  the artifact it describes. The same round repeated the pattern one level up:
+  the count of findings was itself stated more tightly than the evidence,
+  twice, and so was one repair that claimed a fresh preview could not reuse an
+  earlier acknowledgement when the ADR binds the acknowledgement to the scope
+  and the backup record, not to the preview's identity. Both were caught only
+  by re-reading the review's comment list rather than the prose summary of it,
+  which is the same lesson applied to the review process itself.
 
 ## Outcomes & retrospective
 
@@ -671,8 +753,8 @@ Second, the cursor rule was stated three times in three slightly different
 ways, and only a side-by-side comparison exposed that one variant implied a
 denied path blocks its source permanently. Restating a rule in several
 documents requires one canonical statement to copy from. It does not require
-identical sentences: a guide addresses the reader as "you" while an ADR speaks
-of "the operator", and forcing one voice on both would make one of them read
+identical sentences: a guide may address the reader directly while an ADR
+speaks of "the operator", and forcing one voice on both would make one read
 badly. What must not vary is the rule — the cases, their outcomes, and which
 one retries.
 
@@ -829,13 +911,14 @@ value is now one no prefix rule recognizes, and the cell names the two rules
 that cannot be responsible.
 
 The third was a witness that did not witness. R1-37 exists to exercise the
-widened branch, and its reason is that a narrow span would split an escape
-sequence — but its escape sat after the JWT ended, outside the span, so the
-stated reason did not apply to the case given. The escape is now inside the
-span, where the naive span genuinely ends part-way through an escape sequence,
+widened branch, and the reason originally given for it was that a narrow span
+would split an escape sequence — but its escape sat after the JWT ended,
+outside the span, so the stated reason did not apply to the case given, and the
+reason itself was later found not to hold in the inside-span case either. The
+escape is now inside the span, where decoded and raw offsets genuinely differ,
 and the rule text states that the widening is triggered by the string carrying
 an escape at all rather than by the escape's position, since deciding the
-latter needs the mapping the rule declines to reconstruct.
+latter needs the offset map the rule declines to reconstruct.
 
 Two more came out of the same pass once the rows were read as a reader sees
 them rather than as source text. R1-02 marked its input with double backticks,
@@ -924,23 +1007,27 @@ below are local trace labels, not invented upstream IDs.
 
 ### SAFE-ID: workspace derivation
 
-Use a versioned descriptor with distinct Git and non-Git tags. Hash with
-SHA-256 and retain the full 256-bit digest in lowercase hexadecimal; do not
-truncate for storage or authorization. Serialize fields as UTF-8 bytes with
-explicit unsigned 64-bit big-endian byte lengths, preceded by the ASCII domain
-separator `memoryd.workspace.v1` and the descriptor tag. This avoids delimiter
-ambiguity. Define overflow as an error. The tenant stays a separate key field.
+Use a versioned descriptor with a closed tag set: `git-url`, `git-scp`,
+`git-absent`, `git-local`, `nongit`. Hash with SHA-256 and retain the full
+256-bit digest in lowercase hexadecimal; do not truncate for storage or
+authorization. Serialize fields as UTF-8 bytes with explicit unsigned 64-bit
+big-endian byte lengths, preceded by the ASCII domain separator
+`memoryd.workspace.v1` and the length-prefixed tag. This avoids delimiter
+ambiguity, and the fixed tag position makes the Git/non-Git separation
+structural. An unrecognized tag is an error. Define overflow as an error. The
+tenant stays a separate key field.
 
-For Git, fields are normalized origin, the SHA-256 root digest, and profile.
-For non-Git, fields are root digest and profile. Root digests use domain
-separator `memoryd.root.v1` and the length-prefixed canonical absolute path.
-Absent profile is the empty string; an explicitly empty profile means the same
-thing. Preserve profile case and Unicode code points. A root move, different
-worktree, a change to the normalized origin, or a profile change yields a new
-descriptor; a change to the raw origin yields one only when normalization
-alters the identity. Symlinks resolving to the same worktree root yield the
-same root. Do not use Git's shared common directory to collapse linked
-worktrees.
+For every Git tag, fields are normalized origin, the SHA-256 root digest, and
+profile; `git-absent` carries the empty origin, with the tag recording absence.
+For non-Git, fields are root digest and profile, with no origin field, so an
+empty origin cannot make the tags agree. Root digests use domain separator
+`memoryd.root.v1` and the length-prefixed canonical absolute path. Absent
+profile is the empty string; an explicitly empty profile means the same thing.
+Preserve profile case and Unicode code points. A root move, different worktree,
+a change to the normalized origin, or a profile change yields a new descriptor;
+a change to the raw origin yields one only when normalization alters the
+identity. Symlinks resolving to the same worktree root yield the same root. Do
+not use Git's shared common directory to collapse linked worktrees.
 
 Obtain `remote.origin.url` locally without fetching, executing remote helpers,
 or resolving network aliases. For URL forms, lowercase ASCII scheme and DNS
@@ -1371,7 +1458,7 @@ semantic error classes, the storage-binding constraints that matter for
 interval provenance and purge fencing, and a subsection giving each V-ID,
 V-TEXT, and V-PURGE obligation its roadmap owner, witnesses, negative control,
 proof command, and integration-test requirement. Detailed architecture stays in
-the design document and ADR 015. `docs/contents.md` summarises both additions.
+the design document and ADR 015. `docs/contents.md` summarizes both additions.
 
 Acceptance E2: a new provider author can determine every safe ingest outcome
 from the ADR and guides without choosing graph/theme policy. An operator can
@@ -1415,6 +1502,8 @@ make markdownlint 2>&1 | tee /tmp/markdownlint-memoryd-1-1-2-record-local-safety
 make nixie 2>&1 | tee /tmp/nixie-memoryd-1-1-2-record-local-safety-defaults.out
 make lint 2>&1 | tee /tmp/lint-memoryd-1-1-2-record-local-safety-defaults.out
 make test 2>&1 | tee /tmp/test-memoryd-1-1-2-record-local-safety-defaults.out
+make typecheck 2>&1 | tee /tmp/typecheck-memoryd-1-1-2-record-local-safety-defaults.out
+make test-workflow-contracts 2>&1 | tee /tmp/test-workflow-contracts-memoryd-1-1-2-record-local-safety-defaults.out
 ```
 
 Run each line separately and stop on failure. Expected evidence is exit zero
