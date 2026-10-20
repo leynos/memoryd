@@ -753,14 +753,17 @@ _Table 7: Purge examples and expected outcomes._
   runtime slice implements and verifies them.
 - Cross-machine identity stability is not promised, and because no machine
   identifier is an input, two machines are not separated by themselves. Two
-  machines with different canonical roots will register different workspaces
-  for the same repository. Equal canonical paths alone do not establish
-  descriptor equality: under the same tenant, two checkouts with the same
-  descriptor version, normalized origin, canonical root string, and profile
-  derive equal descriptors and register as one workspace, while a difference in
-  any of those fields yields a separate workspace. The mitigation for the
-  shared-path case is to keep one source per workspace or to separate the
-  paths; the explicit operator join covers the different-path case.
+  machines with different canonical roots derive different descriptors for the
+  same repository, and so register different workspaces by default. Equal
+  canonical paths alone do not establish descriptor equality either: under the
+  same tenant, two checkouts with the same descriptor version, normalized
+  origin, canonical root string, and profile derive equal descriptors and
+  register as one workspace. Different bindings do not merge implicitly; they
+  can share one configured workspace only through an explicitly authorized
+  join, and a derived-key collision raises an error rather than merging them.
+  The mitigation for the shared-path case is to keep one source per workspace
+  or to separate the paths; the explicit operator join covers the
+  different-path case.
 
 ## Outstanding decisions
 
@@ -858,8 +861,8 @@ Assessment revision (2026-10-16). Names the initial detector corpus revision
 boundary cases with exact expected outcomes, including the malformed-JSON,
 escaped-string, and multiline grammar decisions and measured entropy boundary
 inputs. Corrects the workspace-identity options table and states that different
-canonical paths separate workspaces while different machines alone do not,
-because no machine identifier is an input.
+canonical paths separate workspaces by default while different machines alone
+do not, because no machine identifier is an input.
 
 Reassessment revision (2026-10-16). Adds the JSON rendering contract, which
 fixes the marker's serialized form inside schema-declared JSON. Without it the
@@ -963,3 +966,22 @@ explanation that dropped conditions the rule it summarised actually requires.
 The rule at SAFE-ID and the users' guide both already carried the full set, so
 neither needed changing; the developers' guide makes no equality claim and was
 checked and left alone.
+
+Join-scope revision (2026-10-20). The descriptor-equality repair itself
+introduced a new overreach in the same risk summary: it said "a difference in
+any of those fields yields a separate workspace". The explicit-join rule above
+permits two different descriptor bindings to share one configured workspace
+when an operator lists both as authorized, and a derived-key collision raises a
+typed error as a third outcome that is neither a merge nor a separate
+workspace. The summary now separates the three outcomes: equal bindings
+register as one workspace, different bindings never merge implicitly but may
+share a configured workspace through an authorized join, and a collision is an
+error. The users' guide's "different canonical paths always give different
+workspaces" carried the same omission and is corrected, and the 2026-10-16
+assessment note's "different canonical paths separate workspaces" is qualified
+with "by default" so the revision record does not restate the defect it
+describes. This one is worth noting for how it arose: the repair for one
+overreach created another by summarising a rule more tightly than the rule
+allows. The reviewer had also proposed wording that omitted the join case, and
+said so; the correction below is not a revert to either version but a
+restatement that keeps all three outcomes.

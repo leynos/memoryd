@@ -35,14 +35,16 @@ Consequences to plan for:
   does not merge them, so a checkout and its linked worktree do not share
   evidence by default.
 - **Cross-machine identity depends on the path, not the machine.** The root
-  path is part of the identity, so different canonical paths always give
-  different workspaces. Two different machines are not separated by themselves:
-  if the same repository is cloned to the *same* canonical path under the same
-  tenant, origin, and profile, the two clones derive the same descriptor and
-  register as one workspace. Nothing in the identity records which machine it
-  came from. To keep two machines separate, give them different canonical
-  paths; to share evidence between divergent paths deliberately, use an
-  explicit operator mapping rather than relying on the paths happening to match.
+  path is part of the identity, so different canonical paths produce different
+  descriptor bindings. They remain separate unless an operator explicitly joins
+  them; a collision causes registration to fail. Two different machines are not
+  separated by themselves: if the same repository is cloned to the *same*
+  canonical path under the same tenant, origin, and profile, the two clones
+  derive the same descriptor and register as one workspace. Nothing in the
+  identity records which machine it came from. To keep two machines separate,
+  give them different canonical paths; to share evidence between divergent
+  paths deliberately, use an explicit operator mapping rather than relying on
+  the paths happening to match.
 
 Operators can map an exact descriptor to a chosen workspace identifier, scoped
 to one tenant. An intentional merge requires listing the descriptors

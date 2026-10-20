@@ -587,6 +587,26 @@ fixed first.
   that drops conditions the rule it summarises requires, so an explanation
   should be checked against the rule for missing preconditions as well as for
   false connectives.
+- (2026-10-20, hosted reassessment) The reviewer confirmed the
+  shape-preservation finding closed and accepted the descriptor-equality
+  repair, then caught an overreach the repair itself introduced: "a difference
+  in any of those fields yields a separate workspace" ignores the explicit-join
+  rule directly above it, under which two different bindings may share one
+  configured workspace, and ignores the collision outcome, which is an error
+  rather than a separate workspace. That is the most useful kind of finding on
+  this branch because it is not a pre-existing defect — it is one I created
+  while fixing another, by summarising a rule more tightly than the rule
+  allows. The summary now states all three outcomes: equal bindings register as
+  one workspace; different bindings never merge implicitly but may share a
+  configured workspace through an authorized join; a collision is an error. The
+  users' guide's "different canonical paths always give different workspaces"
+  carried the identical omission, and a 2026-10-16 assessment note restated it
+  without qualification, so all three were corrected. The reviewer also
+  disclosed that its own earlier suggested wording omitted the join case, which
+  is a useful reminder that a proposed correction is evidence rather than an
+  authority to copy. Lesson for the next round: after repairing an overreach,
+  re-check the replacement text against the full rule, because the compression
+  that causes these defects is also what a repair tends to do.
 
 ## Outcomes & retrospective
 
