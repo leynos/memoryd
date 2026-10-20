@@ -235,6 +235,13 @@ runtime slice implements and verifies them.
   repair that dropped the agent the following sentence depends on. Both are
   corrected, and the first is recorded as a mistake rather than quietly
   rewritten.
+- [x] (2026-10-20) Committed the repairs as `5a97b3e` and pushed them to the PR
+  head, verified by `ls-remote` returning the same object the local HEAD names.
+  Both review replies were posted through the configured manual-comment route
+  and read back: the Codex reply at issue comment 6301537355 by
+  `wafflecat-df12`, and the CodeRabbit reply at issue comment 6301540274 by
+  `buzzybee-df12`. Each used a separately selected pool token, and neither was
+  posted as the lifecycle account.
 
 ## Surprises & discoveries
 
