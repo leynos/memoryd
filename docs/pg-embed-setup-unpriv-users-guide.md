@@ -10,11 +10,19 @@ tool and integrate it into automated test flows.
 
 ## Prerequisites
 
-- Linux host, VM, or container. `root` access enables the privilege-dropping
-  path, but unprivileged executions are also supported.
-- Rust toolchain specified in `rust-toolchain.toml`.
+- Linux, macOS, or Windows host. Linux supports both the root
+  privilege-dropping path and the unprivileged path; macOS and Windows support
+  the unprivileged path.
+- Rust toolchain specified in `rust-toolchain.toml` for developing this crate.
+  A project that depends on it needs Rust 1.92 or newer, the crate's
+  `rust-version`. Releases before 0.6.2 declared 1.85, but no release of
+  `postgresql_embedded` that this crate accepts builds on anything older than
+  1.92, and 0.6.1 additionally required 1.94 through a direct
+  `postgresql_archive` requirement. The `msrv` CI job now enforces the declared
+  version, and the change log records any later change to it.
 - Outbound network access to crates.io and the PostgreSQL binary archive.
-- System timezone database (package usually named `tzdata`).
+- System timezone database where required. On Unix-like systems, this package is
+  usually named `tzdata`; Windows uses the platform timezone database.
 
 ## Platform expectations
 
@@ -23,7 +31,11 @@ tool and integrate it into automated test flows.
 - macOS runs the unprivileged path; root executions are expected to fail fast
   because privilege dropping is not supported on that target.
 - Windows always behaves as unprivileged, so the helper runs in-process and
-  ignores root-only scenarios.
+  ignores root-only scenarios. Windows directory creation uses the current
+  account's access control lists (ACLs); the Unix `0700`/`0755` privacy modes
+  are not applied there.
+- Windows on ARM is not a supported target because the upstream PostgreSQL
+  binary archive does not provide `aarch64-pc-windows-msvc` binaries.
 
 ## Test backend selection
 
@@ -52,8 +64,17 @@ Troubleshooting guidance:
 
 ## Quick start
 
-On Linux `x86_64` and `aarch64`, tagged releases publish both CLI binaries in a
-`cargo binstall` archive. Install them with:
+Tagged releases publish both CLI binaries in `cargo binstall` archives for:
+
+| Operating system | Targets                                                 |
+| ---------------- | ------------------------------------------------------- |
+| Linux            | `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` |
+| macOS            | `aarch64-apple-darwin`, `x86_64-apple-darwin`           |
+| Windows          | `x86_64-pc-windows-msvc`                                |
+
+_Table 1: Host release targets for tagged `cargo binstall` archives._
+
+Install the host release with:
 
 ```bash
 cargo binstall pg-embed-setup-unpriv
@@ -61,7 +82,7 @@ cargo binstall pg-embed-setup-unpriv
 
 1. Choose directories for the staged PostgreSQL distribution and the cluster’s
    data files. They must be writable by whichever user will run the helper; the
-   tool reapplies ownership and permissions on every invocation.
+   tool reapplies ownership and permissions on Unix on every invocation.
 
 2. Export configuration:
 
@@ -73,25 +94,42 @@ cargo binstall pg-embed-setup-unpriv
    export PG_PASSWORD="postgres_pass"
    ```
 
+   Without `PG_RUNTIME_DIR` and `PG_DATA_DIR` the helper derives both under
+   `/var/tmp/pg-embed-{uid}` on Linux and the BSDs, one tree per user that
+   every project on the host shares. Set `PG_EMBED_ROOT` to give a project or a
+   test run its own base (`<root>/install` and `<root>/data`); the two leaf
+   variables still win when set. A derived `<root>/data` holds one directory
+   per cluster, so concurrent test processes can share one root (see
+   "Per-cluster data directories" below). On macOS and Windows there is no
+   per-user default tree: without `PG_EMBED_ROOT` the `postgresql_embedded`
+   defaults apply, and with it the same two leaves are derived.
+
+   Test clusters cap `max_connections` at 20 (a `postgres` container defaults
+   to 100); set `PG_MAX_CONNECTIONS` when parallel test runners need more. The
+   override applies to plain `bootstrap()` runs as well as test bootstraps, and
+   values below 4 are rejected because PostgreSQL keeps three connection slots
+   for superusers below `max_connections`.
+
    Optionally set `PG_SHUTDOWN_TIMEOUT_SECS` to override the 15-second drop
    budget. The helper accepts values between `1` and `600` seconds and reports
    an error when the override falls outside that range or cannot be parsed.
 
-3. Run the helper (`cargo run --release --bin pg_embedded_setup_unpriv`). The
-   command downloads the specified PostgreSQL release, ensures the directories
-   exist, applies PostgreSQL-compatible permissions (0755 for the installation
-   cache, 0700 for the runtime and data directories), and initializes the
-   cluster with the provided credentials via `initdb`. The PostgreSQL server is
-   **not** started — the installation is left ready for subsequent use by
+3. Run the installed helper (`pg_embedded_setup_unpriv`). The command downloads
+   the specified PostgreSQL release, ensures the directories exist, applies
+   PostgreSQL-compatible permissions on Unix (0755 for the installation cache,
+   0700 for the runtime and data directories), and initializes the cluster with
+   the provided credentials via `initdb`. On Windows, POSIX mode changes are
+   skipped and the current account's ACL defaults apply. The PostgreSQL server
+   is **not** started — the installation is left ready for subsequent use by
    `TestCluster` or other tools. Invocations that begin as `root` prepare
    directories for `nobody` and execute lifecycle commands through the worker
    helper, so the privileged operations run entirely under the sandbox user.
-   Ownership fix-ups occur on every call so running the tool twice remains
+   Ownership fix-ups occur on every call, so running the tool twice remains
    idempotent.
 
-4. Pass the resulting paths and credentials to the test harness. If
-   `postgresql_embedded` is used directly after the setup step, it can reuse
-   the staged binaries and data directory without needing `root`.
+4. Pass the resulting paths and credentials to the test suite. Direct
+   `postgresql_embedded` usage after the setup step can reuse the staged
+   binaries and data directory without needing `root`.
 
 ## Bootstrap for test suites
 
@@ -129,9 +167,9 @@ rather than when PostgreSQL launches.
 
 `bootstrap_for_tests()` also inserts a small set of PostgreSQL server
 configuration entries into `bootstrap.settings.configuration` to minimize
-background and parallel worker processes for ephemeral test clusters. These
-values can be overridden by mutating the configuration map before starting the
-cluster if a different behaviour is required.
+background and parallel worker processes for ephemeral test clusters. Suites
+that need different behaviour can override these values by mutating the
+configuration map before starting the cluster.
 
 ## Resource Acquisition Is Initialization (RAII) test clusters
 
@@ -184,14 +222,14 @@ from within a runtime" because it creates its own internal Tokio runtime. Async
 contexts require enabling the `async-api` feature and using the async
 constructor and shutdown methods.
 
-Enable the feature in `Cargo.toml`:
+Enable the feature in your `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-pg-embed-setup-unpriv = { version = "0.2", features = ["async-api"] }
+pg-embed-setup-unpriv = { version = "0.6.3", features = ["async-api"] }
 ```
 
-Then use `start_async()` and `stop_async()` in async tests:
+Then use `start_async()` and `stop_async()` in your async tests:
 
 ```rust,no_run
 use pg_embedded_setup_unpriv::{TestCluster, error::BootstrapResult};
@@ -284,10 +322,10 @@ fn coverage(test_cluster: TestCluster) {
 }
 ```
 
-If PostgreSQL cannot start, the fixture panics with a `SKIP-TEST-CLUSTER`
--prefixed message that retains the original error. Unit tests fail immediately,
-while behaviour tests can convert known transient conditions into soft skips
-via the shared `skip_message` helper.
+If PostgreSQL cannot start, the fixture panics with a
+`SKIP-TEST-CLUSTER`-prefixed message that retains the original error. Unit
+tests fail immediately, while behaviour tests can convert known transient
+conditions into soft skips via the shared `skip_message` helper.
 
 ### Shared cluster fixture for fast test isolation
 
@@ -299,18 +337,28 @@ eliminating per-test bootstrap overhead.
 ```rust,no_run
 use pg_embedded_setup_unpriv::{test_support::shared_test_cluster, TestCluster};
 use rstest::rstest;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+static DB_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+fn unique_database_name() -> String {
+    let id = DB_COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("shared_cluster_test_{}_{id}", std::process::id())
+}
 
 #[rstest]
 fn uses_shared_cluster(shared_test_cluster: &'static TestCluster) {
-    // Create a per-test database for isolation
-    shared_test_cluster.create_database("my_test_db").unwrap();
+    let db_name = unique_database_name();
 
-    // Run tests against the database
-    let url = shared_test_cluster.connection().database_url("my_test_db");
-    assert!(url.contains("my_test_db"));
+    // Create a per-test database for isolation.
+    shared_test_cluster.create_database(&db_name).unwrap();
 
-    // Clean up (optional - the database is dropped when the cluster shuts down)
-    shared_test_cluster.drop_database("my_test_db").unwrap();
+    // Run tests against the database.
+    let url = shared_test_cluster.connection().database_url(&db_name);
+    assert!(url.contains(&db_name));
+
+    // Clean up the per-test database.
+    shared_test_cluster.drop_database(&db_name).unwrap();
 }
 ```
 
@@ -336,6 +384,8 @@ assert!(std::ptr::eq(cluster, cluster2));
 | `test_cluster`        | Tests that modify cluster-level settings or state |
 | `shared_test_cluster` | Tests that only need database-level isolation     |
 
+_Table 2: Fixture selection for `pg-embed-setup-unpriv` test clusters._
+
 The shared cluster is particularly effective when combined with template
 databases (see "Database lifecycle management" below) to reduce per-test
 overhead from seconds to milliseconds.
@@ -345,8 +395,8 @@ overhead from seconds to milliseconds.
 `TestCluster::connection()` exposes `TestClusterConnection`, a lightweight view
 over the running cluster's connection metadata. Use it to read the host, port,
 superuser name, generated password, or the `.pgpass` path without cloning the
-entire bootstrap struct. When persistence beyond the guard is required,
-`metadata()` can be called to obtain an owned `ConnectionMetadata`.
+entire bootstrap struct. When you need to persist those values beyond the guard
+you can call `metadata()` to obtain an owned `ConnectionMetadata`.
 
 Enable the `diesel-support` feature to call `diesel_connection()` and obtain a
 ready-to-use `diesel::PgConnection`. The default feature set keeps Diesel
@@ -463,7 +513,9 @@ execution.
 
 The `ensure_template_exists` method provides concurrency-safe template creation
 with per-template locking to prevent race conditions when multiple tests try to
-initialize the same template simultaneously:
+initialize the same template simultaneously. If the setup callback fails or
+panics after creating the template, the helper drops that partially created
+template before returning the error or resuming the panic:
 
 ```rust,no_run
 use pg_embedded_setup_unpriv::TestCluster;
@@ -498,14 +550,17 @@ let template_name = format!("template_{}", &hash[..8]);
 # }
 ```
 
-If migration version tracking is already configured, include it in the template
-name instead (for example, `format!("template_v{SCHEMA_VERSION}")`). This keeps
+If you already track a migration version, include it in the template name
+instead (for example, `format!("template_v{SCHEMA_VERSION}")`). This keeps
 template invalidation explicit without hashing the migration directory.
 
 ### Performance comparison
 
-The following table compares test isolation approaches: Table: Comparison of
-test-cluster approaches and their isolation/overhead characteristics.
+The following table reports approximate benchmark results from one development
+test environment. Treat the timings as environment-dependent guidance rather
+than guaranteed performance figures.
+
+_Table 3: Performance comparison for test isolation approaches._
 
 | Approach                       | Bootstrap | Per-test overhead | Isolation |
 | ------------------------------ | --------- | ----------------- | --------- |
@@ -568,8 +623,8 @@ cluster.create_database_from_template(&db_name, "my_template")?;
 ```
 
 **Active connection handling:** Dropping a database with active connections
-fails. All connections must be closed before calling `drop_database`. If
-connection pools are used, they should be drained first.
+fails. Ensure all connections are closed before calling `drop_database`. If
+using connection pools, drain the pool first.
 
 ### Automatic cleanup with TemporaryDatabase
 
@@ -595,7 +650,7 @@ drop(temp_db);
 # }
 ```
 
-Template-based workflows use `temporary_database_from_template`:
+For template-based workflows, use `temporary_database_from_template`:
 
 ```rust,no_run
 use pg_embedded_setup_unpriv::TestCluster;
@@ -603,7 +658,7 @@ use pg_embedded_setup_unpriv::TestCluster;
 # fn main() -> pg_embedded_setup_unpriv::BootstrapResult<()> {
 let cluster = TestCluster::new()?;
 
-// The template must exist before cloning
+// Ensure the template exists
 cluster.ensure_template_exists("migrated_template", |_| Ok(()))?;
 
 // Create a temporary database from the template
@@ -623,16 +678,210 @@ let temp_db = cluster.temporary_database_from_template("test_db", "migrated_temp
 - Implicit drop (guard goes out of scope) — Best-effort drop with a warning
   logged on failure.
 
+## Reusing an existing cluster
+
+When the data directory already holds a cluster (its `PG_VERSION` marker is
+present) and `PG_PASSWORD` is not set, the bootstrap reads the superuser
+password back from the install tree's password file (`<install>/.pgpass`, which
+`initdb` was given) instead of generating a fresh one, so connections to the
+reused cluster succeed. If that file is missing, unreadable, or empty the
+bootstrap fails and names the data directory and the file: set `PG_PASSWORD` to
+the password that initialized the cluster, or remove the stale cluster. An
+explicit `PG_PASSWORD` always wins.
+
+An explicit password short-circuits the whole check: the password file is not
+read at all, so setting `PG_PASSWORD` is a working escape from a cluster whose
+stored file has been lost.
+
+When the data directory holds no cluster, a password file left in the install
+tree by an earlier, reaped cluster is removed before the new cluster is
+initialized. In releases after 0.6.0 this applies whether or not `PG_PASSWORD`
+is set. `initdb` reads that file, so a stale one used to give the fresh cluster
+the old password while the bootstrap reported a new one, and every process
+after the first in a persistent install root (`PG_EMBED_ROOT`, or the default
+per-user root) failed with `password authentication failed`. Under
+`cargo nextest`, where each test is its own process, that was every test but
+the first. A stale path that cannot be removed fails the bootstrap with
+`ClusterPasswordUnreadable` rather than letting `initdb` read it.
+
+With an explicit `PG_DATA_DIR`, the password file belongs to the install tree,
+not to a data directory, so an install tree serves one such cluster at a time.
+Point two clusters at one `PG_RUNTIME_DIR` with different `PG_DATA_DIR` values
+and a fresh cluster in the second data directory removes the file the first
+cluster's reuse depends on. Before this change, the fresh cluster was instead
+initialized with the first cluster's password, and nobody could log in to it.
+Give each cluster its own install root, for example its own `PG_EMBED_ROOT`, or
+set `PG_PASSWORD` for both.
+
+A failed connection to the admin database keeps the driver's error in the
+chain, and the message names its cause, for example
+`failed to connect to admin database: db error: FATAL: password authentication
+failed for user "postgres"`
+rather than a bare `db error`.
+
+The file itself must be a regular file of no more than 4 KiB. The bootstrap
+opens it once and takes both its type and its size from that one handle, so a
+path replaced after a check cannot redirect the read. A FIFO, a directory, or
+any other non-regular file is refused rather than waited on: the Unix open
+carries `O_NONBLOCK`, so a FIFO with no writer returns at once and is then
+rejected for its type. A file longer than the cap is refused without being
+read. Both refusals return `ClusterPasswordUnreadable`, the error an unreadable
+file returns.
+
+Probing the data directory fails loudly as well. Only a missing `PG_VERSION`
+marker means there is no cluster; a permission error, or any other failure to
+read that marker, returns `ClusterPasswordUnreadable` rather than reporting no
+cluster, so a data directory that is temporarily unsearchable cannot be
+mistaken for a fresh one and started with a new password.
+
+Three items at the crate root expose the same logic to a consumer that manages
+its own `Settings`.
+
+Table: Password-reuse API.
+
+| Item                      | Purpose                                                                                                                                                                                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `stored_cluster_password` | Query. Given the data directory and the password file, returns `Ok(None)` when the data directory holds no cluster, `Ok(Some(password))` when it does, and an error when the data directory cannot be probed or when the file is missing, unreadable, empty, not a regular file, or larger than 4 KiB. |
+| `reuse_existing_password` | Command. Takes the same two paths plus the mutable `Settings` and whether the caller supplied a password, aligns `settings.password` with the cluster on disk, and returns the outcome.                                                                                                                |
+| `PasswordReuseOutcome`    | The bounded outcome of a successful call: `Reused`, `ExplicitPassword`, or `NoCluster`. Each is also an `outcome` label of the `password_reuse` tracing event, which carries four further labels for the failures.                                                                                     |
+
+`reuse_existing_password` emits a warning-level `password_reuse` event on every
+failure branch before the error is returned, labelled `probe_failed`,
+`missing_file`, `unreadable_file`, or `empty_file`. A failure returns an error
+rather than a `PasswordReuseOutcome`, so those four labels appear only in the
+event: the field accepts all seven values, the returned enum carries the three
+successes. No password is ever a label. `stored_cluster_password` emits nothing
+at all: it is a query, so a caller that wants the event calls the command.
+
+The same call records one `Metric::PasswordReuse` count, once per call and
+never from the query. The crate takes no metrics dependency, because a library
+should not choose one on a consumer's behalf; install a `MetricsRecorder` and
+forward each count to whatever you already run.
+
+```rust,no_run
+use std::sync::Arc;
+
+use pg_embedded_setup_unpriv::observability::{
+    Metric,
+    MetricsRecorder,
+    install_metrics_recorder,
+};
+
+struct Forwarding;
+
+impl MetricsRecorder for Forwarding {
+    fn record(&self, metric: Metric) {
+        let Metric::PasswordReuse(outcome) = metric;
+        // `outcome` is an enum, so it is safe to use as a label directly.
+        println!("password_reuse {outcome:?}");
+    }
+}
+
+let _guard = install_metrics_recorder(Arc::new(Forwarding));
+```
+
+The outcome is an enum rather than a string, so the label set is bounded by
+construction: a password or a path cannot reach a metric through it. The seven
+values are `Reused`, `ExplicitPassword` and `NoCluster` for the success
+branches, and `ProbeFailed`, `MissingFile`, `UnreadableFile` and `EmptyFile`
+for the failures. `ProbeFailed` and `UnreadableFile` stay distinct even though
+both return `ClusterPasswordUnreadable`. With no recorder installed, recording
+costs a branch and a return.
+
+## Per-cluster data directories
+
+**Layout change in releases after 0.6.0.** When the data directory is derived
+from a root, `PG_EMBED_ROOT` or the per-user default, each cluster gets a data
+directory of its own under the root. This lets concurrent processes, such as
+`cargo nextest` running one process per test, each bootstrap a working cluster
+in one root. Up to 0.6.0 they shared one directory, and every process but the
+first failed with `pg_ctl: another server might be running`.
+
+|                | 0.6.0 and earlier        | Later releases              |
+| -------------- | ------------------------ | --------------------------- |
+| Data directory | `<root>/data`            | `<root>/data/<name>/`       |
+| Password file  | `<root>/install/.pgpass` | `<root>/data/<name>.pgpass` |
+| Liveness lock  | none                     | `<root>/data/<name>.lock`   |
+
+_Table: Data layout under a derived root._
+
+`<name>` is `<pid>-<nanoseconds>-<counter>`, unique to each cluster. The
+install tree, `<root>/install`, is still shared. A cluster left directly in
+`<root>/data` by an earlier release is no longer used, and the bootstrap logs a
+warning naming it; it can be deleted.
+
+- **Explicit `PG_DATA_DIR` is unchanged.** Setting it keeps a single data
+  directory at that path, with its password file in the install tree, and skips
+  everything below.
+- **Clean-up.** Each process holds a kernel lock on its cluster's `.lock` file
+  until it exits. The next bootstrap in the root removes every cluster whose
+  lock it can take, which are those whose process has gone, however it ended. A
+  reused process ID cannot fool this, because the held lock decides, not the
+  ID. A cluster whose data directory is removed while its process lives, for
+  example by `TestCluster`'s drop, leaves its `.lock` and `.pgpass` files until
+  the process exits.
+- **Orphaned servers.** If a test process dies abruptly, its `postgres`
+  server can outlive it. Before removing a dead cluster's directory, the
+  bootstrap reads its `postmaster.pid`. A live process counts as that cluster's
+  server only if it is a `postgres` serving that directory (its working
+  directory is the cluster's, read from `/proc` on Linux and with `lsof`
+  elsewhere), so a recycled process ID that now belongs to another database is
+  left alone. The bootstrap stops the server the way `pg_ctl stop -m immediate`
+  does, and removes the directory only after the server has exited. A server it
+  cannot stop, or cannot confirm, keeps its directory, and a warning is logged.
+- **`run` and the binary keep one directory.** The setup-only `run` function
+  and the `pg_embedded_setup_unpriv` binary initialize a cluster to be used
+  after they exit, so they keep the derived `<root>/data` directory as in 0.6.0
+  rather than taking a slot that the next bootstrap would sweep. A
+  `TestCluster` in the same root claims a slot of its own and does not reuse
+  it; set `PG_DATA_DIR` to share one directory.
+- **`CleanupMode::Full` shares the install tree.** Clusters run side by side
+  from one install tree, so a full clean-up removes it only when no other
+  cluster in the root is running from it. Otherwise it removes just its own
+  data directory. The check and the removal hold a guard file, `.claim-guard`,
+  that new clusters wait on when claiming a directory.
+- **Setup turns.** Clusters sharing an install tree take turns populating it,
+  under a lock on `<root>/install/.pg-embed-setup.lock`, so a cold root is set
+  up once rather than raced. Once the tree is populated, clusters initialize
+  and start in parallel; only the brief copy of cached binaries is serialized.
+  Clusters that declare extensions retake the lock while the extensions are
+  installed, so that step is also serialized.
+
+ADR 005 records the design.
+
+## Prebuilt extensions
+
+Out-of-tree extensions such as `pgvector` are not part of the Theseus binaries.
+Declare them through the environment and the cluster installs digest-verified
+prebuilt archives before the server starts:
+
+```bash
+export PG_VERSION_REQ="=17.11.0"
+export PG_EXTENSIONS="vector"
+export PG_EXTENSIONS_MANIFEST="https://github.com/leynos/df12-pg-extensions/releases/download/v1.0.0/manifest.json"
+export PG_EXTENSIONS_MANIFEST_SHA256="<digest from manifest.json.sha256>"
+```
+
+`CREATE EXTENSION vector` then works in any database of the cluster, and
+`ClusterHandle::installed_extensions()` reports what was installed. The hook
+matches the running PostgreSQL major and the compile target and fails closed
+when no verified archive exists; it never builds from source. See
+[`docs/extensions.md`](https://github.com/leynos/pg-embed-setup-unpriv/blob/v0.6.3/docs/extensions.md)
+for the manifest schema, the archive rules and the failure modes.
+
 ## Privilege detection and idempotence
 
 - `pg_embedded_setup_unpriv` detects its effective user ID at runtime. Root
   processes follow the privileged branch and complete all filesystem work as
   `nobody`; non-root invocations leave permissions untouched and keep the
-  caller’s UID on the runtime directories.
+  caller’s UID on the runtime directories. On unsupported Unix targets such as
+  macOS, root execution fails fast with a "privilege drop is not supported on
+  this target" error rather than attempting the Linux worker path.
 - Both flows create the runtime directory with mode `0700` and the data
-  directory with mode `0700`. Existing directories are re-chowned or re-mode’d
-  to enforce the expected invariants, allowing two consecutive runs to succeed
-  without manual cleanup.
+  directory with mode `0700` on Unix. Existing directories are re-chowned or
+  re-mode’d to enforce the expected invariants, allowing two consecutive runs
+  to succeed without manual cleanup. Windows skips POSIX mode changes; choose
+  paths whose ACLs are private to the test account when secrets matter.
 - The XDG cache home stays `0755` so team-mates can inspect extracted binaries
   and logs when debugging CI issues. The runtime directory is clamped to `0700`
   because it holds the PostgreSQL socket, `postmaster.pid`, and `.pgpass`, so
@@ -653,24 +902,101 @@ still running as `root`, follow these steps:
 - Keep the test process running as `root`; the helper binary demotes itself
   before calling into `postgresql_embedded` so the main process never changes
   UID mid-test.
-- The `PGPASSFILE` environment variable must point to the file created in the
+- Ensure the `PGPASSFILE` environment variable points to the file created in the
   runtime directory so subsequent Diesel or libpq connections can authenticate
   without interactive prompts. The
   `bootstrap_for_tests().environment.pgpass_file` helper returns the path if
   the bootstrap ran inside the test process.
-- Set `TZDIR=/usr/share/zoneinfo` (or the correct path for the distribution)
-  when running the CLI. The library helper sets `TZ` automatically and, on
-  Unix-like hosts, also seeds `TZDIR` when it discovers a valid timezone
-  database.
+- Provide `TZDIR=/usr/share/zoneinfo` (or the correct path for your
+  distribution) if you are running the CLI. The library helper sets `TZ`
+  automatically and, on Unix-like hosts, also seeds `TZDIR` when it discovers a
+  valid timezone database.
+
+## Transient bootstrap failures in CI
+
+A shared cluster (`shared_cluster()`, `shared_cluster_handle()` and the
+fixtures built on them) remembers a failed bootstrap for the rest of the test
+process, so every later test in that binary reports the same failure. Under
+`cargo nextest`, each test binary runs in its own process and starts its own
+shared cluster. Two measures stop one network hiccup from failing a whole
+binary.
+
+### Bounded retry
+
+In releases after 0.6.0, a shared cluster retries a bootstrap that fails for a
+plainly transient reason:
+
+- an I/O or repository failure while downloading or extracting the
+  PostgreSQL archive;
+- a lifecycle timeout, such as a slow first start under load;
+- an extension archive that could not be downloaded
+  (`BootstrapErrorKind::ExtensionArchiveUnavailable`).
+
+It makes three attempts in all, one and then two seconds apart. A retry is
+logged as a `warn` event. If every attempt fails, the error keeps its
+`BootstrapErrorKind` and gains `bootstrap failed after 3 attempts`, and that
+failure is the one remembered. Any other failure, such as a configuration error
+or a version that does not exist, is returned at once without a retry.
+Root-privileged bootstraps report worker failures as text, so they are never
+retried. `TestCluster::new()` and `TestCluster::new_split()` called directly do
+not retry.
+
+A failure on binaries copied from the shared binary cache is treated as
+deterministic, apart from a timeout. The cache holds an extracted installation
+tree rather than an archive, so a retry would copy the same tree again rather
+than download it afresh. Such an error says that the binaries came from the
+cache. Remove that version's directory from the cache (see
+[`cache.md`](https://github.com/leynos/pg-embed-setup-unpriv/blob/v0.6.3/docs/cache.md))
+to force a fresh download on the next run. Extension failures are not affected
+by the cache hit: they come from the extension hook, not the cached tree, so
+they carry no such advice, and an extension archive that could not be
+downloaded is still retried.
+
+### Warm the caches before the tests run
+
+Run the `pg_embedded_setup_unpriv` binary as a CI step before the test runner.
+It downloads and verifies the PostgreSQL archive and fills the shared binary
+cache (see
+[`cache.md`](https://github.com/leynos/pg-embed-setup-unpriv/blob/v0.6.3/docs/cache.md)).
+When `PG_EXTENSIONS` is set, it also fills the extension cache, so the test
+processes then need no network. Give it throwaway installation and data
+directories, and the same cache, version and extension settings as the test
+step:
+
+```yaml
+- name: Warm the PostgreSQL caches
+  env:
+    PG_VERSION_REQ: "=17.4.0"
+    PG_BINARY_CACHE_DIR: ${{ runner.temp }}/pg-binaries
+    PG_RUNTIME_DIR: ${{ runner.temp }}/pg-warm/install
+    PG_DATA_DIR: ${{ runner.temp }}/pg-warm/data
+  run: pg_embedded_setup_unpriv
+- name: Test
+  env:
+    PG_VERSION_REQ: "=17.4.0"
+    PG_BINARY_CACHE_DIR: ${{ runner.temp }}/pg-binaries
+  run: cargo nextest run
+```
+
+Install the binary at the version of the library the tests use, for example with
+`cargo binstall pg-embed-setup-unpriv@<version>`. Cache population is best
+effort: it is skipped when the cache lock cannot be taken. To prove the tests
+will not download, assert that the cache directory holds a complete entry after
+the warm step.
 
 ## Known issues and mitigations
 
 - **TimeZone errors**: The embedded cluster loads timezone data from the host
-  `tzdata` package. Install it inside the execution environment when
+  `tzdata` package. Install it inside the execution environment if you see
   `invalid value for parameter "TimeZone": "UTC"`.
 - **Download rate limits**: `postgresql_embedded` fetches binaries from the
-  Theseus GitHub releases. Supply a `GITHUB_TOKEN` environment variable when
-  rate limits are hit in CI.
+  Theseus GitHub releases. Supply a `GITHUB_TOKEN` environment variable if you
+  hit rate limits in CI.
+- **Windows on ARM**: `aarch64-pc-windows-msvc` is not published or tested
+  because upstream PostgreSQL binaries are not available for that target.
+- **Windows directory privacy**: POSIX `0700`/`0755` modes are skipped on
+  Windows. Use private directories or explicit ACLs when the generated
+  `.pgpass` file and data directory must be hidden from other local accounts.
 - **CLI arguments in tests**: `PgEnvCfg::load()` ignores `std::env::args` during
   library use so Cargo test filters (for example,
   `bootstrap_privileges::bootstrap_as_root`) do not trip the underlying Clap
