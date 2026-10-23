@@ -804,7 +804,7 @@ _Table 7: Purge examples and expected outcomes._
   the workspace or retained as control metadata.
 - Which detector-independent input the Codex and Claude idempotency keys'
   `line_hash` covers (memoryd-design.md §§7 and 17). The choice is already
-  bounded above: hashing the redacted line is excluded, because a
+  bounded above: hashing the redacted line is excluded because a
   detector-version change would then redefine an idempotency key. What remains
   open is only the precise detector-independent encoding. Roadmap 2.2.3 owns
   that answer.

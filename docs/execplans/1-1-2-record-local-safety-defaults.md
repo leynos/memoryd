@@ -757,6 +757,25 @@ fixed first.
   and the backup record, not to the preview's identity. Both were caught only
   by re-reading the review's comment list rather than the prose summary of it,
   which is the same lesson applied to the review process itself.
+- (2026-10-23, resumed review) CodeRabbit had auto-paused this review after the
+  repair round, holding its last reviewed commit at `3046f0c` while the head
+  advanced to `d8e613f`. That pause, not a service fault, is why two direct
+  `@coderabbitai approve` requests each returned "I couldn't produce a complete
+  response"; there was no active review to approve from. The pause notice names
+  `@coderabbitai review` as the command for a paused review, and the managed
+  queue delivered it. The resumed review ran against `d8e613f` and raised one
+  finding, at ADR-015's Outstanding decisions section: "hashing the redacted
+  line is excluded, because a detector-version change would then redefine an
+  idempotency key" carries a comma before an essential causal clause. The comma
+  is removed here. The finding was scoped to that one line, and this repair
+  does not widen it: the diff adds 32 other `, because` constructions, several
+  of them structurally identical, so the class is not settled by the single
+  reported instance. A first draft of this entry claimed the other 32 each
+  joined a non-restrictive clause, which was not verified and is false as
+  stated — `docs/adr-015-local-safety-defaults.md:967` reads "The rule stands,
+  because …" with the same tight structure. Whether the project wants the comma
+  gone across the class is a style decision for its own review, not an
+  inference this repair is entitled to draw.
 
 ## Outcomes & retrospective
 
