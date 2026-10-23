@@ -14,10 +14,16 @@ set.
   GIST-aligned implementation phases and review-sized tasks.
 - [Project-design ExecPlan](execplans/project-design.md) records the live
   remediation plan for the Logisphere design-stage review.
-- [Users' guide](users-guide.md) explains how to use Memoryd and its public
+- [Local safety defaults ExecPlan](execplans/1-1-2-record-local-safety-defaults.md)
+  records the completed decision work for roadmap item 1.1.2: the accepted
+  workspace-identity, redaction, and purge defaults in ADR 015, and the runtime
+  work they defer to later roadmap items.
+- [Users' guide](users-guide.md) explains how to use Memoryd, the planned local
+  safety defaults for workspace identity, redaction, and purge, and its public
   build and test commands.
 - [Developers' guide](developers-guide.md) explains the local workflow and
-  implementation tooling for contributors.
+  implementation tooling for contributors, including where the local safety
+  policy belongs and the proof-to-test handoffs that implement it.
 - [Repository layout](repository-layout.md) explains Memoryd's top-level files,
   directories, and ownership boundaries.
 - [Documentation style guide](documentation-style-guide.md) defines the
@@ -82,6 +88,13 @@ set.
   records the joint SQLite/PostgreSQL evidence-store policy, Diesel-backed
   adapter expectation, lockstep migration rule, backup expectation, and
   first-slice test matrix.
+- [ADR 014: Main owns CodeScene coverage publication](adr-014-main-owns-coverage-publication.md)
+  records why the coverage upload runs on main and what the shared CV-005
+  contract requires from pull requests.
+- [ADR 015: Local safety defaults for workspace identity, redaction, and purge](adr-015-local-safety-defaults.md)
+  records the versioned workspace descriptor and collision rule, the first
+  redaction detector corpus with mandatory deny patterns and raw-text modes,
+  and the scope-bound confirmation and pre-purge backup expectations.
 
 ## Requests for comments
 

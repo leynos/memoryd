@@ -229,9 +229,16 @@ retrieve, corrupt, or delete another tenant's memory.
 - Ingestion is idempotent across restarts, repeated file observations, hook
   retries, and manual imports.
 - Redaction happens before storage and before embedding for configured secret
-  classes and deny patterns.
+  classes. Path exclusion is a separate control that runs earlier: a deny
+  pattern match denies access before file contents are opened, so denied
+  content is never read and therefore never redacted, stored, or embedded. ADR
+  015 fixes the first detector corpus, the mandatory default exclusions, and
+  the raw-text modes, and states plainly that detection is a mitigation rather
+  than a guarantee.
 - Purging a workspace removes raw evidence rows, graph namespaces, Qdrant
-  collections or workspace-scoped payloads, and Chutoro checkpoints.
+  collections or workspace-scoped payloads, and Chutoro checkpoints. ADR 015
+  requires an explicit scope-bound confirmation and a pre-purge backup
+  acknowledgement before any of that deletion runs.
 - Tenant isolation is enforced in every storage-backed path: application ports
   require tenant context, tenant-owned persistence rows carry tenant identity,
   vector searches use tenant filters or tenant-scoped collections, graph reads
@@ -295,6 +302,10 @@ retrieve, corrupt, or delete another tenant's memory.
   local repository root path, and optional profile name. Non-Git workspaces use
   the canonical configured root path hash and profile name. Collisions inside a
   tenant require an auditable operator override rather than automatic merge.
+  ADR 015 fixes the normalization, descriptor, and collision rules; it accepts
+  that full path and origin fidelity means a moved root or a change to the
+  normalized origin yields a new workspace rather than silently reusing the old
+  one.
 - Tenant identity is available from authenticated callers, capability tokens,
   or a configured local default. If tenant context is missing in Corbusier
   mode, the request must fail before application use cases run.
@@ -325,10 +336,16 @@ ADR 013 resolves the standalone evidence inbox store question: v1 uses SQLite
 as the local default and PostgreSQL as a first-class deployment path, with
 Diesel-backed adapters and lockstep migrations across both stores.
 
+ADR 015 resolves the first-release redaction question by fixing a documented
+default exclusion list, a versioned secret detector corpus, the raw-text
+storage modes, the operator override and explicit-join model, and the
+workspace-identity derivation those defaults depend on. The encrypted raw-text
+mode stays open and is rejected as unsupported until a key-management decision
+exists.
+
 | Question                                                                                        | Why it matters                                                                           | Criteria for resolution                                                            | Suggested path       |
 | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------- |
 | What is the exact canonical evidence schema for Codex, Claude, Axinite, and manual imports?     | The schema gates adapters, idempotency, redaction, projection, and tests                 | Provider examples round-trip through normalization with stable evidence references | Implementation spike |
-| What redaction policy is sufficient for the first release?                                      | Redaction governs whether transcripts can be stored and embedded safely                  | A documented default deny list, secret detector set, and override model            | Security review      |
 | Should Axinite projection write-back be manual, approved, or automatic by default?              | Write-back can duplicate or strengthen derived facts if loops are not controlled         | A policy that prevents self-reinforcing projection loops                           | ADR                  |
 | Which MCP tools are required in the first public slice?                                         | The MCP surface affects immediate usefulness and implementation order                    | A minimum useful set tied to evidence capture and flat recall                      | Roadmap              |
 | What recall quality signals will decide whether hierarchical recall is better than flat recall? | Without evaluation signals, theme and episode expansion can add complexity without value | A shadow-mode evaluation set with traceable disagreement and token-cost metrics    | Evaluation plan      |
@@ -369,8 +386,9 @@ there when the project creates a ubiquitous language document:
 - Record release 0.1 graph-disabled capability limits and the full v1
   Oxigraph authority boundary.
 - Decide Axinite projection write-back policy and loop prevention.
-- Decide redaction guarantees and whether encrypted raw-text storage is in
-  scope.
+- Decide encrypted raw-text storage key management. ADR 015 fixes the detector
+  corpus, the mandatory exclusions, and the `none` and `redacted` modes, and
+  rejects `encrypted` as unsupported until this decision exists.
 
 ### Appendix C. Downstream design inputs
 
