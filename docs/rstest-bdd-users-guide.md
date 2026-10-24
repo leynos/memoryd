@@ -183,7 +183,8 @@ than the internal fixture key. `#[from(rstest_bdd_harness_context)]` remains
 supported.
 
 `#[from]` selects which fixture key a parameter binds to. It accepts either no
-arguments or exactly one identifier in parentheses:
+arguments or exactly one path in parentheses, so a fixture re-exported from a
+step module can be named as `ledger_steps::ledger_state`:
 
 ```rust,no_run
 #[given("the catalogue is loaded")]
@@ -3226,17 +3227,17 @@ integrate acceptance criteria into their Rust test suites and to engage all
 three amigos in the specification process.
 
 [scenario-status]: https://docs.rs/rstest-bdd/latest/rstest_bdd/reporting/enum.ScenarioStatus.html
-[adr-001]: https://github.com/leynos/rstest-bdd/blob/main/docs/adr-001-async-fixtures-and-test.md
-[adr-007]: https://github.com/leynos/rstest-bdd/blob/main/docs/adr-007-harness-context-injection.md
-[adr-012]: https://github.com/leynos/rstest-bdd/blob/main/docs/adr-012-guard-based-stepcontext-borrowing.md
-[adr-013]: https://github.com/leynos/rstest-bdd/blob/main/docs/adr-013-adopt-whitaker-no-unwrap-or-else-panic.md
-[gherkin-syntax]: https://github.com/leynos/rstest-bdd/blob/main/docs/gherkin-syntax.md#section-12-the-anatomy-of-a-feature-file
-[migration-async-patterns]: https://github.com/leynos/rstest-bdd/blob/main/docs/cucumber-rs-migration-and-async-patterns.md
-[rstest-bdd-design]: https://github.com/leynos/rstest-bdd/blob/main/docs/rstest-bdd-design.md
-[design-runner-parallelism]: https://github.com/leynos/rstest-bdd/blob/main/docs/rstest-bdd-design.md#2767-test-runner-parallelism-and-scenario-state
-[developers-guide-adapter-fallback]: https://github.com/leynos/rstest-bdd/blob/main/docs/developers-guide.md#adapter-fallback-diagnostics
-[developer-serial-nextest]: https://github.com/leynos/rstest-bdd/blob/main/docs/developers-guide.md#serial-file_serial-and-nextest-test-groups
-[developers-guide]: https://github.com/leynos/rstest-bdd/blob/main/docs/developers-guide.md
+[adr-001]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/adr-001-async-fixtures-and-test.md
+[adr-007]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/adr-007-harness-context-injection.md
+[adr-012]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/adr-012-guard-based-stepcontext-borrowing.md
+[adr-013]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/adr-013-adopt-whitaker-no-unwrap-or-else-panic.md
+[gherkin-syntax]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/gherkin-syntax.md#section-12-the-anatomy-of-a-feature-file
+[migration-async-patterns]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/cucumber-rs-migration-and-async-patterns.md
+[rstest-bdd-design]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/rstest-bdd-design.md
+[design-runner-parallelism]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/rstest-bdd-design.md#2767-test-runner-parallelism-and-scenario-state
+[developers-guide-adapter-fallback]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/developers-guide.md#adapter-fallback-diagnostics
+[developer-serial-nextest]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/developers-guide.md#serial-file_serial-and-nextest-test-groups
+[developers-guide]: https://github.com/leynos/rstest-bdd/blob/v0.6.0/docs/developers-guide.md
 [nextest-test-groups]: https://nexte.st/docs/configuration/test-groups/
 
 ### Feature file rebuild invalidation

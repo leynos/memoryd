@@ -847,7 +847,9 @@ warning naming it; it can be deleted.
   Clusters that declare extensions retake the lock while the extensions are
   installed, so that step is also serialized.
 
-ADR 005 records the design.
+[ADR 005][adr-005-per-cluster-data-directories] records the design.
+
+[adr-005-per-cluster-data-directories]: https://github.com/leynos/pg-embed-setup-unpriv/blob/v0.6.3/docs/adr-005-per-cluster-data-directories.md
 
 ## Prebuilt extensions
 
