@@ -22,6 +22,7 @@ omits build output such as `target/`.
 ├── .markdownlint-cli2.jsonc
 ├── .rustfmt.toml
 ├── docs/
+│   ├── adrs/
 │   ├── contents.md
 │   ├── developers-guide.md
 │   ├── execplans/

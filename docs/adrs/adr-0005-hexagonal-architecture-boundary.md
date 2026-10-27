@@ -98,6 +98,6 @@ transport-specific responses.
 
 - `docs/memoryd-design.md`.
 - `docs/roadmap.md`.
-- `docs/rfcs/0001-standalone-evidence-inbox.md`.
-- `docs/rfcs/0002-projection-tiers-and-promotion-rules.md`.
-- `docs/rfcs/0003-hierarchical-materialization.md`.
+- `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`.
+- `docs/rfcs/rfc-0002-projection-tiers-and-promotion-rules.md`.
+- `docs/rfcs/rfc-0003-hierarchical-materialization.md`.

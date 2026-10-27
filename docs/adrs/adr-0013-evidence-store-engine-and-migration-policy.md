@@ -198,9 +198,10 @@ Non-goals:
   slice.
 - `docs/terms-of-reference.md`, section 9 open questions.
 - `docs/memoryd-design.md`, sections 2, 7, 13, 14, and 17.
-- `docs/rfcs/0001-standalone-evidence-inbox.md`, compatibility and migration.
-- `docs/adr-005-hexagonal-architecture-boundary.md`.
-- `docs/adr-006-tenant-isolation-and-corbusier-context.md`.
+- `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`, compatibility and
+  migration.
+- `docs/adrs/adr-0005-hexagonal-architecture-boundary.md`.
+- `docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md`.
 - `docs/pg-embed-setup-unpriv-users-guide.md`.
 - `docs/rstest-bdd-users-guide.md`.
 - `mxd` commit `153671c2c8794b8fb122545afdbea1df8e35cbc1`.

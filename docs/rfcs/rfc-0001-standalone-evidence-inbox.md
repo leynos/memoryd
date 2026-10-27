@@ -104,11 +104,11 @@ their trust, capability, sequencing, cursor, and idempotency checks differ at
 the application-command boundary.
 
 Redaction, path exclusion, and raw-text storage are not specified here.
-[ADR 015](../adr-015-local-safety-defaults.md) records those defaults: what the
-collector and daemon each redact, the mandatory deny patterns, the `none` and
-`redacted` raw-text modes, and the processing limits that make a failed
-redaction an explicit rejection. Three consequences belong to this RFC's scope.
-No redaction, deny-pattern, or raw-text policy may reintroduce a
+[ADR 015](../adrs/adr-0015-local-safety-defaults.md) records those defaults:
+what the collector and daemon each redact, the mandatory deny patterns, the
+`none` and `redacted` raw-text modes, and the processing limits that make a
+failed redaction an explicit rejection. Three consequences belong to this RFC's
+scope. No redaction, deny-pattern, or raw-text policy may reintroduce a
 provider-specific branch into the core pipeline; the daemon revalidates push
 and worker inputs rather than trusting a caller-supplied redacted flag; and
 because provider idempotency keys are derived from provider line and request
@@ -184,7 +184,7 @@ ADR 013 resolves the evidence-store engine policy for this RFC. The standalone
 evidence inbox uses SQLite as the local default and PostgreSQL as a first-class
 deployment path, with Diesel-backed adapters and lockstep migrations.
 
-[ADR 015](../adr-015-local-safety-defaults.md) resolves the local safety
+[ADR 015](../adrs/adr-0015-local-safety-defaults.md) resolves the local safety
 defaults this RFC depends on. Ingest outcome is unaffected in the ordinary
 case: the same canonical delta, the same idempotency keys, and the same inbox
 records. What changes is the cursor rule. An **intentional exclusion** — a

@@ -63,5 +63,5 @@ state.
 ## References
 
 [^1]: `../dear-diary/README.md`.
-[^2]: `docs/rfcs/0002-projection-tiers-and-promotion-rules.md`.
-[^3]: `docs/rfcs/0003-hierarchical-materialization.md`.
+[^2]: `docs/rfcs/rfc-0002-projection-tiers-and-promotion-rules.md`.
+[^3]: `docs/rfcs/rfc-0003-hierarchical-materialization.md`.

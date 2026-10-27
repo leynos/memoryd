@@ -772,10 +772,10 @@ fixed first.
   of them structurally identical, so the class is not settled by the single
   reported instance. A first draft of this entry claimed the other 32 each
   joined a non-restrictive clause, which was not verified and is false as
-  stated — `docs/adr-015-local-safety-defaults.md:967` reads "The rule stands,
-  because …" with the same tight structure. Whether the project wants the comma
-  gone across the class is a style decision for its own review, not an
-  inference this repair is entitled to draw.
+  stated — `docs/adrs/adr-0015-local-safety-defaults.md:967` reads "The rule
+  stands, because …" with the same tight structure. Whether the project wants
+  the comma gone across the class is a style decision for its own review, not
+  an inference this repair is entitled to draw.
 
 ## Outcomes & retrospective
 
@@ -1033,9 +1033,9 @@ not, and should be held to the same execution test as the row.
 
 Start with `docs/contents.md` and `docs/repository-layout.md`. The normative
 sources are `docs/terms-of-reference.md`, `docs/memoryd-design.md`,
-`docs/roadmap.md`, `docs/rfcs/0001-standalone-evidence-inbox.md`, and
-`docs/adr-013-evidence-store-engine-and-migration-policy.md`. RFC 0006,
-`docs/rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md`,
+`docs/roadmap.md`, `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`, and
+`docs/adrs/adr-0013-evidence-store-engine-and-migration-policy.md`. RFC 0006,
+`docs/rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md`,
 identifies later epistemic work; it supplies no reason to delay local safety.
 
 A workspace is a tenant-owned evidence namespace. A canonical root is the
@@ -1049,9 +1049,9 @@ provider transcripts or operator backup copies.
 Read `docs/documentation-style-guide.md` before creating the ADR. This plan
 originally reserved `docs/adr-014-local-safety-defaults.md`, but 014 was
 already allocated by the CodeScene coverage-publication ADR, so the fallback
-applied and the file is `docs/adr-015-local-safety-defaults.md`. No existing
-safety abstraction is implemented at the baseline. Future runtime work must
-repeat the repository sweep before adding helpers or ports.
+applied and the file is `docs/adrs/adr-0015-local-safety-defaults.md`. No
+existing safety abstraction is implemented at the baseline. Future runtime work
+must repeat the repository sweep before adding helpers or ports.
 
 ## Conformance basis
 

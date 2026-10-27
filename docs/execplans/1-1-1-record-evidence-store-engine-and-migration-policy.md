@@ -33,8 +33,9 @@ approves the plan.
   parsing, or tests in this slice unless the user explicitly approves a scope
   expansion.
 - Create one accepted ADR as the authoritative decision record. The expected
-  filename is `docs/adr-013-evidence-store-engine-and-migration-policy.md`
-  because ADR 012 is currently the newest accepted sequence number.
+  filename is
+  `docs/adrs/adr-0013-evidence-store-engine-and-migration-policy.md` because
+  ADR 012 is currently the newest accepted sequence number.
 - Preserve the decision stated in the request: v1 uses a joint
   SQLite/PostgreSQL approach, abstracted with Diesel and lockstep migrations
   following `mxd`; libSQL/Turso is not selected for v1 because Diesel support
@@ -69,7 +70,7 @@ approves the plan.
 - Scope: if more than six repository files need changes, stop and ask whether
   to split the work. The expected files are the new ADR plus `docs/roadmap.md`,
   `docs/terms-of-reference.md`, `docs/memoryd-design.md`,
-  `docs/rfcs/0001-standalone-evidence-inbox.md`, and `docs/contents.md`.
+  `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`, and `docs/contents.md`.
 - Interface: if the plan appears to require a public command-line interface,
   MCP tool, or configuration key before the storage ADR is accepted, stop and
   defer that interface to the implementation slice that first uses it.
@@ -125,7 +126,7 @@ The implementer must read these local documents before editing:
 - `docs/memoryd-design.md`, especially the minimum useful deployment,
   evidence schema outline, tenant isolation, purge, configuration, and open
   decisions sections.
-- `docs/rfcs/0001-standalone-evidence-inbox.md`, especially compatibility,
+- `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`, especially compatibility,
   migration, and open questions.
 - `docs/documentation-style-guide.md`, especially ADR naming, section, and
   formatting rules.
@@ -214,7 +215,7 @@ tree contains unrelated user changes, leave them alone and do not stage them.
 
 ### Milestone 1: Write the accepted ADR
 
-Create `docs/adr-013-evidence-store-engine-and-migration-policy.md`.
+Create `docs/adrs/adr-0013-evidence-store-engine-and-migration-policy.md`.
 
 The ADR must use the documentation style guide's ADR structure and include
 these sections:
@@ -288,7 +289,7 @@ Accept the joint SQLite and PostgreSQL evidence-store policy for
 roadmap item 1.1.1, including Diesel-backed lockstep migrations,
 backup expectations, and the first implementation test matrix.
 ENDOFMSG
-git add docs/adr-013-evidence-store-engine-and-migration-policy.md
+git add docs/adrs/adr-0013-evidence-store-engine-and-migration-policy.md
 git commit -F "$COMMIT_MSG_DIR/COMMIT_MSG.md"
 rm -rf "$COMMIT_MSG_DIR"
 ```
@@ -309,11 +310,11 @@ evidence inbox store records the selected answer. Keep any still-open tenant
 storage strategy questions if they extend beyond the evidence store, but do not
 leave the default evidence store undecided.
 
-Update `docs/rfcs/0001-standalone-evidence-inbox.md` so its open question about
-SQLite, libSQL, PostgreSQL, or a supported set is resolved by ADR 013. The RFC
-should either remove that bullet from `Open questions` or replace it with a
-sentence in the compatibility section that says ADR 013 selects the joint
-SQLite/PostgreSQL policy.
+Update `docs/rfcs/rfc-0001-standalone-evidence-inbox.md` so its open question
+about SQLite, libSQL, PostgreSQL, or a supported set is resolved by ADR 013.
+The RFC should either remove that bullet from `Open questions` or replace it
+with a sentence in the compatibility section that says ADR 013 selects the
+joint SQLite/PostgreSQL policy.
 
 Update `docs/contents.md` to add ADR 013 to the design records list.
 
@@ -351,7 +352,7 @@ the accepted evidence-store policy is discoverable from every source
 document that previously carried the open decision.
 ENDOFMSG
 git add docs/memoryd-design.md docs/terms-of-reference.md \
-  docs/rfcs/0001-standalone-evidence-inbox.md docs/contents.md \
+  docs/rfcs/rfc-0001-standalone-evidence-inbox.md docs/contents.md \
   docs/roadmap.md
 git commit -F "$COMMIT_MSG_DIR/COMMIT_MSG.md"
 rm -rf "$COMMIT_MSG_DIR"

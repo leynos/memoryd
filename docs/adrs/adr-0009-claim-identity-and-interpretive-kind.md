@@ -98,7 +98,7 @@ records, future claim graphs, and post-1.0 falsification workflows.
 ## References
 
 - `docs/memoryd-design.md`.
-- `docs/rfcs/0002-projection-tiers-and-promotion-rules.md`.
-- `docs/adr-005-hexagonal-architecture-boundary.md`.
-- `docs/adr-006-tenant-isolation-and-corbusier-context.md`.
-- `docs/rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md`.
+- `docs/rfcs/rfc-0002-projection-tiers-and-promotion-rules.md`.
+- `docs/adrs/adr-0005-hexagonal-architecture-boundary.md`.
+- `docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md`.
+- `docs/rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md`.

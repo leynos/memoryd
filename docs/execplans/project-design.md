@@ -124,9 +124,9 @@ startup reconciliation, purge backup warnings, Oxigraph rebuild, and projection
 backpressure.
 
 Second, update ADR and RFC files that currently describe the old ingestion
-shape. `docs/adr-007-standard-conversation-ingestion-port.md` and
-`docs/rfcs/0001-standalone-evidence-inbox.md` must describe separate push and
-worker-batch commands over the same canonical delta.
+shape. `docs/adrs/adr-0007-standard-conversation-ingestion-port.md` and
+`docs/rfcs/rfc-0001-standalone-evidence-inbox.md` must describe separate push
+and worker-batch commands over the same canonical delta.
 
 Third, update `docs/terms-of-reference.md` to reflect the now-decided workspace
 identity rule, minimum useful deployment, and remaining open questions.
