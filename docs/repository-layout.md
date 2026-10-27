@@ -47,6 +47,7 @@ omits build output such as `target/`.
 
 ## Path responsibilities
 
+- `docs/adrs/`: Contains accepted and proposed Architecture Decision Records.
 - `.cargo/config.toml`: Configures Cargo defaults for local development,
   including the Linux linker.
 - `tools/dev-fast/config.toml`: Cargo configuration fragment that selects the

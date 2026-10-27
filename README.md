@@ -79,10 +79,10 @@ ______________________________________________________________________
 The full architecture is defined in the
 [Memoryd design](docs/memoryd-design.md) and the supporting ADR set. The most
 important implementation boundary is recorded in
-[ADR 005: Hexagonal architecture boundary](docs/adrs/adr-0005-hexagonal-architecture-boundary.md).
-Domain and application code own the memory rules, use cases, and port traits;
-adapters own provider parsing, local persistence, Qdrant, Ollama, Oxigraph,
-Chutoro, MCP, UDS, loopback HTTP, and filesystem watching.
+[ADR 005: Hexagonal architecture boundary][adr-005]. Domain and application
+code own the memory rules, use cases, and port traits; adapters own provider
+parsing, local persistence, Qdrant, Ollama, Oxigraph, Chutoro, MCP, UDS,
+loopback HTTP, and filesystem watching.
 
 Port traits are the contract between those layers. Application services such as
 ingestion, recall, curated memory storage, retraction, session listing, and
@@ -93,22 +93,22 @@ the core testable without running storage engines, model servers, vector
 indexes, graph stores, clustering runtimes, or MCP transports.
 
 Tenant isolation is a first-class part of the same boundary, as recorded in
-[ADR 006: Tenant isolation and Corbusier context](docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md).
-Tenant-owned use cases carry an authenticated request context, and the
-normative memory scope is `(tenant_id, workspace_id)`. Storage rows, Qdrant
-payload filters, Oxigraph named graphs, Chutoro checkpoints, audit records, and
-purge plans all preserve that scope so local single-user deployments and
-Corbusier-style multi-tenant deployments exercise the same isolation contract.
+[ADR 006: Tenant isolation and Corbusier context][adr-006]. Tenant-owned use
+cases carry an authenticated request context, and the normative memory scope is
+`(tenant_id, workspace_id)`. Storage rows, Qdrant payload filters, Oxigraph
+named graphs, Chutoro checkpoints, audit records, and purge plans all preserve
+that scope so local single-user deployments and Corbusier-style multi-tenant
+deployments exercise the same isolation contract.
 
 Conversation ingestion follows
-[ADR 007: Standard conversation ingestion port](docs/adrs/adr-0007-standard-conversation-ingestion-port.md).
-All producers emit the same canonical conversation delta, but the application
-ports separate trust and sequencing semantics: `ConversationPushIngestPort`
-handles authenticated push producers such as Corbusier, Axinite outboxes, and
-manual MCP imports; `CollectedConversationIngestPort` handles worker-collected
-batches from filesystem or pull-mode sources; and `ConversationSourcePort` is
-the collector-facing discovery, tailing, snapshot, and replay contract for
-Codex, Claude, Axinite pull mode, and future source adapters.
+[ADR 007: Standard conversation ingestion port][adr-007]. All producers emit
+the same canonical conversation delta, but the application ports separate trust
+and sequencing semantics: `ConversationPushIngestPort` handles authenticated
+push producers such as Corbusier, Axinite outboxes, and manual MCP imports;
+`CollectedConversationIngestPort` handles worker-collected batches from
+filesystem or pull-mode sources; and `ConversationSourcePort` is the
+collector-facing discovery, tailing, snapshot, and replay contract for Codex,
+Claude, Axinite pull mode, and future source adapters.
 
 ______________________________________________________________________
 
@@ -138,3 +138,7 @@ ______________________________________________________________________
 
 Contributions are welcome. Please start with [AGENTS.md](AGENTS.md) for the
 repository workflow, code style, and validation requirements.
+
+[adr-005]: docs/adrs/adr-0005-hexagonal-architecture-boundary.md
+[adr-006]: docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md
+[adr-007]: docs/adrs/adr-0007-standard-conversation-ingestion-port.md

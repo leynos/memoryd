@@ -91,10 +91,11 @@ set.
 - [ADR 014: Main owns CodeScene coverage publication](adrs/adr-0014-main-owns-coverage-publication.md)
   records why the coverage upload runs on main and what the shared CV-005
   contract requires from pull requests.
-- [ADR 015: Local safety defaults for workspace identity, redaction, and purge](adrs/adr-0015-local-safety-defaults.md)
-  records the versioned workspace descriptor and collision rule, the first
-  redaction detector corpus with mandatory deny patterns and raw-text modes,
-  and the scope-bound confirmation and pre-purge backup expectations.
+- [ADR 015: Local safety defaults for workspace identity, redaction, and
+  purge](adrs/adr-0015-local-safety-defaults.md) records the versioned
+  workspace descriptor and collision rule, the first redaction detector corpus
+  with mandatory deny patterns and raw-text modes, and the scope-bound
+  confirmation and pre-purge backup expectations.
 
 ## Requests for comments
 
@@ -108,6 +109,9 @@ set.
   defines Chutoro-backed, `memoryd`-owned theme management.
 - [RFC 0005: Hierarchical recall](rfcs/rfc-0005-hierarchical-recall.md) defines
   recall profiles, context assembly, and fallback behaviour.
-- [RFC 0006: Epistemic health, empiricism, falsification, and semirings](rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md)
-  proposes the post-1.0 substrate for Axinite v1.2 claim validity, omission
-  observability, hypotheses, experiments, and outcome learning.
+- [RFC 0006: Epistemic health, empiricism, falsification, and
+  semirings][rfc-0006] proposes the post-1.0 substrate for Axinite v1.2 claim
+  validity, omission observability, hypotheses, experiments, and outcome
+  learning.
+
+[rfc-0006]: rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md
