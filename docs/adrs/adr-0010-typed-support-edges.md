@@ -90,8 +90,8 @@ not decide whether the edge is valid.
 ## References
 
 - `docs/memoryd-design.md`.
-- `docs/rfcs/0002-projection-tiers-and-promotion-rules.md`.
-- `docs/adr-001-qdrant-is-a-serving-index.md`.
-- `docs/adr-002-dual-path-semantic-extraction.md`.
-- `docs/adr-006-tenant-isolation-and-corbusier-context.md`.
-- `docs/rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md`.
+- `docs/rfcs/rfc-0002-projection-tiers-and-promotion-rules.md`.
+- `docs/adrs/adr-0001-qdrant-is-a-serving-index.md`.
+- `docs/adrs/adr-0002-dual-path-semantic-extraction.md`.
+- `docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md`.
+- `docs/rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md`.

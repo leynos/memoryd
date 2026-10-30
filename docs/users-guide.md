@@ -6,8 +6,8 @@ from the template.
 ## Local safety defaults (planned)
 
 These defaults are accepted policy in
-[ADR 015](adr-015-local-safety-defaults.md) but are **not yet enforced**: the
-daemon, collector, and MCP server do not implement workspace derivation,
+[ADR 015](adrs/adr-0015-local-safety-defaults.md) but are **not yet enforced**:
+the daemon, collector, and MCP server do not implement workspace derivation,
 redaction, deny patterns, or purge. Treat this section as the target contract
 for planned behaviour; the build and test commands later in this guide are the
 tooling that actually runs today.

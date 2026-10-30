@@ -123,12 +123,12 @@ the detailed setup and test-support APIs.
 
 ## Local safety policy reuse
 
-[ADR 015](adr-015-local-safety-defaults.md) settles the local safety defaults
-for workspace identity, redaction, and purge. The policy is one domain-owned
-decision used by every ingestion and purge path; it is not a per-adapter
-convention, and it is not a library that adapters may reimplement. Read the ADR
-for the normative rules and this section for where the implementing code
-belongs.
+[ADR 015](adrs/adr-0015-local-safety-defaults.md) settles the local safety
+defaults for workspace identity, redaction, and purge. The policy is one
+domain-owned decision used by every ingestion and purge path; it is not a
+per-adapter convention, and it is not a library that adapters may reimplement.
+Read the ADR for the normative rules and this section for where the
+implementing code belongs.
 
 Ownership: the workspace descriptor and its versioned serialization, the digest
 and normalization rules, exclusion and deny-pattern evaluation, the redaction
@@ -164,11 +164,11 @@ exactly one of three outcomes:
   or otherwise, **does not advance** the source cursor, and surfaces as a
   source-health error for an operator to repair or explicitly skip.
 
-[ADR 015](adr-015-local-safety-defaults.md) states this cursor rule canonically
-and in full; the three outcomes above restate it for implementers and must not
-diverge from it. Authority comes from the authenticated request context; the
-pair of authenticated tenant and workspace is the authority, and a workspace
-string, a provider field, or a descriptor alone is not.
+[ADR 015](adrs/adr-0015-local-safety-defaults.md) states this cursor rule
+canonically and in full; the three outcomes above restate it for implementers
+and must not diverge from it. Authority comes from the authenticated request
+context; the pair of authenticated tenant and workspace is the authority, and a
+workspace string, a provider field, or a descriptor alone is not.
 
 Validated inputs: workspace registration requires a structurally valid
 versioned descriptor, and the daemon rejects an unsupported version rather than
@@ -298,7 +298,7 @@ into infrastructure operations. Neither adapter family should make
 memory-policy decisions that belong in the domain or application layer.
 
 Evidence-store adapters follow
-[Architecture Decision Record (ADR) 013](adr-013-evidence-store-engine-and-migration-policy.md):
+[Architecture Decision Record (ADR) 013](adrs/adr-0013-evidence-store-engine-and-migration-policy.md):
 SQLite is the local default, PostgreSQL is a first-class deployment path,
 Diesel remains behind adapter boundaries, and paired SQLite and PostgreSQL
 migrations must preserve one logical evidence-store contract. Domain ports must

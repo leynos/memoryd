@@ -56,58 +56,62 @@ set.
 
 ## Design records
 
-- [ADR 001: Qdrant is a serving index](adr-001-qdrant-is-a-serving-index.md)
+- [ADR 001: Qdrant is a serving index](adrs/adr-0001-qdrant-is-a-serving-index.md)
   records the boundary between vector indexes and memory truth.
-- [ADR 002: Dual-path semantic extraction](adr-002-dual-path-semantic-extraction.md)
+- [ADR 002: Dual-path semantic extraction](adrs/adr-0002-dual-path-semantic-extraction.md)
   records the shared extractor contract for encoder and Ollama paths.
-- [ADR 003: Memoryd owns theme management](adr-003-memoryd-owns-theme-management.md)
+- [ADR 003: Memoryd owns theme management](adrs/adr-0003-memoryd-owns-theme-management.md)
   records the boundary between Chutoro clustering and durable themes.
-- [ADR 004: Dual-mode recall gating](adr-004-dual-mode-recall-gating.md)
+- [ADR 004: Dual-mode recall gating](adrs/adr-0004-dual-mode-recall-gating.md)
   records the proxy and model-assisted recall expansion strategy.
-- [ADR 005: Hexagonal architecture boundary](adr-005-hexagonal-architecture-boundary.md)
+- [ADR 005: Hexagonal architecture boundary](adrs/adr-0005-hexagonal-architecture-boundary.md)
   records the dependency rule, port ownership, and adapter boundaries.
-- [ADR 006: Tenant isolation and Corbusier context](adr-006-tenant-isolation-and-corbusier-context.md)
+- [ADR 006: Tenant isolation and Corbusier context](adrs/adr-0006-tenant-isolation-and-corbusier-context.md)
   records the tenant-scoped request context, storage, index, graph, and theme
   isolation boundary.
-- [ADR 007: Standard conversation ingestion port](adr-007-standard-conversation-ingestion-port.md)
+- [ADR 007: Standard conversation ingestion port](adrs/adr-0007-standard-conversation-ingestion-port.md)
   records the canonical conversation-source and ingestion ports used by
   Corbusier, Axinite, Codex, Claude, and manual import adapters.
-- [ADR 008: Source health and coverage foundation](adr-008-source-health-and-coverage-foundation.md)
+- [ADR 008: Source health and coverage foundation](adrs/adr-0008-source-health-and-coverage-foundation.md)
   records the pre-1.0 source-health substrate for freshness, parse, and
   accessibility diagnostics.
-- [ADR 009: Claim identity and interpretive kind](adr-009-claim-identity-and-interpretive-kind.md)
+- [ADR 009: Claim identity and interpretive kind](adrs/adr-0009-claim-identity-and-interpretive-kind.md)
   records stable claim identity and claim-kind labels for claim-bearing memory.
-- [ADR 010: Typed support edges](adr-010-typed-support-edges.md) records
+- [ADR 010: Typed support edges](adrs/adr-0010-typed-support-edges.md) records
   relation-aware support links between claims and evidence.
-- [ADR 011: Projection activity lineage](adr-011-projection-activity-lineage.md)
+- [ADR 011: Projection activity lineage](adrs/adr-0011-projection-activity-lineage.md)
   records derivation activity tracking for extraction, validation, promotion,
   repair, and future recomputation.
-- [ADR 012: Durable recall audits](adr-012-durable-recall-audits.md) records
-  configurable persistence for decision-relevant recall traces.
-- [ADR 013: Evidence-store engine and migration policy](adr-013-evidence-store-engine-and-migration-policy.md)
+- [ADR 012: Durable recall audits](adrs/adr-0012-durable-recall-audits.md)
+  records configurable persistence for decision-relevant recall traces.
+- [ADR 013: Evidence-store engine and migration policy](adrs/adr-0013-evidence-store-engine-and-migration-policy.md)
   records the joint SQLite/PostgreSQL evidence-store policy, Diesel-backed
   adapter expectation, lockstep migration rule, backup expectation, and
   first-slice test matrix.
-- [ADR 014: Main owns CodeScene coverage publication](adr-014-main-owns-coverage-publication.md)
+- [ADR 014: Main owns CodeScene coverage publication](adrs/adr-0014-main-owns-coverage-publication.md)
   records why the coverage upload runs on main and what the shared CV-005
   contract requires from pull requests.
-- [ADR 015: Local safety defaults for workspace identity, redaction, and purge](adr-015-local-safety-defaults.md)
-  records the versioned workspace descriptor and collision rule, the first
-  redaction detector corpus with mandatory deny patterns and raw-text modes,
-  and the scope-bound confirmation and pre-purge backup expectations.
+- [ADR 015: Local safety defaults for workspace identity, redaction, and
+  purge](adrs/adr-0015-local-safety-defaults.md) records the versioned
+  workspace descriptor and collision rule, the first redaction detector corpus
+  with mandatory deny patterns and raw-text modes, and the scope-bound
+  confirmation and pre-purge backup expectations.
 
 ## Requests for comments
 
-- [RFC 0001: Standalone evidence inbox](rfcs/0001-standalone-evidence-inbox.md)
+- [RFC 0001: Standalone evidence inbox](rfcs/rfc-0001-standalone-evidence-inbox.md)
   adapts Axinite's transactional outbox into a provider-neutral evidence inbox.
-- [RFC 0002: Projection tiers and promotion rules](rfcs/0002-projection-tiers-and-promotion-rules.md)
+- [RFC 0002: Projection tiers and promotion rules](rfcs/rfc-0002-projection-tiers-and-promotion-rules.md)
   adapts Axinite's memory semantics to standalone provider evidence.
-- [RFC 0003: Hierarchical materialization](rfcs/0003-hierarchical-materialization.md)
+- [RFC 0003: Hierarchical materialization](rfcs/rfc-0003-hierarchical-materialization.md)
   defines raw evidence, episode, semantic-carrier, and theme hierarchy.
-- [RFC 0004: Theme detection and rebalancing](rfcs/0004-theme-detection-and-rebalancing.md)
+- [RFC 0004: Theme detection and rebalancing](rfcs/rfc-0004-theme-detection-and-rebalancing.md)
   defines Chutoro-backed, `memoryd`-owned theme management.
-- [RFC 0005: Hierarchical recall](rfcs/0005-hierarchical-recall.md) defines
+- [RFC 0005: Hierarchical recall](rfcs/rfc-0005-hierarchical-recall.md) defines
   recall profiles, context assembly, and fallback behaviour.
-- [RFC 0006: Epistemic health, empiricism, falsification, and semirings](rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md)
-  proposes the post-1.0 substrate for Axinite v1.2 claim validity, omission
-  observability, hypotheses, experiments, and outcome learning.
+- [RFC 0006: Epistemic health, empiricism, falsification, and
+  semirings][rfc-0006] proposes the post-1.0 substrate for Axinite v1.2 claim
+  validity, omission observability, hypotheses, experiments, and outcome
+  learning.
+
+[rfc-0006]: rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md

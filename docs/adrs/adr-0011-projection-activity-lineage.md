@@ -93,8 +93,8 @@ activity lineage explains derivation.
 ## References
 
 - `docs/memoryd-design.md`.
-- `docs/rfcs/0001-standalone-evidence-inbox.md`.
-- `docs/rfcs/0003-hierarchical-materialization.md`.
-- `docs/adr-002-dual-path-semantic-extraction.md`.
-- `docs/adr-005-hexagonal-architecture-boundary.md`.
-- `docs/rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md`.
+- `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`.
+- `docs/rfcs/rfc-0003-hierarchical-materialization.md`.
+- `docs/adrs/adr-0002-dual-path-semantic-extraction.md`.
+- `docs/adrs/adr-0005-hexagonal-architecture-boundary.md`.
+- `docs/rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md`.

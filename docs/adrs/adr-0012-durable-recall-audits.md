@@ -94,7 +94,7 @@ audit, but they may not disable a policy-required audit.
 ## References
 
 - `docs/memoryd-design.md`.
-- `docs/rfcs/0005-hierarchical-recall.md`.
-- `docs/adr-004-dual-mode-recall-gating.md`.
-- `docs/adr-006-tenant-isolation-and-corbusier-context.md`.
-- `docs/rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md`.
+- `docs/rfcs/rfc-0005-hierarchical-recall.md`.
+- `docs/adrs/adr-0004-dual-mode-recall-gating.md`.
+- `docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md`.
+- `docs/rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md`.

@@ -833,12 +833,12 @@ slices and runtime slices.
 - `docs/roadmap.md`, roadmap items 1.1.1, 1.1.2, 2.2.3, 2.2.4, and 5.3.1.
 - `docs/terms-of-reference.md`, sections 7.2, 8.1, 8.2, and 9.
 - `docs/memoryd-design.md`, sections 5.4, 8.4, 13, 14, 15, and 17.
-- `docs/rfcs/0001-standalone-evidence-inbox.md`, the Current state, Proposed
+- `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`, the Current state, Proposed
   design, and Compatibility and migration headings.
-- `docs/adr-005-hexagonal-architecture-boundary.md`.
-- `docs/adr-006-tenant-isolation-and-corbusier-context.md`.
-- `docs/adr-007-standard-conversation-ingestion-port.md`.
-- `docs/adr-013-evidence-store-engine-and-migration-policy.md`.
+- `docs/adrs/adr-0005-hexagonal-architecture-boundary.md`.
+- `docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md`.
+- `docs/adrs/adr-0007-standard-conversation-ingestion-port.md`.
+- `docs/adrs/adr-0013-evidence-store-engine-and-migration-policy.md`.
 - `docs/execplans/1-1-2-record-local-safety-defaults.md`.
 - `docs/documentation-style-guide.md`.
 - Git clone documentation, Git URLs, <https://git-scm.com/docs/git-clone>.[^1]

@@ -100,7 +100,7 @@ features will use later.
 ## References
 
 - `docs/memoryd-design.md`.
-- `docs/rfcs/0001-standalone-evidence-inbox.md`.
-- `docs/adr-005-hexagonal-architecture-boundary.md`.
-- `docs/adr-006-tenant-isolation-and-corbusier-context.md`.
-- `docs/rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md`.
+- `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`.
+- `docs/adrs/adr-0005-hexagonal-architecture-boundary.md`.
+- `docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md`.
+- `docs/rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md`.

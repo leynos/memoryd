@@ -7,24 +7,24 @@
 - **Audience:** Implementers, design reviewers, Axinite integrators, and
   operators running local coding-agent memory infrastructure.
 - **Companion documents:** `docs/terms-of-reference.md`,
-  `docs/rfcs/0001-standalone-evidence-inbox.md`,
-  `docs/rfcs/0002-projection-tiers-and-promotion-rules.md`,
-  `docs/rfcs/0003-hierarchical-materialization.md`,
-  `docs/rfcs/0004-theme-detection-and-rebalancing.md`,
-  `docs/rfcs/0005-hierarchical-recall.md`,
-  `docs/adr-001-qdrant-is-a-serving-index.md`,
-  `docs/adr-002-dual-path-semantic-extraction.md`,
-  `docs/adr-003-memoryd-owns-theme-management.md`,
-  `docs/adr-004-dual-mode-recall-gating.md`,
-  `docs/adr-005-hexagonal-architecture-boundary.md`,
-  `docs/adr-006-tenant-isolation-and-corbusier-context.md`,
-  `docs/adr-007-standard-conversation-ingestion-port.md`,
-  `docs/adr-008-source-health-and-coverage-foundation.md`,
-  `docs/adr-009-claim-identity-and-interpretive-kind.md`,
-  `docs/adr-010-typed-support-edges.md`,
-  `docs/adr-011-projection-activity-lineage.md`,
-  `docs/adr-012-durable-recall-audits.md`, and
-  `docs/rfcs/0006-epistemic-health-empiricism-falsification-and-semirings.md`.
+  `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`,
+  `docs/rfcs/rfc-0002-projection-tiers-and-promotion-rules.md`,
+  `docs/rfcs/rfc-0003-hierarchical-materialization.md`,
+  `docs/rfcs/rfc-0004-theme-detection-and-rebalancing.md`,
+  `docs/rfcs/rfc-0005-hierarchical-recall.md`,
+  `docs/adrs/adr-0001-qdrant-is-a-serving-index.md`,
+  `docs/adrs/adr-0002-dual-path-semantic-extraction.md`,
+  `docs/adrs/adr-0003-memoryd-owns-theme-management.md`,
+  `docs/adrs/adr-0004-dual-mode-recall-gating.md`,
+  `docs/adrs/adr-0005-hexagonal-architecture-boundary.md`,
+  `docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md`,
+  `docs/adrs/adr-0007-standard-conversation-ingestion-port.md`,
+  `docs/adrs/adr-0008-source-health-and-coverage-foundation.md`,
+  `docs/adrs/adr-0009-claim-identity-and-interpretive-kind.md`,
+  `docs/adrs/adr-0010-typed-support-edges.md`,
+  `docs/adrs/adr-0011-projection-activity-lineage.md`,
+  `docs/adrs/adr-0012-durable-recall-audits.md`, and
+  `docs/rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md`.
 - **Last substantive revision:** 2026-05-25.
 
 ## 1. Problem statement
@@ -345,15 +345,15 @@ workspaces derive from a hash of the canonical configured root path and profile
 name. Operators may define explicit workspace aliases or overrides in
 configuration. If derivation detects a collision inside one tenant, ingestion
 must fail with an auditable collision diagnostic rather than merging evidence.
-[ADR 015](adr-015-local-safety-defaults.md) records the derivation contract in
-detail: a versioned, length-prefixed descriptor, the origin normalization
-rules, the separate Git and non-Git tags, the digest and canonical-root binding
-that registration persists, and the explicit descriptor join that an
-intentional merge requires. Because full origin and root-path fidelity is part
-of identity, a root move, a different worktree, or a change to the normalized
-origin yields a new workspace rather than silently reusing an existing one.
-Changing the raw origin without changing its normalized identity — rotating
-HTTP credentials, which normalization omits — does not.
+[ADR 015](adrs/adr-0015-local-safety-defaults.md) records the derivation
+contract in detail: a versioned, length-prefixed descriptor, the origin
+normalization rules, the separate Git and non-Git tags, the digest and
+canonical-root binding that registration persists, and the explicit descriptor
+join that an intentional merge requires. Because full origin and root-path
+fidelity is part of identity, a root move, a different worktree, or a change to
+the normalized origin yields a new workspace rather than silently reusing an
+existing one. Changing the raw origin without changing its normalized identity
+— rotating HTTP credentials, which normalization omits — does not.
 
 Driven adapters enforce tenant context using the strongest mechanism available
 for their store:
@@ -1106,13 +1106,14 @@ The collector redacts before storage and before embedding. The first release
 must detect API keys, OAuth tokens, JSON Web Tokens (JWTs), private keys, SSH
 material, `.env` content, passwords, cookies, cloud credentials, database URLs,
 and high-entropy blobs. Per-workspace deny patterns block configured paths from
-transcript capture and import. [ADR 015](adr-015-local-safety-defaults.md)
-turns that class list into a versioned detector corpus with explicit prefix,
-assignment, JSON-key, and entropy rules; mandatory default exclusions that an
-operator may extend but not disable; the `none` and `redacted` raw-text
-behaviour; and fail-closed processing limits. Redaction is a mitigation, not a
-guarantee: no detector corpus finds every secret, and a high-entropy match is a
-warning heuristic rather than proof.
+transcript capture and import.
+[ADR 015](adrs/adr-0015-local-safety-defaults.md) turns that class list into a
+versioned detector corpus with explicit prefix, assignment, JSON-key, and
+entropy rules; mandatory default exclusions that an operator may extend but not
+disable; the `none` and `redacted` raw-text behaviour; and fail-closed
+processing limits. Redaction is a mitigation, not a guarantee: no detector
+corpus finds every secret, and a high-entropy match is a warning heuristic
+rather than proof.
 
 Large tool outputs are not embedded directly. The daemon summarizes or extracts
 bounded spans, records hashes and evidence references, and keeps raw references
@@ -1146,7 +1147,7 @@ must display the tenant and workspace or tenant scope it will remove. There is
 no implicit undo window unless a later backup feature is explicitly
 implemented. ADR 013 requires explicit pre-migration and pre-purge operator
 backups for the evidence store until automated backup tooling exists.
-[ADR 015](adr-015-local-safety-defaults.md) makes the confirmation act
+[ADR 015](adrs/adr-0015-local-safety-defaults.md) makes the confirmation act
 scope-bound and explicit, requires a pre-purge backup acknowledgement bound to
 the preview, refuses to report success before every active store deletion is
 acknowledged, and retains a content-free workspace tombstone that blocks
@@ -1237,7 +1238,7 @@ store_raw_text = "redacted" # none | redacted | encrypted
 _Listing 3: Initial configuration shape._
 
 The `[privacy]` field names are normative.
-[ADR 015](adr-015-local-safety-defaults.md) fixes their meaning:
+[ADR 015](adrs/adr-0015-local-safety-defaults.md) fixes their meaning:
 `redact_before_store` and `redact_before_embedding` are both `true` and cannot
 be disabled in the first release, `store_raw_text = "redacted"` is the default,
 `"none"` drops all free-text payload fields, and `"encrypted"` is rejected as
@@ -1252,7 +1253,7 @@ field names.
 
 The design carries several correctness surfaces that deserve explicit
 verification beyond ordinary unit and behavioural tests. The local-safety rows
-below come from [ADR 015](adr-015-local-safety-defaults.md); they are
+below come from [ADR 015](adrs/adr-0015-local-safety-defaults.md); they are
 requirements on the slices that implement it, not evidence that the policy is
 already enforced.
 
@@ -1318,9 +1319,10 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
   deployment-mode strategy itself remains open.
 - Define exact Axinite projection write-back policy.
 - Define the encrypted raw-text mode, including key management.
-  [ADR 015](adr-015-local-safety-defaults.md) defines the detector corpus and
-  closes the `none` and `redacted` modes, but leaves `encrypted` unsupported
-  until a key-provisioning, rotation, recovery, and audit decision exists.
+  [ADR 015](adrs/adr-0015-local-safety-defaults.md) defines the detector corpus
+  and closes the `none` and `redacted` modes, but leaves `encrypted`
+  unsupported until a key-provisioning, rotation, recovery, and audit decision
+  exists.
 - Define the workspace-registry storage surface. ADR 015 requires a registry
   that persists the descriptor version, the canonical root path before hashing,
   and the full descriptor binding, and compares the full canonical descriptor
@@ -1341,9 +1343,9 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 - Define recall-audit retention defaults and whether redacted query text is
   ever stored by default.
 - Define the operator backup format used before irreversible purge.
-  [ADR 015](adr-015-local-safety-defaults.md) fixes when a backup is required
-  and what the operator must acknowledge, but not the backup format or the
-  restore rehearsal procedure.
+  [ADR 015](adrs/adr-0015-local-safety-defaults.md) fixes when a backup is
+  required and what the operator must acknowledge, but not the backup format or
+  the restore rehearsal procedure.
 
 ## References
 

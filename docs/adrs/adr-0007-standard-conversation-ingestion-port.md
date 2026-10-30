@@ -150,9 +150,9 @@ The first implementation must provide these adapter shapes:
 ## References
 
 - `docs/memoryd-design.md`.
-- `docs/rfcs/0001-standalone-evidence-inbox.md`.
-- `docs/adr-005-hexagonal-architecture-boundary.md`.
-- `docs/adr-006-tenant-isolation-and-corbusier-context.md`.
+- `docs/rfcs/rfc-0001-standalone-evidence-inbox.md`.
+- `docs/adrs/adr-0005-hexagonal-architecture-boundary.md`.
+- `docs/adrs/adr-0006-tenant-isolation-and-corbusier-context.md`.
 - `../corbusier/src/message/ports/conversation.rs`.
 - `../corbusier/src/message/domain/conversation.rs`.
 - `../corbusier/src/message/domain/message.rs`.
