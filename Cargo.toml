@@ -100,7 +100,7 @@ invalid_codeblock_attributes        = "deny"
 unescaped_backticks                 = "deny"
 
 [dev-dependencies]
-rstest = "0.26.1"
+rstest = "0.28.0"
 
 # Development builds keep no incremental state and no debug information, which
 # shrinks `target/` (Concordat rule `rust-dev-build-footprint`). The test
