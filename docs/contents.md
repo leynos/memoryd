@@ -18,6 +18,9 @@ set.
   records the completed decision work for roadmap item 1.1.2: the accepted
   workspace-identity, redaction, and purge defaults in ADR 015, and the runtime
   work they defer to later roadmap items.
+- [Boundary ratification ExecPlan](execplans/1-1-3-accept-or-revise-boundaries.md)
+  plans roadmap 1.1.3: hexagonal ownership, tenant authority, canonical deltas,
+  and separate push and collected-ingestion contracts.
 - [Users' guide](users-guide.md) explains how to use Memoryd, the planned local
   safety defaults for workspace identity, redaction, and purge, and its public
   build and test commands.
