@@ -88,7 +88,14 @@ adapter tests before claiming implementation correctness.
   Six gates passed against the candidate: `check-fmt`, `markdownlint`, `nixie`,
   `lint`, and `test` (150 tests, zero skipped). Logs are under `/tmp` with the
   `1-1-3-epm1` suffix.
-- [ ] EP-M2: Record conformance cases and verification handoffs in guides.
+- [x] (2026-11-03) EP-M2: Record conformance cases and verification handoffs
+  in guides. The developers' guide carries the producer mappings, obligation
+  and owner map, negative controls, acceptance and rejection fixture tables,
+  fixture-reuse ownership, and the proof/test relationship. The users' guide
+  states the planned authority, duplicate, retry, and stalled-source behaviour
+  as not implemented. Five gates passed on the same Rust tree: `check-fmt`,
+  `markdownlint`, `nixie`, `lint`, and `test` (150 tests, zero skipped). The
+  Markdown gates were re-run after the review corrections.
 - [ ] EP-M3: Reconcile evidence, mark 1.1.3 done, and deliver.
 
 ## Surprises & discoveries
@@ -134,6 +141,11 @@ than the simplified commands in generic guidance.
   terms of reference now summarize those contracts; no runtime work was
   introduced and the exact hash encoding, executable normalization, and
   provider fixtures remain deferred to roadmap 2.2.1–2.2.3.
+- 2026-11-03: EP-M2 keeps fixture provenance distinct from fixture coverage. A
+  synthetic canonical example tests the shared contract; each producer family
+  still needs its own provider-envelope fixture that records the provider or
+  CLI version, capture command, and date. No synthetic example is presented as
+  provider compatibility.
 
 ## Outcomes & retrospective
 

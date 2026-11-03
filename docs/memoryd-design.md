@@ -1388,6 +1388,16 @@ explicit. The first implementation should include negative fixtures proving
 that a domain-to-adapter import, application-to-SDK import, inbound-to-outbound
 adapter import, and outbound-to-inbound adapter import all fail before review.
 
+Conversation-ingestion conformance is a third surface. The developers' guide
+assigns each producer family, obligation, negative control, and fixture to a
+future roadmap owner. The design-level target remains the abstract model and
+representation relationship recorded in the ExecPlan for roadmap 1.1.3:
+tenant-scoped rows and unique keys map to accepted evidence and operations,
+committed cursor rows and source generations map to cursor state, and exclusion
+records map to durable dispositions. A later pure transition kernel may be
+proved, but that proof must be paired with adapter and crash tests; it does not
+establish SQL atomicity, parser correctness, or provider-version compatibility.
+
 ## 16. Rollout sequence
 
 1. **Tenant-aware evidence capture.** Implement request context, provider

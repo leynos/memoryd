@@ -19,14 +19,16 @@ set.
   workspace-identity, redaction, and purge defaults in ADR 015, and the runtime
   work they defer to later roadmap items.
 - [Boundary ratification ExecPlan](execplans/1-1-3-accept-or-revise-boundaries.md)
-  plans roadmap 1.1.3: hexagonal ownership, tenant authority, canonical deltas,
-  and separate push and collected-ingestion contracts.
+  records roadmap 1.1.3: the accepted hexagonal ownership, tenant authority,
+  canonical delta, and separate push and collected-ingestion contracts, plus
+  their conformance and verification handoffs.
 - [Users' guide](users-guide.md) explains how to use Memoryd, the planned local
-  safety defaults for workspace identity, redaction, and purge, and its public
-  build and test commands.
+  safety defaults for workspace identity, redaction, and purge, the planned
+  conversation-ingestion behaviour, and its public build and test commands.
 - [Developers' guide](developers-guide.md) explains the local workflow and
   implementation tooling for contributors, including where the local safety
-  policy belongs and the proof-to-test handoffs that implement it.
+  policy belongs, the conversation-ingestion producer mappings and fixture
+  obligations, and the proof-to-test handoffs that implement them.
 - [Repository layout](repository-layout.md) explains Memoryd's top-level files,
   directories, and ownership boundaries.
 - [Documentation style guide](documentation-style-guide.md) defines the

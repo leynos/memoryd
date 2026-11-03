@@ -151,6 +151,60 @@ side effect of a retry or a restart. If a purge cannot finish, it reports the
 incomplete cleanup without exposing payloads, and retrying over the same scope
 is safe to repeat.
 
+## Conversation ingestion (planned)
+
+Conversation ingestion is accepted policy in
+[ADR 005](adrs/adr-0005-hexagonal-architecture-boundary.md), [ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md),
+and [ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md), but it
+is **not yet implemented**: the daemon and collector do not discover sources,
+accept conversation deltas, or persist evidence. This section describes the
+behaviour to expect once roadmap phases 2.2, 2.3, and 5.3 land.
+
+### Who decides where evidence belongs
+
+Every conversation is stored under the tenant and workspace proven by the
+authenticated caller. A tenant or workspace named inside a transcript, an
+import file, or an ingestion payload describes provenance only; it cannot place
+evidence in a scope the caller is not authorized to write. Missing Corbusier
+credentials are an authentication failure, not a reason to use the local
+tenant. Local single-user mode selects the local tenant only when the
+deployment is explicitly configured for it.
+
+### Duplicates and conflicts
+
+Submitting the same logical conversation twice is safe: an identical retry
+reports the events as already seen and changes nothing. Reusing a request
+identifier with different content is rejected as a conflict rather than
+silently overwriting accepted evidence. A correction or deletion adds a new
+versioned operation that references the earlier event, retaining it as
+superseded provenance and excluding it from current recall. Purge, not a
+deletion event, is the erasure path.
+
+### Retries and interrupted work
+
+Accepting a collector batch is atomic within one tenant and one authorized
+workspace. If an acknowledgement is lost, replaying the identical batch adds no
+duplicate evidence or jobs. A batch built on an outdated cursor is rejected, so
+two collectors cannot both advance the same source. Acknowledgement follows
+durable commit, never precedes it.
+
+### Stalled, truncated, and unreadable sources
+
+A partially written trailing record is not read past; the cursor waits for the
+record to complete. A malformed complete record blocks progress until an
+operator-visible disposition records the decision without retaining payload
+text; that disposition is the audited explicit-skip path described in
+[What is excluded and redacted](#what-is-excluded-and-redacted), and skipping
+is never automatic. An empty read does not move the cursor. If a source file is
+truncated, replaced, or no longer matches its recorded identity, Memoryd
+reconciles the source generation instead of silently restarting from offset
+zero. Source health reporting for lag, parse errors, and stale cursors is
+planned for roadmap 2.3.3.
+
+Purged evidence is fenced from re-collection by the tombstone described in
+[Purging a workspace](#purging-a-workspace); ingestion does not reopen a purged
+scope.
+
 ## Generated Tooling
 
 Generated projects use Rust 2024, a pinned nightly toolchain, strict lint

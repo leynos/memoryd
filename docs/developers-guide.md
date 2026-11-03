@@ -402,6 +402,209 @@ Tests for new ports or adapters should include negative fixtures for missing
 context, mismatched tenant and workspace, insufficient capability, reused
 cursor from another scope, and cross-tenant read or write attempts.
 
+## Conversation ingestion contracts
+
+[ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md) is the
+normative record of the canonical delta, the three ingestion boundaries, and
+the push, batch, retry, cursor, correction, and reporting rules. This section
+is the implementor handoff: it maps each producer family to its path, names the
+obligations and their future owners, and specifies the fixtures later slices
+must write. Nothing here is implemented. The port traits, storage writes,
+cursor table, and fixture harness arrive with roadmap 1.2, 2.1, 2.2, 2.3, and
+5.3. A fixture described below is a specification, not evidence that any real
+provider version is supported.
+
+### Producer families and their paths
+
+The path follows the producer's trust and sequencing evidence, not its
+transport convenience. Table 1 assigns every family exactly one primary path;
+Axinite appears twice because its outbox and pull modes have different trust.
+
+| Producer family   | Ingestion path                      | Illustrative adapter name         | Request or operation identity          | Cursor ownership       | Owner        |
+| ----------------- | ----------------------------------- | --------------------------------- | -------------------------------------- | ---------------------- | ------------ |
+| Corbusier         | `ConversationPushIngestPort`        | `CorbusierConversationAdapter`    | Caller-supplied request ID             | Provenance only        | 5.3.5, 5.3.6 |
+| Axinite outbox    | `ConversationPushIngestPort`        | `AxiniteConversationAdapter`      | Outbox event identity                  | Provenance only        | 5.3.2        |
+| Axinite pull      | `ConversationSourcePort` then batch | `AxiniteConversationAdapter`      | Collector operation and batch identity | Collector resume state | 5.3.2        |
+| Codex rollout     | `ConversationSourcePort` then batch | `CodexRolloutSourceAdapter`       | Collector operation and batch identity | Collector resume state | 2.3.1        |
+| Claude transcript | `ConversationSourcePort` then batch | `ClaudeTranscriptSourceAdapter`   | Collector operation and batch identity | Collector resume state | 2.3.2        |
+| Manual import     | `ConversationPushIngestPort`        | `ManualConversationImportAdapter` | Explicit import request ID             | Provenance only        | 2.2.5        |
+
+_Table 1: Conversation producer families and their ingestion paths._
+
+A push caller submits one logical canonical delta under `memory.ingest`. A push
+token is not a collector token. A push delta's cursor metadata records where
+the producer believed it was; it cannot advance collector resume state. Manual
+import validates configured roots and keeps filesystem reading at the edge, but
+it does not gain collector trust by reading files.
+
+### Shared semantics and provider-only fields
+
+Each family must project the same canonical semantics for the data its source
+genuinely carries. The minimum-field sets are in the design document's
+producer-minimum table; the lists below state what a conformance comparison may
+assert and what stays provider-specific.
+
+- **Corbusier** (5.3.5, 5.3.6). Shared: tenant, principal or service identity,
+  conversation ID, message sequence, role, content part, timestamp, source
+  fingerprint, and workspace scope. Provider-only: repository metadata, model,
+  tool metadata, file edits, parent conversation, and Corbusier identifiers
+  outside the canonical scope.
+- **Axinite** (5.3.2). Shared: tenant, conversation ID, message role, content,
+  timestamp, channel or thread where present, source fingerprint, and workspace
+  scope. Provider-only: outbox ID, workspace document revision, model, branch,
+  repository metadata, and projection sink hints. Outbox mode pushes; pull mode
+  reads through `ConversationSourcePort`.
+- **Codex rollout** (2.3.1). Shared: tenant, source path, line or byte offset,
+  line hash, rollout item kind, ordinal, actor or role, timestamp where
+  present, and redaction state. Provider-only: Git branch, Git SHA, origin URL,
+  model provider, CLI version, tool metadata, file edits, and compaction
+  context.
+- **Claude transcript** (2.3.2). Shared: tenant, transcript path, transcript
+  offset, hook event or transcript line identity, actor or role, timestamp
+  where present, and redaction state. Provider-only: model, working directory,
+  stop reason, compaction summary, tool metadata, and subagent metadata.
+- **Manual import** (2.2.5). Shared: tenant, configured import root, source
+  path, import request ID, content hash, timestamp, workspace scope, and
+  redaction state. Provider-only: provider-specific metadata, model, branch,
+  and explicit provenance notes.
+
+Missing optional source data stays absent. An adapter must not fabricate a
+timestamp, actor, workspace, or authority value to make a shared field line up.
+Compare shared semantic projections, never transport IDs, source paths, or
+invented values.
+
+### Obligations and their owners
+
+Table 2 maps every contract obligation to the slice that must produce
+executable evidence for it. A documentation statement alone does not discharge
+an obligation.
+
+| Obligation                               | Contract                    | Evidence expected later                                           | Owner                             |
+| ---------------------------------------- | --------------------------- | ----------------------------------------------------------------- | --------------------------------- |
+| Canonical delta and port vocabulary      | ADR 005, ADR 007; design §6 | Domain types compile without infrastructure; fixture round trips  | 1.2.1                             |
+| Port ledger and inward dependency rule   | ADR 005                     | Architecture lint rejects seeded forbidden edges                  | 1.2.7                             |
+| Authenticated tenant context             | ADR 006                     | Tenant-isolation fitness checks and two-tenant fixtures           | 1.2.8, 2.2.2                      |
+| Payload scope agrees with context        | ADR 006, ADR 007            | Forged-tenant and widened-workspace rejections                    | 2.2.2                             |
+| Push request deduplication               | ADR 007                     | Identical-retry no-op and changed-payload conflict                | 2.2.2                             |
+| Event identity and correction            | ADR 007, ADR 015            | Conflicting-key rejection; versioned correction                   | 2.2.2, 2.2.3                      |
+| Atomic collected-batch acceptance        | ADR 007                     | Invalid-member, lost-acknowledgement, and crash tests             | 2.2.2                             |
+| Cursor progress and source generations   | ADR 007                     | Partial, empty, append, rotation, and stale-writer cases          | 2.2.1, 2.2.2                      |
+| Configured input and batch limits        | ADR 007                     | Below, at, and above each bound, including byte-heavy events      | 2.2.2                             |
+| Reusable conformance fixture corpus      | ADR 007; design §15         | Harness used by fakes and real adapters without a parallel format | 1.2.6                             |
+| Provider parsing and adapter conformance | ADR 007                     | Adapter tests against the shared corpus                           | 2.2.5, 2.3.1, 2.3.2, 5.3.2, 5.3.6 |
+| Detector-independent ingestion identity  | ADR 007, ADR 015            | Redacted bytes never define event identity                        | 2.2.3                             |
+| Pure transition kernel and non-vacuity   | ADR 007; design §15         | Verus kernel, property histories, and crash tests                 | 2.1.3, 2.2.2                      |
+| Source-health diagnostics                | ADR 008                     | Lag, stale cursor, parse error, and denial surfacing              | 2.3.3                             |
+
+_Table 2: Ingestion obligations and their future owners._
+
+### Negative controls
+
+A conforming implementation must fail these seeded defects. They are the
+counterexamples later suites must include, not optional hardening.
+
+- Trusting the payload tenant or workspace instead of the resolved context.
+- Falling back to the local tenant when Corbusier credentials are missing.
+- Accepting a push token as collector authority.
+- Deduplicating a push by request ID alone, so changed content is treated as a
+  replay.
+- Treating an event-key collision with different content as an identical retry.
+- Implementing a correction as an overwrite that reuses the original event key.
+- Resetting a file offset silently when a source is truncated or rotated.
+- Consuming a partial trailing record, or advancing on an empty read.
+- Deriving ingestion identity from redacted bytes or from a detector version.
+- Merging two tenants that reuse the same workspace label and provider keys.
+- Duplicating evidence or jobs after a lost acknowledgement is replayed.
+- Approving a generated snapshot merely because the mapper produced it.
+- A domain crate importing an adapter crate or an infrastructure SDK type.
+- An application crate importing an infrastructure SDK type.
+- An inbound adapter importing an outbound adapter, or the reverse.
+
+The last three controls belong to the architecture fitness check in roadmap
+1.2.7; the design document's verification strategy defines the four import
+directions it must reject.
+
+### Fixture specifications
+
+Each fixture must record its provider and source version or provenance, its
+input, the shared semantics it expects, the provider-only fields it excludes,
+its expected rejection where applicable, and its owning roadmap item. A
+provider-envelope fixture records the provider or CLI version, the capture
+command, and the capture date; a synthetic input says so explicitly and is
+never presented as provider capture. Table 3 lists the acceptance cases and
+Table 4 the rejection and recovery cases. The common human-message example is
+one synthetic canonical input that every family must project identically; it
+tests the contract, while each family's provider envelope remains a separate
+fixture.
+
+| Case                     | Producers and provenance                                 | Input                                               | Expected shared semantics                                                         | Provider-only expectations                      | Owner               |
+| ------------------------ | -------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------- |
+| Canonical common message | One synthetic canonical input; provider envelopes follow | One human message with role, text, and timestamp    | Same conversation identity, event kind, order, role, text, and timestamp          | Provider IDs, paths, and metadata differ        | 1.2.6, 2.2.2        |
+| Tool call and result     | Corbusier, Axinite, Codex, Claude                        | Assistant tool call followed by its matching result | Two ordered content parts with their linkage preserved                            | Tool names, arguments, and result payloads      | 2.2.2, 2.3.1, 2.3.2 |
+| Compaction summary       | Codex, Claude, and Axinite where surfaced                | A provider compaction marker                        | `compaction_summary` content part and boundary; no invented pre-compaction text   | Provider compaction metadata                    | 2.2.2, 2.3.1, 2.3.2 |
+| Correction and tombstone | All five                                                 | A corrected message and a deleted event             | New versioned operations that reference the earlier event; the original remains   | Provider redaction or supersession detail       | 2.2.2               |
+| Absent metadata          | All five                                                 | A message lacking model, actor, or workspace hints  | Absent fields stay absent; no fabricated timestamp, actor, or scope               | None                                            | 1.2.6, 2.2.2        |
+| Ordinary append          | Codex, Claude, Axinite pull                              | New records appended to an existing source          | Same source generation; cursor advances past committed complete items             | File growth and digest changes are not identity | 2.2.1, 2.3.1, 2.3.2 |
+| Collector restart        | Codex, Claude, Axinite pull                              | Accepted batch, then a new worker process           | Sequence namespace persists; replay adds no duplicates; cursor comes from storage | Worker process identity is not the namespace    | 2.2.1, 2.2.2        |
+| Push cursor injection    | Corbusier, Axinite outbox, manual import                 | A push delta carrying cursor fields                 | Provenance only; collector resume state is unchanged                              | Producer checkpoint token stays opaque          | 2.2.2               |
+
+_Table 3: Acceptance fixture specifications._
+
+| Case                      | Producers and provenance    | Input                                                 | Expected outcome                                        | Owner                      |
+| ------------------------- | --------------------------- | ----------------------------------------------------- | ------------------------------------------------------- | -------------------------- |
+| Unauthorized scope        | Push producers              | Delta claims a tenant or workspace outside authority  | Denied before the use case; no acceptance effects       | 1.2.8, 2.2.2               |
+| Missing context           | Corbusier mode              | No credential; delta claims a tenant                  | Denied; no fallback to the local tenant                 | 1.2.8                      |
+| Token substitution        | Push and collected paths    | Push token submitted to the collected command         | Denied; a push token is not collector authority         | 1.2.5, 2.2.2               |
+| Same ID, changed payload  | Push producers              | Committed request ID with different content           | Conflict; no acceptance effects                         | 2.2.2                      |
+| Same ID, changed cursor   | Collected batch             | Committed operation ID with a different cursor vector | Conflict; never treated as an identical retry           | 2.2.2                      |
+| Competing stale batch     | Collected batch             | Two batches expecting the same prior cursor           | First commits; second is rejected as stale              | 2.2.2                      |
+| Partial trailing record   | Codex, Claude               | Read ending in an incomplete record                   | Cursor stays before the partial record                  | 2.2.1, 2.3.1, 2.3.2        |
+| Malformed complete record | Codex, Claude               | Read encountering a malformed complete record         | Advancement blocked until an audited disposition exists | 2.2.1, 2.3.1, 2.3.2        |
+| Deny-pattern exclusion    | All producers               | Record matched by a mandatory deny pattern            | Advances only with a durable content-free disposition   | 2.2.3                      |
+| Lost acknowledgement      | Collected batch             | Identical committed batch replayed                    | No duplicate evidence or jobs; cursor unchanged         | 2.2.2                      |
+| Invalid batch member      | Collected batch             | Batch containing one invalid delta                    | No member accepted; prior cursor retained               | 2.2.2                      |
+| Source rotation           | Codex, Claude, Axinite pull | Source reports a different generation                 | Reconciliation required; no silent offset reset         | 2.2.1, 2.3.1, 2.3.2        |
+| Source truncation         | Codex, Claude, Axinite pull | Source shortens below a committed offset              | Generation reconciliation; no silent reset or data loss | 2.2.1, 2.2.2, 2.3.1, 2.3.2 |
+| Empty read                | Codex, Claude, Axinite pull | No items and no valid checkpoint                      | Cursor unchanged                                        | 2.2.1                      |
+
+_Table 4: Rejection and recovery fixture specifications._
+
+Wrong event order and dropped tool-result linkage are required negative
+controls for the acceptance fixtures. A fixture must not claim compatibility
+with a real provider version unless its provenance names that version and the
+adapter was exercised against it.
+
+### Fixture reuse and ownership
+
+The domain owns canonical values, the application layer owns acceptance policy,
+and adapters own parsing. Roadmap 1.2.6 owns the shared fixture harness and its
+stable file format; concrete adapters reuse that harness, and production code
+must never depend on fixture helpers. Before introducing any new fixture
+abstraction, sweep the repository for an existing equivalent and record the
+intended scope and re-use policy, as the repository's abstraction policy
+requires. A later slice may extend the harness; it must not fork a parallel
+format.
+
+### Proof and test relationship
+
+The design document's verification strategy owns the correctness surfaces and
+the representation relationship; this guide owns the implementor-facing cases.
+B1 is discharged by document review now and architecture lint in 1.2.7. B2 uses
+the worked authority examples now and tenant fixtures in 1.2.8 and 2.2.2. B3
+uses the five producer specifications above, then `rstest` cases and
+`googletest` matchers over the shared corpus in 2.2.1 and 2.2.2. B4 warrants a
+small Verus transition kernel in 2.1.3 and 2.2.2, paired with `proptest`
+operation histories and real daemon/collector crash tests.
+
+No proof artefact exists in this slice, and no theorem is claimed. A later
+proof of a pure transition function does not establish that SQL transactions,
+parsers, or retries satisfy the representation relationship; the owning slice
+must record the production mapping and retain the integration tests. External
+assumptions — token validation, adapter successor correctness, database commit
+and durability, and filesystem observation — are tested at their real
+boundaries rather than restated as theorems. Passing fixtures prove conformance
+to this specification, not compatibility with every provider version.
+
 ## CodeScene coverage and the CV-005 contract
 
 Main owns coverage publication (estate rule CV-005). A pull request measures
