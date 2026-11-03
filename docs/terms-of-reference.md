@@ -309,6 +309,11 @@ retrieve, corrupt, or delete another tenant's memory.
 - Tenant identity is available from authenticated callers, capability tokens,
   or a configured local default. If tenant context is missing in Corbusier
   mode, the request must fail before application use cases run.
+  [ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md) accepts
+  this assumption and adds that the local default is selected only by explicit
+  local mode; a missing Corbusier credential does not trigger it. Canonical
+  payload scope fields are provenance and must agree with the resolved context,
+  never replace it.
 
 ### 8.3 Dependencies
 
@@ -343,13 +348,24 @@ workspace-identity derivation those defaults depend on. The encrypted raw-text
 mode stays open and is rejected as unsupported until a key-management decision
 exists.
 
-| Question                                                                                        | Why it matters                                                                           | Criteria for resolution                                                            | Suggested path       |
-| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------- |
-| What is the exact canonical evidence schema for Codex, Claude, Axinite, and manual imports?     | The schema gates adapters, idempotency, redaction, projection, and tests                 | Provider examples round-trip through normalization with stable evidence references | Implementation spike |
-| Should Axinite projection write-back be manual, approved, or automatic by default?              | Write-back can duplicate or strengthen derived facts if loops are not controlled         | A policy that prevents self-reinforcing projection loops                           | ADR                  |
-| Which MCP tools are required in the first public slice?                                         | The MCP surface affects immediate usefulness and implementation order                    | A minimum useful set tied to evidence capture and flat recall                      | Roadmap              |
-| What recall quality signals will decide whether hierarchical recall is better than flat recall? | Without evaluation signals, theme and episode expansion can add complexity without value | A shadow-mode evaluation set with traceable disagreement and token-cost metrics    | Evaluation plan      |
-| Which tenant storage strategy should each supported deployment use?                             | SQLite, PostgreSQL, Qdrant, Oxigraph, and Chutoro enforce isolation differently          | A selected local default, Corbusier mode, and hosted-ready extension point         | ADR                  |
+ADR 005 accepts the hexagonal ownership boundary: the inward dependency rule,
+adapter isolation, collector orchestration in the application layer, and the
+port ledger that keeps the collected-ingestion boundary internal until it meets
+the port budget. ADR 006 accepts the tenant-authority contract: the
+tenant-scoped request context, the explicit local default, provenance-only
+payload scope, and adapter enforcement, while deferring per-store layouts to
+their owning roadmap slices. ADR 007 accepts the shared conversation-ingestion
+contract: one canonical delta, three ports, and the push, batch, retry, cursor,
+correction, and reporting rules. It settles shared semantics only; executable
+normalization, exact encodings, and provider-version fixtures remain later work.
+
+| Question                                                                                        | Why it matters                                                                           | Criteria for resolution                                                                                                         | Suggested path                     |
+| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| What is the exact canonical evidence schema for Codex, Claude, Axinite, and manual imports?     | The schema gates adapters, idempotency, redaction, projection, and tests                 | ADR 007 accepts shared semantics; executable normalization, exact encodings, and versioned fixtures reproduce provider examples | Roadmap 2.2.1–2.2.3                |
+| Should Axinite projection write-back be manual, approved, or automatic by default?              | Write-back can duplicate or strengthen derived facts if loops are not controlled         | A policy that prevents self-reinforcing projection loops                                                                        | ADR                                |
+| Which MCP tools are required in the first public slice?                                         | The MCP surface affects immediate usefulness and implementation order                    | A minimum useful set tied to evidence capture and flat recall                                                                   | Roadmap                            |
+| What recall quality signals will decide whether hierarchical recall is better than flat recall? | Without evaluation signals, theme and episode expansion can add complexity without value | A shadow-mode evaluation set with traceable disagreement and token-cost metrics                                                 | Evaluation plan                    |
+| Which tenant storage strategy should each supported deployment use?                             | SQLite, PostgreSQL, Qdrant, Oxigraph, and Chutoro enforce isolation differently          | ADR 006 accepts the local, Corbusier, and hosted-ready contract; per-store layouts are deferred to their owning slices          | ADR 006; roadmap 3.1, 5.1, and 6.1 |
 
 _Table 3: Open questions for the next design iteration._
 

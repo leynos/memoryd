@@ -2,11 +2,18 @@
 
 ## Status
 
-Proposed.
+Accepted on 2026-11-03. Tenant isolation is a first-class Memoryd boundary. The
+normative identity is the authenticated pair `(tenant_id, workspace_id)`; a
+`RequestContext` is resolved at the driving boundary and propagated immutably;
+canonical payload scope is provenance and must agree with that context; and
+each driven adapter enforces the same contract with the strongest mechanism its
+store offers. Enforcement is implemented by roadmap items 1.2.5, 1.2.8, 2.1.1,
+2.2.2, 2.2.4, 3.1.1, 5.1.1, 6.1.1, and 6.1.2; this ADR records the contract,
+not an implementation.
 
 ## Date
 
-2026-05-25.
+2026-11-03.
 
 ## Context and problem statement
 
@@ -83,6 +90,68 @@ identity is taken from an authenticated capability token, Corbusier request
 context, or configured local default, never from an untrusted request field by
 itself.
 
+### Authority resolution and propagation
+
+A driving boundary resolves the complete context before any application logic
+runs: tenant, principal or service identity, session, correlation, optional
+causation, and the authorized workspace scope. The configured local tenant is
+selected only when the deployment is explicitly in local mode. A missing
+Corbusier credential in Corbusier mode is an authentication failure; it is not
+a reason to fall back to the local tenant.
+
+The resolved context is immutable for the life of the operation. Worker jobs
+carry it through retries, storage calls, and audit events; a retry does not
+re-resolve authority from the retried payload. Table 1 separates what may
+establish authority from what may only describe or narrow it.
+
+| Input                                               | Resolved at                    | Permitted effect                                                    | Not permitted                                                 |
+| --------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Authenticated capability token or Corbusier context | Driving adapter                | Establish tenant, principal or service identity, session, and scope | Be replaced by payload fields                                 |
+| Explicit local mode configuration                   | Composition root               | Select the configured local tenant                                  | Act as a fallback when Corbusier credentials are missing      |
+| Canonical delta scope fields                        | Application command validation | Describe provenance and confirm agreement with the resolved context | Establish or widen authority; a mismatch is a typed rejection |
+| Caller workspace filter or allowed-workspace hint   | Driving adapter and use case   | Narrow within the authoritatively permitted set                     | Broaden the authenticated workspace scope                     |
+| Scheduled-job record                                | Job runner                     | Carry the context resolved when the job was created                 | Acquire a fresh tenant or workspace from job arguments        |
+
+_Table 1: Authority inputs and their permitted effects._
+
+Canonical scope fields describe provenance. They must agree with the resolved
+context; a disagreement is a typed rejection and never an instruction to
+replace the context. Allowed-workspace hints supplied in configuration or
+payloads cannot broaden authenticated permissions.
+
+### Worked authority examples
+
+Table 2 works the boundary through accept and reject cases. Tenants A and B
+reuse the same workspace label and the same provider identifiers deliberately,
+because identifier reuse is the failure this boundary must survive.
+
+| Case                          | Resolved context                       | Payload or request claim                    | Outcome                                                           |
+| ----------------------------- | -------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------- |
+| Trusted local                 | Explicit local mode, tenant L          | Workspace W under tenant L                  | Accepted; tenant L owns the evidence                              |
+| Trusted Corbusier             | Token for tenant A, workspace W        | Delta scope tenant A, workspace W           | Accepted                                                          |
+| Missing Corbusier context     | None; Corbusier mode                   | Delta scope tenant A, workspace W           | Denied before the use case; no fallback to tenant L               |
+| Forged tenant                 | Token for tenant A, workspace W        | Delta scope tenant B, workspace W           | Typed scope rejection; no acceptance effects                      |
+| Widened workspace             | Token permits W only                   | Filter or hint names W2                     | Denied; hints cannot broaden the permitted set                    |
+| Same label, different tenants | Tenant A accepts W; tenant B accepts W | Identical workspace label and provider keys | Both accepted in separate partitions; neither read sees the other |
+| Token substitution            | Push token, collected batch            | Collector batch identity                    | Denied; a push token is not collector authority                   |
+
+_Table 2: Worked accept/reject authority examples._
+
+A seeded implementation that trusts the payload tenant fails the forged-tenant
+case. An implementation that maps a missing Corbusier context onto the local
+tenant fails the missing-context case. Both are required negative controls for
+the later executable tests.
+
+### Deferred store strategy
+
+This decision ratifies isolation invariants, not a fixed storage layout.
+Database, vector, graph, and clustering enforcement mechanisms stay in their
+adapters. Only the SQL evidence-store contract gates the first implementation.
+The specific Qdrant collection layout and the Oxigraph and Chutoro operational
+strategies are deferred to their owning delivery slices — roadmap 3.1, 5.1, and
+6.1 respectively — and are not accepted by implication here. Their isolation
+requirements remain binding when those slices implement them.
+
 Workspace identity becomes tenant-scoped. The normative identity boundary is
 `(tenant_id, workspace_id)`, not `workspace_id` alone. Local single-user mode
 uses a stable default local tenant so the existing local-first workflow remains
@@ -144,6 +213,14 @@ tenants.
 - Fleet-wide tenant administration, billing, analytics, and tenant lifecycle
   management remain deferred product scope. The v1 requirement is isolation and
   compatibility, not a hosted control plane.
+- A missing authenticated context in Corbusier mode fails the request. The
+  local default is a deliberate deployment mode, not an error-recovery path.
+- Payload scope fields are evidence about the source, not authority. An
+  implementation that trusts a payload tenant is non-conforming even if it
+  happens to pass a happy-path test.
+- Deferring the Qdrant, Oxigraph, and Chutoro layouts keeps this decision
+  stable while their owning slices learn operational requirements. It does not
+  relax the isolation invariant those layouts must satisfy.
 
 ## References
 

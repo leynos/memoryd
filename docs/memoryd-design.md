@@ -304,7 +304,30 @@ distinct use cases, or one use case with a clear second adapter scheduled in
 the roadmap. A boundary that only separates one adapter from one use case may
 begin as an internal module until the second pressure arrives. This discipline
 keeps the dependency rule without turning early implementation into interface
-theatre.
+theatre. Internal visibility never permits a second delta definition or a
+source-specific ingestion contract in another crate.
+
+The conversation-ingestion boundaries apply the budget as follows. The port
+ledger itself is recorded in
+[ADR 005](adrs/adr-0005-hexagonal-architecture-boundary.md).
+
+- `ConversationPushIngestPort` is public: it already serves Corbusier, the
+  Axinite transactional outbox, and the manual/MCP import surface.
+- `ConversationSourcePort` is public: it already serves Codex rollout,
+  Claude transcript, and Axinite pull-mode source adapters.
+- `CollectedConversationIngestPort` is an internal workspace implementation
+  contract: `memoryd-collector` is its single driving adapter. It remains a
+  required logical boundary, because it carries collector trust, batch
+  sequencing, and cursor preconditions that the push command must not accept.
+  It graduates only when a second adapter, a second use case, or a
+  roadmap-scheduled second adapter arrives; no adapter is invented to satisfy
+  the budget.
+
+Collector orchestration belongs to an application service wired at the
+collector composition root. That service invokes injected
+`ConversationSourcePort` implementations and the collected-ingestion command;
+it does not reach a concrete adapter or daemon client directly. The domain owns
+the shared port contracts, and the application owns the two ingest use cases.
 
 Adapters never call one another directly. For example, the Claude Code adapter
 does not write Qdrant; it emits evidence through the ingest use case. The MCP
@@ -332,6 +355,20 @@ capability tokens, Corbusier request context, MCP configuration, scheduled-job
 state, or the configured local default before invoking application services.
 Untrusted request fields may narrow filters, but they do not establish tenant
 identity.
+
+The driving boundary resolves the complete context — tenant, principal or
+service identity, session, correlation, optional causation, and authorized
+workspace scope — before application logic runs. The configured local tenant is
+selected only by an explicit local deployment mode; missing Corbusier
+credentials are an authentication failure, not a fallback trigger. The resolved
+context is immutable for the operation, and worker jobs carry it through
+retries, storage calls, and audit events.
+
+Canonical scope fields describe provenance and must agree with the resolved
+context. A disagreement is a typed rejection, never an instruction to replace
+the context. Allowed-workspace hints cannot broaden authenticated permissions.
+[ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md) records the
+authority matrix and the permitted effect of each input.
 
 Workspace identity is scoped by tenant. The normative identity boundary is
 `(tenant_id, workspace_id)`. A repository-derived workspace ID is not globally
@@ -366,6 +403,14 @@ for their store:
   delete, and repair operation;
 - Oxigraph adapters address only tenant-and-workspace named graphs;
 - Chutoro adapters load only tenant-and-workspace sessions and checkpoints.
+
+Enforcement stays in the adapters. Only the SQL evidence-store contract gates
+the first implementation. This design does not fix a Qdrant collection layout
+or an Oxigraph or Chutoro operational strategy; those remain deferred to
+roadmap 3.1, 5.1, and 6.1, and their isolation requirements bind when those
+slices implement them. Acceptance of
+[ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md) ratifies the
+isolation invariants, not those layouts.
 
 The same boundary applies to observability and error handling. Audit records
 carry tenant context. Metrics labels must avoid unbounded tenant names or raw
@@ -418,6 +463,14 @@ at the application-command boundary instead of being hidden inside one
 polymorphic function body. The ingest application layer remains responsible for
 redaction checks, source-session materialization, raw event and span writes,
 idempotency keys, cursor updates, projection jobs, and audit records.
+
+Push and collected ingestion share the delta but not their trust rules. A push
+token is not a collector token. Push cursor metadata is provenance only and
+cannot advance collector resume state. Collected ingestion additionally checks
+collector identity, batch identity, sequence, source binding, and cursor
+preconditions. [ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md)
+is the canonical record of acceptance, retry, cursor, correction, and reporting
+semantics; §6.2 summarizes the contract for implementers.
 
 `ConversationSourcePort` is the source-reader contract implemented by adapters
 when `memoryd-collector` must discover, tail, page, or replay source material.
@@ -547,6 +600,41 @@ _Figure 3: Standard conversation ingestion paths._
 | Manual import adapter          | Operator-supplied transcript or rollout paths                                                             | Read only explicitly supplied files under configured roots and record import actor and request ID.                                |
 
 _Table 5: Provider adapters and their source boundaries._
+
+### 6.2 Acceptance, retry, and cursor contract
+
+An ingest call reports accepted, identical retry, or a typed failure. Report
+counts distinguish newly accepted events from already-seen ones. Typed failures
+distinguish at least malformed input, scope or capability denial, a conflicting
+duplicate, a stale cursor or sequence, and a retryable storage failure. Error
+text never echoes raw source payloads.
+
+A collected batch commits atomically within one tenant and one authorized
+workspace: evidence, spans, jobs, accepted batch identity, and cursor
+transitions together. An invalid member or storage failure leaves those
+acceptance effects unchanged, though a content-free rejection audit may still
+be recorded. The collector partitions cross-workspace work before submission;
+cross-workspace atomicity has no first-value consumer.
+
+Operation identity is namespaced by tenant, operation kind, and authenticated
+producer or collector-stream identity, and is bound to the logical payload and
+the entire expected and next cursor vector. The same identity with changed
+content is a conflict, never an identical retry. Sequence numbers belong to a
+stable `(tenant, workspace, collector-stream)` namespace that survives worker
+restart and advances only on accepted fresh batches.
+
+Cursors are bound to tenant, workspace, source identity, and source generation,
+and provider checkpoint tokens are opaque. A cursor advances only past
+committed complete items or durable dispositions; a partial trailing record is
+not consumed, an empty read does not advance, and source truncation, rotation,
+or a fingerprint mismatch triggers generation reconciliation rather than a
+silent offset reset. Corrections and tombstones are new versioned operations,
+not retries that overwrite.
+
+Configured limits bound encoded input bytes, events per delta, deltas per
+batch, and source page size. Oversized input is rejected before acceptance
+effects or cursor advancement. Numeric defaults belong to configuration and
+runtime delivery, and tests must cover below, at, and above each bound.
 
 ## 7. Canonical evidence model
 
@@ -771,6 +859,15 @@ request ID, or Axinite outbox identifier may exist for different tenants
 without collision. Source-session and projection uniqueness rules follow the
 same pattern: tenant identity is part of the logical key even when surrogate
 IDs are globally unique.
+
+Event identity and request identity are distinct. A push request ID
+deduplicates the logical request; a provider event key deduplicates evidence.
+Reusing a request ID with changed logical content is a conflict even when every
+event has already been seen. Each event key is bound to its full source and
+workspace identity and to a detector-independent content identity, so the Codex
+and Claude `{line_hash}` input must not cover redacted bytes; roadmap 2.2.3
+fixes the exact encoding. A correction or tombstone is a new versioned
+operation that references the earlier event rather than reusing its key.
 
 ## 8. Projection and storage model
 
@@ -1295,7 +1392,11 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 
 1. **Tenant-aware evidence capture.** Implement request context, provider
    discovery, source health, cursor persistence, redaction, raw event
-   normalization, session listing, and health checks.
+   normalization, session listing, and health checks. The ownership,
+   tenant-authority, and conversation-ingestion boundaries this step depends on
+   are ratified by
+   [ADR 005](adrs/adr-0005-hexagonal-architecture-boundary.md), [ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md),
+   and [ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md).
 2. **Dear Diary parity through the daemon.** Add curated writes, flat recall,
    durable recall audit modes, retraction, Qdrant indexing, and audit records
    without exposing collection names through MCP. This is the release 0.1
@@ -1313,10 +1414,26 @@ adapter import, and outbound-to-inbound adapter import all fail before review.
 
 ## 17. Open design decisions
 
-- Accept or revise the tenant-isolation strategy for local, Corbusier, and
-  hosted-ready modes. ADR 015 fixes the workspace-identity derivation,
-  collision, and override rules that the strategy must preserve; the
-  deployment-mode strategy itself remains open.
+- Resolved: the tenant-isolation strategy for local, Corbusier, and
+  hosted-ready modes.
+  [ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md) accepts
+  the tenant-scoped request context, the explicit local default, and the
+  adapter enforcement contract. ADR 015 fixes the workspace-identity
+  derivation, collision, and override rules that the strategy must preserve.
+  Per-store layouts for Qdrant, Oxigraph, and Chutoro remain deferred to
+  roadmap 3.1, 5.1, and 6.1; they are not first-value design questions.
+- Resolved: the ownership, dependency, and port-budget boundary.
+  [ADR 005](adrs/adr-0005-hexagonal-architecture-boundary.md) accepts the
+  inward dependency rule, adapter isolation, collector orchestration in the
+  application layer, and the port ledger. Runtime enforcement belongs to
+  roadmap 1.2.7 and 1.2.8.
+- Resolved: the shared conversation-ingestion semantics.
+  [ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md) accepts the
+  single canonical delta, the three ports, and the push, batch, retry, cursor,
+  correction, and reporting rules. The exact encoding, executable
+  normalization, and provider-version fixtures remain later work in roadmap
+  2.2.1–2.2.3; this decision does not close the terms of reference's
+  exact-evidence-schema question.
 - Define exact Axinite projection write-back policy.
 - Define the encrypted raw-text mode, including key management.
   [ADR 015](adrs/adr-0015-local-safety-defaults.md) defines the detector corpus

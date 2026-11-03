@@ -1,6 +1,6 @@
 # Accept or revise the hexagonal, tenant, and ingestion boundaries
 
-Status: DRAFT — awaiting explicit approval before execution.
+Status: APPROVED — execution authorised on 2026-11-03.
 
 This ExecPlan is a living document. Keep Constraints, Tolerances, Risks,
 Progress, Surprises & discoveries, Decision log, Outcomes & retrospective,
@@ -81,8 +81,13 @@ adapter tests before claiming implementation correctness.
 - [x] (2026-11-02) Planning validation passed: formatting, Markdown, Mermaid,
   Rustdoc, Clippy, Whitaker, and 150 tests (zero skipped). Publication and
   final candidate readback evidence accompany the draft PR.
-- [ ] Obtain explicit execution approval.
-- [ ] EP-M1: Ratify boundary decisions and synchronize the design.
+- [x] (2026-11-03) Obtain explicit execution approval.
+- [x] (2026-11-03) EP-M1: Ratify boundary decisions and synchronize the
+  design. ADRs 005–007 are Accepted; the port ledger, authority matrix, and
+  acceptance/cursor contract are recorded in the design and terms of reference.
+  Six gates passed against the candidate: `check-fmt`, `markdownlint`, `nixie`,
+  `lint`, and `test` (150 tests, zero skipped). Logs are under `/tmp` with the
+  `1-1-3-epm1` suffix.
 - [ ] EP-M2: Record conformance cases and verification handoffs in guides.
 - [ ] EP-M3: Reconcile evidence, mark 1.1.3 done, and deliver.
 
@@ -121,16 +126,24 @@ than the simplified commands in generic guidance.
   identity, batch cursor vectors, persistent sequence namespaces, and stable
   source generations make retry claims precise. The trade-off is smaller atomic
   scope at the cost of collector-side partitioning.
+- 2026-11-03: Accepted ADRs 005, 006, and 007 with targeted clarifications
+  rather than replacement ADRs. The clarifications add the port ledger and
+  collector-orchestration ownership to ADR 005, the authority matrix and
+  deferred-store statement to ADR 006, and the producer routing, acceptance,
+  retry, cursor, correction, and reporting rules to ADR 007. The design and
+  terms of reference now summarize those contracts; no runtime work was
+  introduced and the exact hash encoding, executable normalization, and
+  provider fixtures remain deferred to roadmap 2.2.1–2.2.3.
 
 ## Outcomes & retrospective
 
-The reviewed planning draft is ready for approval. All six local gates passed
-before this progress update; the publication handoff records validation of the
-final candidate and draft PR readback. No boundary decision has been ratified,
-no runtime behaviour has changed, and no theorem is claimed proved. During
-execution, record accepted decisions, remaining runtime owners, and exact gate
-evidence per milestone; do not describe a moving branch head as a permanently
-tested SHA.
+The reviewed planning draft was approved on 2026-11-03. EP-M1 has ratified ADRs
+005–007 and synchronized the design and terms of reference; all six local gates
+passed against that candidate. No runtime behaviour has changed and no theorem
+is claimed proved. Remaining work is EP-M2's implementor guidance and EP-M3's
+expert review, roadmap closure, and delivery. During execution, record accepted
+decisions, remaining runtime owners, and exact gate evidence per milestone; do
+not describe a moving branch head as a permanently tested SHA.
 
 ## Context and orientation
 

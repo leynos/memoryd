@@ -2,11 +2,18 @@
 
 ## Status
 
-Proposed.
+Accepted on 2026-11-03. Memoryd defines one canonical conversation delta and
+three standard ports: an authenticated push command, a collector-originated
+batch command, and a source-reader contract. Push and collected paths keep
+their trust, capability, sequencing, cursor, and idempotency rules separate
+while producing the same evidence records. This ADR records the shared
+semantics, acceptance and retry rules, cursor progress, correction handling,
+and reporting limits. Runtime implementation belongs to roadmap items 1.2.1,
+1.2.6, 2.1.3, 2.2.1, 2.2.2, and 2.2.3.
 
 ## Date
 
-2026-05-25.
+2026-11-03.
 
 ## Context and problem statement
 
@@ -111,6 +118,154 @@ Content parts are canonical and extensible. The first set is `text`,
 payload remains in redacted JSON metadata and does not become a new event kind
 unless the domain needs different behaviour.
 
+Missing optional source data stays absent. An adapter must not fabricate a
+timestamp, actor, workspace, or authority value to fill a canonical field.
+Producer-specific minimum fields are listed in the design document's
+producer-minimum table; fields outside that minimum are optional or best-effort.
+
+### Producer routing
+
+Table 1 assigns each producer family to one path. The routing follows the
+producer's trust and sequencing evidence, not its transport convenience.
+
+| Producer          | Ingestion path                                         | Request or operation identity          | Cursor ownership       |
+| ----------------- | ------------------------------------------------------ | -------------------------------------- | ---------------------- |
+| Corbusier push    | `ConversationPushIngestPort`                           | Caller-supplied request ID             | Provenance only        |
+| Axinite outbox    | `ConversationPushIngestPort`                           | Outbox event identity                  | Provenance only        |
+| Axinite pull      | `ConversationSourcePort` then collected batch          | Collector operation and batch identity | Collector resume state |
+| Codex rollout     | `ConversationSourcePort` then collected batch          | Collector operation and batch identity | Collector resume state |
+| Claude transcript | `ConversationSourcePort` then collected batch          | Collector operation and batch identity | Collector resume state |
+| Manual import     | `ConversationPushIngestPort` with an import request ID | Explicit import request ID             | Provenance only        |
+
+_Table 1: Producer routing for the canonical delta._
+
+A push caller uses one logical delta per command and requires `memory.ingest`
+through a push token. A push token is not a collector token, and the two are
+never interchangeable. A push delta's cursor metadata is provenance: it cannot
+advance collector resume state and is not compared with a source cursor. Manual
+import validates configured roots and keeps filesystem reading at the edge; it
+does not gain collector trust by reading files.
+
+### Push acceptance
+
+A push command accepts one canonical delta. Its request identity is separate
+from any provider event identity in the delta. Push requests are deduplicated
+by tenant, authenticated caller, and request ID. Events are independently
+deduplicated by their tenant-scoped provider keys.
+
+Reusing a request ID with changed logical content is a conflict, even when
+every event in the changed delta has already been seen. An identical retry of
+the same request identity and payload is a no-op on acceptance effects.
+
+### Collected batch acceptance
+
+Collected ingestion additionally checks collector identity, batch identity,
+sequence number, source binding, and cursor preconditions. Acceptance is atomic
+within one tenant and one authorized workspace: evidence, spans, jobs, accepted
+batch identity, and cursor transitions commit together.
+
+An invalid member, or a storage failure, leaves those acceptance effects
+unchanged. A separate content-free rejection audit may still be recorded; it
+must not retain prohibited payload text. The initial batch scope is one
+workspace, and the collector partitions work before submission, because
+cross-workspace atomicity has no demonstrated first-value consumer.
+
+Acknowledgement follows durable commit. A lost acknowledgement permits the
+collector to replay the identical batch with no duplicate effects.
+
+### Operation identity and retry
+
+Operation identity is namespaced by tenant, operation kind, and authenticated
+producer or collector-stream identity. It is bound to the canonical logical
+payload and to the entire expected and next cursor vector.
+
+The same identity with a changed payload or changed cursor vector is a
+conflict, never an identical retry. This prevents a retry from silently
+becoming an overwrite.
+
+Sequence numbers belong to a stable `(tenant, workspace, collector-stream)`
+namespace. They survive worker restart and advance only for accepted fresh
+batches. A new worker process cannot reset that namespace; source
+reconciliation or a genuinely new stream requires explicit, audited
+registration.
+
+### Cursor semantics
+
+Cursors are bound to tenant, workspace, source identity, and source generation.
+Provider checkpoint tokens are opaque. An `after` cursor is exclusive of the
+last committed complete item. Only the source adapter interprets its own
+ordering; no component compares opaque tokens lexically or across sources.
+
+A fresh update requires an expected previous cursor or an equivalent version
+check, so competing stale updates are rejected. An identical committed retry is
+recognised before that stale-update rejection, so a harmless replay is not
+reported as a conflict. Replaying older accepted evidence must not regress the
+cursor.
+
+A partial trailing record is not consumed. A malformed complete record blocks
+advancement until an explicit, audited disposition exists. A mandatory safety
+exclusion may advance only with a durable content-free disposition committed
+with the cursor, so no prohibited text is retained.
+
+Source truncation, rotation, or an identity-fingerprint mismatch requires
+reconciliation of the source generation; an offset is never reset silently.
+Ordinary appends, or a changing content digest alone, do not create a new
+source generation. Stable source-incarnation identity stays distinct from
+observed content fingerprints. An empty read does not advance a cursor unless
+it carries an explicit valid source checkpoint or disposition.
+
+### Event identity and correction
+
+Within a tenant, the provider-specific event keys from the design document's
+idempotency-key list are retained. Each key is bound to its full source and
+workspace identity and to a detector-independent logical content identity. An
+identical retry is a no-op; the same key with conflicting identity or content
+is rejected.
+
+A correction or tombstone is an explicit new versioned operation that
+references the old event. It is not an overwrite disguised as a retry.
+Corrections preserve provenance and ADR 015's purge recapture fence. The exact
+hash encoding remains roadmap 2.2.3's decision, and redacted bytes must not
+define ingestion identity.
+
+### Worked retry and cursor examples
+
+Table 2 works the acceptance, retry, and cursor rules through accept and reject
+cases. These are documentation examples, not runnable fixtures; the executable
+conformance corpus belongs to roadmap 1.2.6 and 2.2.1–2.2.2.
+
+| Case                          | Prior state                      | Request                                 | Outcome                                                          |
+| ----------------------------- | -------------------------------- | --------------------------------------- | ---------------------------------------------------------------- |
+| Identical push retry          | Request R committed              | Same R, same payload                    | Accepted as identical retry; counts already-seen; no new effects |
+| Changed payload under same ID | Request R committed              | Same R, changed event content           | Conflict; no acceptance effects                                  |
+| Lost acknowledgement          | Batch B committed, cursor C      | Identical B replayed                    | No duplicate evidence or jobs; cursor stays C                    |
+| Competing stale batch         | Cursor C0 committed              | Two batches both expecting C0           | First commits; second is rejected as stale                       |
+| Partial trailing record       | Cursor before a partial record   | Read after the last complete record     | Cursor remains before the partial record                         |
+| Malformed complete record     | Cursor before a malformed record | Read continues                          | Advancement blocked until an audited disposition exists          |
+| Mandatory safety exclusion    | Cursor before an excluded record | Read continues                          | Advances only with a durable content-free disposition            |
+| Source rotation               | Cursor bound to generation G1    | Source now reports generation G2        | Reconciliation required; no silent offset reset                  |
+| Ordinary append               | Cursor bound to generation G1    | File grows; content digest changes      | Same generation; cursor advances normally                        |
+| Empty read                    | Cursor C                         | Read returns no items and no checkpoint | Cursor stays C                                                   |
+| Correction                    | Event E accepted                 | New versioned operation referencing E   | Correction accepted; E is not overwritten                        |
+| Push cursor injection         | Collector cursor C               | Push delta carries a cursor field       | Provenance only; collector cursor stays C                        |
+
+_Table 2: Worked retry and cursor examples._
+
+### Report semantics and limits
+
+An ingest call reports accepted, identical retry, or a typed failure. Report
+counts distinguish newly accepted events from already-seen events. Failures
+distinguish at least malformed input, scope or capability denial, a conflicting
+duplicate, a stale cursor or sequence, and a retryable storage failure. Error
+text must not echo raw source payloads.
+
+This ADR does not settle a serialization format or an exact Rust enum layout.
+It requires configured limits on encoded input bytes, events per delta, deltas
+per batch, and source page size. Oversized input is rejected before acceptance
+effects or cursor advancement. Numeric defaults belong to configuration and
+runtime delivery; tests must cover below, at, and above each configured bound,
+including byte-heavy events with low event counts.
+
 ## Required adapters
 
 The first implementation must provide these adapter shapes:
@@ -146,6 +301,20 @@ The first implementation must provide these adapter shapes:
 - The ports must be domain-owned. Adapter implementations may depend on
   Corbusier, Axinite, Codex rollout, Claude transcript, SQL, filesystem, or
   JSON parser types; the domain and application crates must not.
+- A retry and a correction are different operations. Retrying is idempotent;
+  correcting is a new versioned operation. Collapsing the two would let a
+  replay silently change accepted evidence.
+- Cursor progress is evidence-backed. A cursor may pass an item only when that
+  item has accepted evidence or a durable disposition, so an empty read does
+  not advance and a partial record is not consumed.
+- One-workspace batch atomicity is the first-value contract. Cross-workspace
+  atomicity is deliberately deferred until a consumer demonstrates the need;
+  the collector partitions work instead.
+- Providers whose paths may be reused must expose a stable source-incarnation
+  identity. A content digest is not a substitute, because appends change it
+  without creating a new source. This ADR records contracts; it does not
+  enforce them, and the runtime remains incomplete until the named roadmap
+  items land.
 
 ## References
 
