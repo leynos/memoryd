@@ -12,8 +12,8 @@ Conformance basis, and Verification plan current at every milestone.
 Ratify roadmap item 1.1.3 so Corbusier, Axinite, Codex, Claude, and manual
 import implementors can target one canonical conversation delta while keeping
 authenticated push and collector-batch trust and retry rules separate. Success
-is a coherent accepted decision set, worked conformance examples, and explicit
-verification handoffs that later implementation slices can execute.
+is a coherent set of accepted decisions, worked conformance examples, and
+explicit verification handoffs that later implementation slices can execute.
 
 This is a documentation decision slice. It does not implement ingestion or
 claim that the current binary can ingest, browse sessions, or recall memories.
@@ -118,9 +118,10 @@ adapter tests before claiming implementation correctness.
 
 ## Surprises & discoveries
 
-ADRs 005–007 remain Proposed although their boundaries already structure the
-roadmap. They must receive an explicit acceptance disposition. Prerequisites
-1.1.1 and 1.1.2 are checked complete and governed by ADRs 013 and 015.
+ADRs 005–007 were Proposed when planning began, although their boundaries
+already structured the roadmap. They needed an explicit acceptance disposition.
+Prerequisites 1.1.1 and 1.1.2 were already checked complete and governed by
+ADRs 013 and 015.
 
 The design specifies cursor fields and provider key examples, but does not
 fully specify advancement, replay, or conflicting duplicate behaviour. The
@@ -199,6 +200,12 @@ than the simplified commands in generic guidance.
   every derived summary. EP-M2 gained the five producer fixture specifications
   the guide's tables implied but did not define. No runtime work, dependency,
   or transport format was added.
+- 2026-11-04: The follow-up review round corrected derived wording rather than
+  contract meaning. `README.md` now marks tenant isolation and ingestion as
+  accepted policy that is not yet enforced, matching the ADRs and guides. The
+  completed closure instructions in EP-M3 are historical prose, the contents
+  link text fits the 80-column rule, and several grammar and wrapping defects
+  were fixed. No requirement, decision, or roadmap association changed.
 
 ## Outcomes & retrospective
 
@@ -207,11 +214,11 @@ The reviewed planning draft was approved on 2026-11-03. EP-M1 ratified ADRs
 producer mappings, obligation owners, negative controls, fixture
 specifications, and proof handoffs in the guides. EP-M3 resolved the expert
 review findings, recorded the `mapsplice` deviation, and closed roadmap 1.1.3.
-No runtime behaviour has changed and no theorem is claimed proved: the proof
+No runtime behaviour has changed, and no theorem is claimed proved: the proof
 obligations, adapter conformance corpus, and source-health work remain with
 their named later owners. Ratification is delivered; ingestion does not yet
 exist. Gate evidence is recorded per milestone rather than as a permanently
-tested SHA, because the branch head moves.
+tested SHA because the branch head moves.
 
 ## Context and orientation
 
@@ -450,14 +457,14 @@ injectivity, or database correctness as a theorem. Defer solver triggers,
 auxiliary induction lemmas, and collection algebra until actual verification
 conditions exist. No proof artefact or proof check exists in this slice.
 
-The future proof milestone must pin a Verus version and add an explicit project
-command, proposed as `make verify-ingest`, which invokes Verus on the actual
-kernel and fails on any undisclosed trusted body or undischarged goal. Its
-owning ExecPlan must replace this proposed command with the implemented command
-before approval. Acceptance requires zero verification errors, a reviewed
-assumption list, executable-to-model correspondence, and ordinary
-`make check-fmt`, `make lint`, and `make test` success. A proof of an unrelated
-model or merely assumed postcondition is not acceptance evidence.
+The proof milestone planned for later phases must pin a Verus version and add
+an explicit project command, proposed as `make verify-ingest`, which invokes
+Verus on the actual kernel and fails on any undisclosed trusted body or
+undischarged goal. Its owning ExecPlan must replace this proposed command with
+the implemented command before approval. Acceptance requires zero verification
+errors, a reviewed assumption list, executable-to-model correspondence, and
+ordinary `make check-fmt`, `make lint`, and `make test` success. A proof of an
+unrelated model or merely assumed postcondition is not acceptance evidence.
 
 Pair that proof with `proptest` operation histories: retries, conflicts,
 interleaved tenants, generation changes, exclusions, and corrections. Start
@@ -583,15 +590,16 @@ Resolve material findings and record the reasoning in Decision log. Verify that
 acceptance has not silently introduced runtime work or closed deferred schema,
 hash-encoding, graph, or source-health decisions.
 
-Only after B1–B5 have their evidence, mark roadmap 1.1.3 done in
-`docs/roadmap.md`, preserving its dependencies and adding a concise decision
-summary and links. Use the `mapsplice` skill for this structural roadmap edit.
-Update this plan's outcomes and progress. Run all gates again, commit, and
-publish the implementation PR for the documentation decision slice. Status
-COMPLETE means ratification is delivered, not that ingestion exists. If any
-upstream assumption was falsified, update the TOR/design/ADR and obtain any
-required deviation approval before completion. Recovery is an ordinary revert
-of this closure commit; never erase review evidence or force-reset others' work.
+EP-M3 marked roadmap 1.1.3 done in `docs/roadmap.md` after B1–B5 had their
+evidence, preserving its dependencies and adding a concise decision summary and
+links. The structural roadmap edit was a direct text edit because `mapsplice`
+refused it, as the Decision log records. This plan's outcomes and progress were
+updated, all gates were rerun, and the implementation PR for the documentation
+decision slice was published. Status COMPLETE means ratification is delivered,
+not that ingestion exists. Had an upstream assumption been falsified, the TOR,
+design, and ADRs would have been updated and any required deviation approval
+obtained before completion. Recovery is an ordinary revert of the closure
+commit; review evidence is never erased and others' work is never force-reset.
 
 ## Concrete steps and validation
 
@@ -645,7 +653,7 @@ Firecrawl research on 2026-11-02 checked the upstream
 which documents `rstest` integration and placing `#[gtest]` before `#[rstest]`,
 and the [Verus guide](https://verus-lang.github.io/verus/guide/), which
 describes static verification against specifications. These support the future
-testing and proof approach; neither validates Memoryd's provider contracts or
+testing and proof approach; neither validates Memoryd's provider contracts nor
 supplies a proof of its transaction implementation.
 
 ## Idempotence, recovery, and publication

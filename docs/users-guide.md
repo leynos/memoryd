@@ -153,12 +153,15 @@ is safe to repeat.
 
 ## Conversation ingestion (planned)
 
-Conversation ingestion is accepted policy in
-[ADR 005](adrs/adr-0005-hexagonal-architecture-boundary.md), [ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md),
-and [ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md), but it
-is **not yet implemented**: the daemon and collector do not discover sources,
-accept conversation deltas, or persist evidence. This section describes the
-behaviour to expect once roadmap phases 2.2, 2.3, and 5.3 land.
+Conversation ingestion is accepted policy in:
+
+- [ADR 005](adrs/adr-0005-hexagonal-architecture-boundary.md)
+- [ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md)
+- [ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md)
+
+It is **not yet implemented**: the daemon and collector do not discover
+sources, accept conversation deltas, or persist evidence. This section
+describes the behaviour to expect once roadmap phases 2.2, 2.3, and 5.3 land.
 
 ### Who decides where evidence belongs
 

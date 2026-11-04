@@ -317,7 +317,7 @@ ledger itself is recorded in
   Claude transcript, and Axinite pull-mode source adapters.
 - `CollectedConversationIngestPort` is an internal workspace implementation
   contract: `memoryd-collector` is its single driving adapter. It remains a
-  required logical boundary, because it carries collector trust, batch
+  required logical boundary because it carries collector trust, batch
   sequencing, and cursor preconditions that the push command must not accept.
   It graduates only when a second adapter, a second use case, or a
   roadmap-scheduled second adapter arrives; no adapter is invented to satisfy
@@ -610,11 +610,11 @@ _Table 5: Provider adapters and their source boundaries._
 normative record; this section and the implementors' guide are derived
 summaries that must be corrected if they diverge.
 
-An ingest call reports accepted, identical retry, or a typed failure. Report
-counts distinguish newly accepted events from already-seen ones. Typed failures
-distinguish at least malformed input, scope or capability denial, a conflicting
-duplicate, a stale cursor or sequence, and a retryable storage failure. Error
-text never echoes raw source payloads.
+An ingest call reports an accepted result, an identical retry, or a typed
+failure. Report counts distinguish newly accepted events from already-seen
+ones. Typed failures distinguish at least malformed input, scope or capability
+denial, a conflicting duplicate, a stale cursor or sequence, and a retryable
+storage failure. Error text never echoes raw source payloads.
 
 A collected batch commits atomically within one tenant and one authorized
 workspace: evidence, spans, jobs, accepted batch identity, and cursor

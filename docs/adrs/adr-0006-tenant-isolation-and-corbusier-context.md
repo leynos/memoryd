@@ -122,7 +122,7 @@ payloads cannot broaden authenticated permissions.
 ### Worked authority examples
 
 Table 3 works the boundary through accept and reject cases. Tenants A and B
-reuse the same workspace label and the same provider identifiers deliberately,
+reuse the same workspace label and the same provider identifiers deliberately
 because identifier reuse is the failure this boundary must survive.
 
 | Case                          | Resolved context                       | Payload or request claim                    | Outcome                                                           |

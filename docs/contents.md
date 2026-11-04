@@ -18,7 +18,7 @@ set.
   records the completed decision work for roadmap item 1.1.2: the accepted
   workspace-identity, redaction, and purge defaults in ADR 015, and the runtime
   work they defer to later roadmap items.
-- [Boundary ratification ExecPlan](execplans/1-1-3-accept-or-revise-boundaries.md)
+- [Boundary ratification](execplans/1-1-3-accept-or-revise-boundaries.md)
   records roadmap 1.1.3: the accepted hexagonal ownership, tenant authority,
   canonical delta, and separate push and collected-ingestion contracts, plus
   their conformance and verification handoffs.
