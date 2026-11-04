@@ -7,7 +7,7 @@ normative identity is the authenticated pair `(tenant_id, workspace_id)`; a
 `RequestContext` is resolved at the driving boundary and propagated immutably;
 canonical payload scope is provenance and must agree with that context; and
 each driven adapter enforces the same contract with the strongest mechanism its
-store offers. Enforcement is implemented by roadmap items 1.2.5, 1.2.8, 2.1.1,
+store offers. Enforcement is scheduled for roadmap items 1.2.5, 1.2.8, 2.1.1,
 2.2.2, 2.2.4, 3.1.1, 5.1.1, 6.1.1, and 6.1.2; this ADR records the contract,
 not an implementation.
 
@@ -101,7 +101,7 @@ a reason to fall back to the local tenant.
 
 The resolved context is immutable for the life of the operation. Worker jobs
 carry it through retries, storage calls, and audit events; a retry does not
-re-resolve authority from the retried payload. Table 1 separates what may
+re-resolve authority from the retried payload. Table 2 separates what may
 establish authority from what may only describe or narrow it.
 
 | Input                                               | Resolved at                    | Permitted effect                                                    | Not permitted                                                 |
@@ -112,7 +112,7 @@ establish authority from what may only describe or narrow it.
 | Caller workspace filter or allowed-workspace hint   | Driving adapter and use case   | Narrow within the authoritatively permitted set                     | Broaden the authenticated workspace scope                     |
 | Scheduled-job record                                | Job runner                     | Carry the context resolved when the job was created                 | Acquire a fresh tenant or workspace from job arguments        |
 
-_Table 1: Authority inputs and their permitted effects._
+_Table 2: Authority inputs and their permitted effects._
 
 Canonical scope fields describe provenance. They must agree with the resolved
 context; a disagreement is a typed rejection and never an instruction to
@@ -121,7 +121,7 @@ payloads cannot broaden authenticated permissions.
 
 ### Worked authority examples
 
-Table 2 works the boundary through accept and reject cases. Tenants A and B
+Table 3 works the boundary through accept and reject cases. Tenants A and B
 reuse the same workspace label and the same provider identifiers deliberately,
 because identifier reuse is the failure this boundary must survive.
 
@@ -135,7 +135,7 @@ because identifier reuse is the failure this boundary must survive.
 | Same label, different tenants | Tenant A accepts W; tenant B accepts W | Identical workspace label and provider keys | Both accepted in separate partitions; neither read sees the other |
 | Token substitution            | Push token, collected batch            | Collector batch identity                    | Denied; a push token is not collector authority                   |
 
-_Table 2: Worked accept/reject authority examples._
+_Table 3: Worked accept/reject authority examples._
 
 A seeded implementation that trusts the payload tenant fails the forged-tenant
 case. An implementation that maps a missing Corbusier context onto the local

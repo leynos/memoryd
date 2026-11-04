@@ -198,8 +198,11 @@ text; that disposition is the audited explicit-skip path described in
 is never automatic. An empty read does not move the cursor. If a source file is
 truncated, replaced, or no longer matches its recorded identity, Memoryd
 reconciles the source generation instead of silently restarting from offset
-zero. Source health reporting for lag, parse errors, and stale cursors is
-planned for roadmap 2.3.3.
+zero. Reconciliation either confirms the same source generation and resumes
+from a verified offset, or registers a new source generation and re-reads under
+that identity; the outcome is audited and reported through source health, never
+applied silently. Source health reporting for lag, parse errors, and stale
+cursors is planned for roadmap 2.3.3.
 
 Purged evidence is fenced from re-collection by the tombstone described in
 [Purging a workspace](#purging-a-workspace); ingestion does not reopen a purged

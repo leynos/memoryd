@@ -125,7 +125,7 @@ producer-minimum table; fields outside that minimum are optional or best-effort.
 
 ### Producer routing
 
-Table 1 assigns each producer family to one path. The routing follows the
+Table 2 assigns each producer family to one path. The routing follows the
 producer's trust and sequencing evidence, not its transport convenience.
 
 | Producer          | Ingestion path                                         | Request or operation identity          | Cursor ownership       |
@@ -137,7 +137,7 @@ producer's trust and sequencing evidence, not its transport convenience.
 | Claude transcript | `ConversationSourcePort` then collected batch          | Collector operation and batch identity | Collector resume state |
 | Manual import     | `ConversationPushIngestPort` with an import request ID | Explicit import request ID             | Provenance only        |
 
-_Table 1: Producer routing for the canonical delta._
+_Table 2: Producer routing for the canonical delta._
 
 A push caller uses one logical delta per command and requires `memory.ingest`
 through a push token. A push token is not a collector token, and the two are
@@ -176,12 +176,16 @@ collector to replay the identical batch with no duplicate effects.
 ### Operation identity and retry
 
 Operation identity is namespaced by tenant, operation kind, and authenticated
-producer or collector-stream identity. It is bound to the canonical logical
-payload and to the entire expected and next cursor vector.
+producer or collector-stream identity. A push request's identity is bound to
+the canonical logical payload; its cursor metadata is provenance only and
+contributes no expected cursor. A collected batch's identity is bound to the
+canonical logical payload and to the entire expected and next cursor vector.
+The accepted batch identity is the durable record of the committed operation
+identity, including its sequence and cursor vector.
 
-The same identity with a changed payload or changed cursor vector is a
-conflict, never an identical retry. This prevents a retry from silently
-becoming an overwrite.
+The same identity with a changed payload, or with a changed cursor vector where
+one applies, is a conflict, never an identical retry. This prevents a retry
+from silently becoming an overwrite.
 
 Sequence numbers belong to a stable `(tenant, workspace, collector-stream)`
 namespace. They survive worker restart and advance only for accepted fresh
@@ -198,7 +202,7 @@ ordering; no component compares opaque tokens lexically or across sources.
 
 A fresh update requires an expected previous cursor or an equivalent version
 check, so competing stale updates are rejected. An identical committed retry is
-recognised before that stale-update rejection, so a harmless replay is not
+recognized before that stale-update rejection, so a harmless replay is not
 reported as a conflict. Replaying older accepted evidence must not regress the
 cursor.
 
@@ -209,10 +213,14 @@ with the cursor, so no prohibited text is retained.
 
 Source truncation, rotation, or an identity-fingerprint mismatch requires
 reconciliation of the source generation; an offset is never reset silently.
-Ordinary appends, or a changing content digest alone, do not create a new
-source generation. Stable source-incarnation identity stays distinct from
-observed content fingerprints. An empty read does not advance a cursor unless
-it carries an explicit valid source checkpoint or disposition.
+Reconciliation compares the structural signal with the cursor's recorded
+generation. It either confirms the same generation and resumes from a verified
+offset, or registers a new generation and re-reads under the new identity; the
+outcome is audited and surfaces through source health. Ordinary appends, or a
+changing content digest alone, do not create a new source generation. Stable
+source-incarnation identity stays distinct from observed content fingerprints.
+An empty read does not advance a cursor unless it carries an explicit valid
+source checkpoint or disposition.
 
 ### Event identity and correction
 
@@ -230,7 +238,7 @@ define ingestion identity.
 
 ### Worked retry and cursor examples
 
-Table 2 works the acceptance, retry, and cursor rules through accept and reject
+Table 3 works the acceptance, retry, and cursor rules through accept and reject
 cases. These are documentation examples, not runnable fixtures; the executable
 conformance corpus belongs to roadmap 1.2.6 and 2.2.1–2.2.2.
 
@@ -249,7 +257,7 @@ conformance corpus belongs to roadmap 1.2.6 and 2.2.1–2.2.2.
 | Correction                    | Event E accepted                 | New versioned operation referencing E   | Correction accepted; E is not overwritten                        |
 | Push cursor injection         | Collector cursor C               | Push delta carries a cursor field       | Provenance only; collector cursor stays C                        |
 
-_Table 2: Worked retry and cursor examples._
+_Table 3: Worked retry and cursor examples._
 
 ### Report semantics and limits
 
@@ -262,9 +270,11 @@ text must not echo raw source payloads.
 This ADR does not settle a serialization format or an exact Rust enum layout.
 It requires configured limits on encoded input bytes, events per delta, deltas
 per batch, and source page size. Oversized input is rejected before acceptance
-effects or cursor advancement. Numeric defaults belong to configuration and
-runtime delivery; tests must cover below, at, and above each configured bound,
-including byte-heavy events with low event counts.
+effects or cursor advancement. The expected and next cursor vectors are bounded
+by the configured source registry, and the report is a fixed set of count
+fields, so neither grows with batch size. Numeric defaults belong to
+configuration and runtime delivery; tests must cover below, at, and above each
+configured bound, including byte-heavy events with low event counts.
 
 ## Required adapters
 

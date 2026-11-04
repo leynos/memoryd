@@ -412,7 +412,8 @@ obligations and their future owners, and specifies the fixtures later slices
 must write. Nothing here is implemented. The port traits, storage writes,
 cursor table, and fixture harness arrive with roadmap 1.2, 2.1, 2.2, 2.3, and
 5.3. A fixture described below is a specification, not evidence that any real
-provider version is supported.
+provider version is supported. This handoff is a derived summary of ADR 007 and
+the design; it must be corrected if it diverges from either.
 
 ### Producer families and their paths
 
@@ -524,6 +525,14 @@ The last three controls belong to the architecture fitness check in roadmap
 1.2.7; the design document's verification strategy defines the four import
 directions it must reject.
 
+### Observability obligations
+
+Roadmap 2.3.3 owns ingestion observability. Its counters must distinguish
+accepted events, identical retries, each rejection class, stale-cursor and
+conflict rates, and batch latency. Labels stay low-cardinality: tenant and
+workspace names, request identifiers, payload fragments, and file paths never
+become labels, and error text is classified rather than echoed.
+
 ### Fixture specifications
 
 Each fixture must record its provider and source version or provenance, its
@@ -594,7 +603,13 @@ the worked authority examples now and tenant fixtures in 1.2.8 and 2.2.2. B3
 uses the five producer specifications above, then `rstest` cases and
 `googletest` matchers over the shared corpus in 2.2.1 and 2.2.2. B4 warrants a
 small Verus transition kernel in 2.1.3 and 2.2.2, paired with `proptest`
-operation histories and real daemon/collector crash tests.
+operation histories and real daemon/collector crash tests. The kernel must
+state and prove scope preservation, retry idempotence, commit-prefix safety,
+and stale-writer exclusion. It must also pass non-vacuity cases for an empty
+and a non-empty valid state, an accepted write, an identical retry, a rejected
+conflict, two competing writers, and an advanced cursor without evidence or
+disposition; a proof whose preconditions only the empty state satisfies
+discharges nothing.
 
 No proof artefact exists in this slice, and no theorem is claimed. A later
 proof of a pure transition function does not establish that SQL transactions,

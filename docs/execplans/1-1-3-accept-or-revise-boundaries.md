@@ -1,6 +1,7 @@
 # Accept or revise the hexagonal, tenant, and ingestion boundaries
 
-Status: APPROVED — execution authorised on 2026-11-03.
+Status: COMPLETE — ratification delivered on 2026-11-03; ingestion is not
+implemented.
 
 This ExecPlan is a living document. Keep Constraints, Tolerances, Risks,
 Progress, Surprises & discoveries, Decision log, Outcomes & retrospective,
@@ -96,7 +97,14 @@ adapter tests before claiming implementation correctness.
   as not implemented. Five gates passed on the same Rust tree: `check-fmt`,
   `markdownlint`, `nixie`, `lint`, and `test` (150 tests, zero skipped). The
   Markdown gates were re-run after the review corrections.
-- [ ] EP-M3: Reconcile evidence, mark 1.1.3 done, and deliver.
+- [x] (2026-11-03) EP-M3: Reconcile evidence, mark 1.1.3 done, and deliver.
+  Review findings from all six expert lenses were resolved in the ADRs, design,
+  terms of reference, and guides. Roadmap 1.1.3 is checked with its decision
+  summary and links; the `mapsplice` `dangling_dependency` refusal is recorded
+  in the Decision log as a direct-edit deviation. Five gates passed against the
+  candidate: `check-fmt`, `markdownlint`, `nixie`, `lint`, and `test` (150
+  tests, zero skipped). Logs use the `1-1-3-epm3` suffix. Publication of the
+  implementation PR follows this commit.
 
 ## Surprises & discoveries
 
@@ -146,16 +154,36 @@ than the simplified commands in generic guidance.
   still needs its own provider-envelope fixture that records the provider or
   CLI version, capture command, and date. No synthetic example is presented as
   provider compatibility.
+- 2026-11-03: EP-M3 resolved the review findings without widening scope. The
+  design and ADR 007 now agree that a push identity binds the payload only,
+  while a collected identity binds the payload and the full cursor vector, with
+  identical retries recognized before stale-writer rejection. ADR 007 is named
+  normative and the design and guide as derived summaries. The design no longer
+  calls source readers driving adapters. The TOR question is reframed to the
+  residual per-store layout. Truncation reconciliation, cursor-vector and
+  report bounds, observability ownership and low-cardinality labels, and the
+  four kernel lemmas with non-vacuity cases are recorded. ADR 005 and 006 use
+  scheduled rather than built wording, ADR 006 and 007 table captions are
+  renumbered, and spelling and line length follow the style guide. None of
+  these changes adds runtime work or closes a deferred encoding, graph, or
+  source-health decision.
+- 2026-11-03: `mapsplice` 0.1.0 refused the roadmap checkbox edit with
+  `dangling_dependency` because other tasks legitimately name `1.1.3` in their
+  `Requires` lines. Direct text edit is the recorded deviation for this
+  checkbox flip only; no other structural roadmap edit was made.
 
 ## Outcomes & retrospective
 
-The reviewed planning draft was approved on 2026-11-03. EP-M1 has ratified ADRs
-005–007 and synchronized the design and terms of reference; all six local gates
-passed against that candidate. No runtime behaviour has changed and no theorem
-is claimed proved. Remaining work is EP-M2's implementor guidance and EP-M3's
-expert review, roadmap closure, and delivery. During execution, record accepted
-decisions, remaining runtime owners, and exact gate evidence per milestone; do
-not describe a moving branch head as a permanently tested SHA.
+The reviewed planning draft was approved on 2026-11-03. EP-M1 ratified ADRs
+005–007 and synchronized the design and terms of reference. EP-M2 published the
+producer mappings, obligation owners, negative controls, fixture
+specifications, and proof handoffs in the guides. EP-M3 resolved the expert
+review findings, recorded the `mapsplice` deviation, and closed roadmap 1.1.3.
+No runtime behaviour has changed and no theorem is claimed proved: the proof
+obligations, adapter conformance corpus, and source-health work remain with
+their named later owners. Ratification is delivered; ingestion does not yet
+exist. Gate evidence is recorded per milestone rather than as a permanently
+tested SHA, because the branch head moves.
 
 ## Context and orientation
 
@@ -619,3 +647,6 @@ ExecPlan and its contents-index entry. Execution remains approval-gated.
 
 - 2026-11-02: Recorded passing planning gates and 150 tests; execution remains
   unapproved. Final publication evidence belongs to the draft PR handoff.
+- 2026-11-03: Closed the plan after EP-M1 through EP-M3 passed their gates and
+  roadmap 1.1.3 was checked. COMPLETE here means the decision slice is
+  delivered; it does not assert that any ingestion behaviour exists.

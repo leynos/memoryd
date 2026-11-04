@@ -6,9 +6,9 @@ Accepted on 2026-11-03. Memoryd adopts hexagonal architecture with an inward
 dependency rule, domain-owned port contracts, application-owned use cases, and
 composition-root wiring. Adapters never call one another, and the port-budget
 discipline governs which boundaries become public crate application programming
-interfaces (APIs). The runtime crate spine and its architecture lint are built
-by roadmap items 1.2.1, 1.2.2, and 1.2.7; this ADR records the contract, not an
-implementation.
+interfaces (APIs). The runtime crate spine and its architecture lint are
+scheduled for roadmap items 1.2.1, 1.2.2, and 1.2.7; this ADR records the
+contract, not an implementation.
 
 ## Date
 

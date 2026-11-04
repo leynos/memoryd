@@ -420,10 +420,12 @@ different tenant.
 
 ## 6. Provider adapters
 
-Provider adapters are driving adapters into the ingest use case. They sit above
-native provider storage and below semantic projection. They must not leak
-provider-specific event shapes into the core pipeline or write to driven
-adapters such as persistence, Qdrant, Oxigraph, Ollama, or Chutoro directly.
+Push provider adapters drive the ingest use case; source-reader adapters are
+driven by collector orchestration, which invokes the collected-ingestion
+command. They sit above native provider storage and below semantic projection.
+They must not leak provider-specific event shapes into the core pipeline or
+write to driven adapters such as persistence, Qdrant, Oxigraph, Ollama, or
+Chutoro directly.
 
 ```mermaid
 flowchart TB
@@ -603,6 +605,10 @@ _Table 5: Provider adapters and their source boundaries._
 
 ### 6.2 Acceptance, retry, and cursor contract
 
+[ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md) is the
+normative record; this section and the implementors' guide are derived
+summaries that must be corrected if they diverge.
+
 An ingest call reports accepted, identical retry, or a typed failure. Report
 counts distinguish newly accepted events from already-seen ones. Typed failures
 distinguish at least malformed input, scope or capability denial, a conflicting
@@ -611,17 +617,23 @@ text never echoes raw source payloads.
 
 A collected batch commits atomically within one tenant and one authorized
 workspace: evidence, spans, jobs, accepted batch identity, and cursor
-transitions together. An invalid member or storage failure leaves those
-acceptance effects unchanged, though a content-free rejection audit may still
-be recorded. The collector partitions cross-workspace work before submission;
-cross-workspace atomicity has no first-value consumer.
+transitions together. The accepted batch identity is the durable record of the
+committed operation identity, including its sequence and cursor vector. An
+invalid member or storage failure leaves those acceptance effects unchanged,
+though a content-free rejection audit may still be recorded. The collector
+partitions cross-workspace work before submission; cross-workspace atomicity
+has no first-value consumer.
 
 Operation identity is namespaced by tenant, operation kind, and authenticated
-producer or collector-stream identity, and is bound to the logical payload and
-the entire expected and next cursor vector. The same identity with changed
-content is a conflict, never an identical retry. Sequence numbers belong to a
-stable `(tenant, workspace, collector-stream)` namespace that survives worker
-restart and advances only on accepted fresh batches.
+producer or collector-stream identity. A push request's identity is bound to
+the logical payload; its cursor metadata is provenance and contributes no
+expected cursor. A collected batch's identity is bound to the logical payload
+and to the entire expected and next cursor vector. The same identity with a
+changed payload, or with a changed cursor vector where one applies, is a
+conflict, never an identical retry. An identical committed retry is recognized
+before stale-update rejection. Sequence numbers belong to a stable
+`(tenant, workspace, collector-stream)` namespace that survives worker restart
+and advances only on accepted fresh batches.
 
 Cursors are bound to tenant, workspace, source identity, and source generation,
 and provider checkpoint tokens are opaque. A cursor advances only past
@@ -633,8 +645,11 @@ not retries that overwrite.
 
 Configured limits bound encoded input bytes, events per delta, deltas per
 batch, and source page size. Oversized input is rejected before acceptance
-effects or cursor advancement. Numeric defaults belong to configuration and
-runtime delivery, and tests must cover below, at, and above each bound.
+effects or cursor advancement. The expected and next cursor vectors are bounded
+by the configured source registry, and the report is a fixed set of count
+fields, so neither grows with batch size. Numeric defaults belong to
+configuration and runtime delivery, and tests must cover below, at, and above
+each bound.
 
 ## 7. Canonical evidence model
 
@@ -1397,6 +1412,11 @@ committed cursor rows and source generations map to cursor state, and exclusion
 records map to durable dispositions. A later pure transition kernel may be
 proved, but that proof must be paired with adapter and crash tests; it does not
 establish SQL atomicity, parser correctness, or provider-version compatibility.
+The kernel must state and prove scope preservation, retry idempotence,
+commit-prefix safety, and stale-writer exclusion, and it must pass non-vacuity
+cases for an empty and a non-empty valid state, an accepted write, an identical
+retry, a rejected conflict, two competing writers, and an advanced cursor
+without evidence or disposition.
 
 ## 16. Rollout sequence
 

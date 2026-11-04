@@ -79,13 +79,22 @@ and RFC 0006.
     migration headings.
   - Success: provider adapters can ingest safely without waiting for graph,
     theme, or Axinite write-back decisions.
-- [ ] 1.1.3. Accept or revise the hexagonal, tenant, and ingestion boundaries.
+- [x] 1.1.3. Accept or revise the hexagonal, tenant, and ingestion boundaries.
   - Requires 1.1.1 and 1.1.2.
   - Confirm the dependency rule, request-context propagation, port-budget
     discipline, `ConversationPushIngestPort`,
     `CollectedConversationIngestPort`, `ConversationSourcePort`, canonical
     conversation deltas, cursor semantics, and adapter conformance fixtures.
-  - See memoryd-design.md §§5.3-6.1 and ADRs 005-007.
+  - Decided: ADRs 005-007 are accepted with the port ledger, authenticated
+    `(tenant_id, workspace_id)` authority, one canonical delta, and separate
+    push and collected-batch acceptance, retry, and cursor contracts.
+    Conformance fixtures and verification owners are handed off to roadmap
+    1.2.6 through 5.3.6; no runtime behaviour is implemented.
+  - See the [ExecPlan](execplans/1-1-3-accept-or-revise-boundaries.md),
+    [memoryd-design.md](memoryd-design.md) §§5.3-6.1, and ADRs
+    [005](adrs/adr-0005-hexagonal-architecture-boundary.md),
+    [006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md), and
+    [007](adrs/adr-0007-standard-conversation-ingestion-port.md).
   - Success: Corbusier, Axinite, Codex, Claude, and manual import adapters can
     target one canonical delta while push and worker-batch use cases keep
     their trust and idempotency invariants separate.
