@@ -5,7 +5,7 @@
 Accepted on 2026-11-03. Memoryd defines one canonical conversation delta and
 three standard ports: an authenticated push command, a collector-originated
 batch command, and a source-reader contract. Push and collected paths keep
-their trust, capability, sequencing, cursor, and idempotency rules separate
+separate rules for trust, capability, sequencing, cursors, and idempotency
 while producing the same evidence records. This ADR records the shared
 semantics, acceptance and retry rules, cursor progress, correction handling,
 and reporting limits. Runtime implementation belongs to roadmap items 1.2.1,
@@ -167,7 +167,7 @@ batch identity, and cursor transitions commit together.
 An invalid member, or a storage failure, leaves those acceptance effects
 unchanged. A separate content-free rejection audit may still be recorded; it
 must not retain prohibited payload text. The initial batch scope is one
-workspace, and the collector partitions work before submission, because
+workspace, and the collector partitions work before submission because
 cross-workspace atomicity has no demonstrated first-value consumer.
 
 Acknowledgement follows durable commit. A lost acknowledgement permits the
@@ -185,7 +185,7 @@ identity, including its sequence and cursor vector.
 
 The same identity with a changed payload, or with a changed cursor vector where
 one applies, is a conflict, never an identical retry. This prevents a retry
-from silently becoming an overwrite.
+from silently replacing accepted evidence.
 
 Sequence numbers belong to a stable `(tenant, workspace, collector-stream)`
 namespace. They survive worker restart and advance only for accepted fresh
@@ -231,7 +231,7 @@ identical retry is a no-op; the same key with conflicting identity or content
 is rejected.
 
 A correction or tombstone is an explicit new versioned operation that
-references the old event. It is not an overwrite disguised as a retry.
+references the old event. It does not replace the old event during a retry.
 Corrections preserve provenance and ADR 015's purge recapture fence. The exact
 hash encoding remains roadmap 2.2.3's decision, and redacted bytes must not
 define ingestion identity.
@@ -261,11 +261,11 @@ _Table 3: Worked retry and cursor examples._
 
 ### Report semantics and limits
 
-An ingest call reports accepted, identical retry, or a typed failure. Report
-counts distinguish newly accepted events from already-seen events. Failures
-distinguish at least malformed input, scope or capability denial, a conflicting
-duplicate, a stale cursor or sequence, and a retryable storage failure. Error
-text must not echo raw source payloads.
+An ingest call reports an accepted result, an identical retry, or a typed
+failure. Report counts distinguish newly accepted events from already-seen
+events. Failures distinguish at least malformed input, scope or capability
+denial, a conflicting duplicate, a stale cursor or sequence, and a retryable
+storage failure. Error text must not echo raw source payloads.
 
 This ADR does not settle a serialization format or an exact Rust enum layout.
 It requires configured limits on encoded input bytes, events per delta, deltas
@@ -316,12 +316,12 @@ The first implementation must provide these adapter shapes:
   replay silently change accepted evidence.
 - Cursor progress is evidence-backed. A cursor may pass an item only when that
   item has accepted evidence or a durable disposition, so an empty read does
-  not advance and a partial record is not consumed.
+  not advance, and a partial record is not consumed.
 - One-workspace batch atomicity is the first-value contract. Cross-workspace
   atomicity is deliberately deferred until a consumer demonstrates the need;
   the collector partitions work instead.
 - Providers whose paths may be reused must expose a stable source-incarnation
-  identity. A content digest is not a substitute, because appends change it
+  identity. A content digest is not a substitute because appends change it
   without creating a new source. This ADR records contracts; it does not
   enforce them, and the runtime remains incomplete until the named roadmap
   items land.

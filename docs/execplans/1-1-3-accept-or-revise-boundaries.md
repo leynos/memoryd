@@ -30,8 +30,9 @@ is tenant-scoped. Preserve all three ingestion ports and one canonical delta.
 Do not add executable Rust, dependencies, migrations, transport formats,
 provider parsers, runnable fixtures, or speculative Verus scaffolding in this
 slice. Do not advance graph, themes, Axinite write-back, hosted administration,
-or RFC 0006's post-1.0 epistemic-health decisions. Do not mark 1.1.3 done in
-this planning PR. Mark it done only after the approved execution is complete.
+or RFC 0006's post-1.0 epistemic-health decisions. Roadmap 1.1.3 is marked done
+after the approved execution completes, and this slice records that check in
+Progress.
 
 No `assume`, `admit`, trusted/external proof body, or equivalent shortcut may
 stand in for a proof. Unproved statements remain prose until their owning
@@ -171,6 +172,14 @@ than the simplified commands in generic guidance.
   `dangling_dependency` because other tasks legitimately name `1.1.3` in their
   `Requires` lines. Direct text edit is the recorded deviation for this
   checkbox flip only; no other structural roadmap edit was made.
+- 2026-11-04: The hosted CodeRabbit review found stale implementation claims
+  and stale planning instructions. The port ledger and design now describe the
+  push and source adapters as planned, the collector worker is a runtime
+  adapter that invokes the collector application service, and the ADR 007
+  outcome list and wording are parallel and free of the bare "an overwrite"
+  count noun. The ExecPlan records the draft PR and approval gate as historical
+  steps instead of current requirements. These are wording corrections within
+  the approved scope; no contract or runtime scope changed.
 
 ## Outcomes & retrospective
 
@@ -627,14 +636,17 @@ review the complete diff before each atomic commit. Commit via a temporary
 message file after gates pass. No data migration or destructive operation is
 needed. Inspect new upstream changes before resuming after a pause.
 
-For this planning delivery, push `1-1-3-accept-or-revise-boundaries` over SSH
-with the authenticated `leynos` identity, refresh its origin tracking ref, and
-set upstream to `origin/1-1-3-accept-or-revise-boundaries`. Use standard Git/gh
-with the clean environment required by AGENTS.md. Create a draft PR titled
-`Plan: Accept or revise boundaries (1.1.3)`, link this document using the
-branch URL, and end its body with `## References` containing the Lody session
-URL. Read back draft state, head, and upstream. The PR contains only this
-ExecPlan and its contents-index entry. Execution remains approval-gated.
+For this planning delivery, `1-1-3-accept-or-revise-boundaries` was pushed over
+SSH with the authenticated `leynos` identity, its origin tracking ref was
+refreshed, and its upstream was set to
+`origin/1-1-3-accept-or-revise-boundaries`. Standard Git/gh was used with the
+clean environment required by AGENTS.md. The PR was created as a draft titled
+`Plan: Accept or revise boundaries (1.1.3)`, linked this document using the
+branch URL, and ended its body with `## References` containing the Lody session
+URL. Draft state, head, and upstream were read back. The initial PR contained
+only this ExecPlan and its contents-index entry. Those draft-state and approval
+steps are historical: approval was granted, the PR was marked ready, and the
+title became `Accept or revise boundaries (1.1.3)` before execution began.
 
 ## Revision notes
 
@@ -650,3 +662,7 @@ ExecPlan and its contents-index entry. Execution remains approval-gated.
 - 2026-11-03: Closed the plan after EP-M1 through EP-M3 passed their gates and
   roadmap 1.1.3 was checked. COMPLETE here means the decision slice is
   delivered; it does not assert that any ingestion behaviour exists.
+- 2026-11-04: Applied the CodeRabbit review repairs. The draft PR, the
+  planning-only PR contents, and the approval gate are historical steps:
+  approval was granted, the PR was marked ready, and the title lost its `Plan:`
+  prefix before execution began.

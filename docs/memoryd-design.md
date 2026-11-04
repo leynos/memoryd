@@ -311,9 +311,9 @@ The conversation-ingestion boundaries apply the budget as follows. The port
 ledger itself is recorded in
 [ADR 005](adrs/adr-0005-hexagonal-architecture-boundary.md).
 
-- `ConversationPushIngestPort` is public: it already serves Corbusier, the
-  Axinite transactional outbox, and the manual/MCP import surface.
-- `ConversationSourcePort` is public: it already serves Codex rollout,
+- `ConversationPushIngestPort` is public: it is designed to serve Corbusier,
+  the Axinite transactional outbox, and the manual/MCP import surface.
+- `ConversationSourcePort` is public: it is designed to serve Codex rollout,
   Claude transcript, and Axinite pull-mode source adapters.
 - `CollectedConversationIngestPort` is an internal workspace implementation
   contract: `memoryd-collector` is its single driving adapter. It remains a
@@ -562,7 +562,8 @@ Required fields depend on the producer kind:
 
 _Table 4: Minimum viable canonical delta fields by producer kind._
 
-The collector worker is an adapter orchestrator. It loads configured
+The collector worker is a runtime adapter at the collector composition root. It
+invokes the collector application service, which orchestrates the configured
 `ConversationSourcePort` implementations, persists cursors through the daemon,
 and calls `SubmitCollectedConversationBatch` with canonical deltas. The daemon
 does not scrape `~/.codex`, `~/.claude`, or provider databases directly.

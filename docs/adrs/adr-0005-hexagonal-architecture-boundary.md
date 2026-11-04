@@ -95,10 +95,10 @@ implementation contract, not a supported external crate API. Internal
 visibility does not permit a second delta definition or a source-specific
 ingestion contract in another crate.
 
-| Boundary                          | Kind                | Driving adapters today                                     | Visibility | Graduation trigger                                                                  |
+| Boundary                          | Kind                | Planned driving adapters                                   | Visibility | Graduation trigger                                                                  |
 | --------------------------------- | ------------------- | ---------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------- |
-| `ConversationPushIngestPort`      | Application command | Corbusier, Axinite transactional outbox, manual/MCP import | Public     | Already serves three distinct adapters.                                             |
-| `ConversationSourcePort`          | Driven source read  | Codex rollout, Claude transcript, Axinite pull mode        | Public     | Already serves three distinct adapters.                                             |
+| `ConversationPushIngestPort`      | Application command | Corbusier, Axinite transactional outbox, manual/MCP import | Public     | Designed to serve three distinct adapters.                                          |
+| `ConversationSourcePort`          | Driven source read  | Codex rollout, Claude transcript, Axinite pull mode        | Public     | Designed to serve three distinct adapters.                                          |
 | `CollectedConversationIngestPort` | Application command | `memoryd-collector` only                                   | Internal   | A second driving adapter, a second use case, or a roadmap-scheduled second adapter. |
 
 _Table 2: Conversation-ingestion port ledger._
