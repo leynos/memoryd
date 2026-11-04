@@ -2,11 +2,17 @@
 
 ## Status
 
-Proposed.
+Accepted on 2026-11-03. Memoryd adopts hexagonal architecture with an inward
+dependency rule, domain-owned port contracts, application-owned use cases, and
+composition-root wiring. Adapters never call one another, and the port-budget
+discipline governs which boundaries become public crate application programming
+interfaces (APIs). The runtime crate spine and its architecture lint are
+scheduled for roadmap items 1.2.1, 1.2.2, and 1.2.7; this ADR records the
+contract, not an implementation.
 
 ## Date
 
-2026-05-25.
+2026-11-03.
 
 ## Context and problem statement
 
@@ -71,6 +77,37 @@ Chutoro, MCP, CLI, UDS, loopback HTTP, and filesystem watching. Adapters map
 infrastructure data into domain commands and domain results back into
 transport-specific responses.
 
+### Collector orchestration
+
+Collector orchestration is an application service, not an adapter. It is wired
+at the collector composition root, which injects the configured
+`ConversationSourcePort` implementations and the collected-ingestion command.
+The orchestrator invokes those injected ports; it never reaches a concrete
+source adapter or a concrete daemon client directly. This keeps discovery,
+tailing, redaction, and batching policy in one place while leaving provider
+parsing in the adapters and acceptance policy in the daemon's application layer.
+
+### Port ledger
+
+The port-budget rule is applied to the conversation-ingestion boundaries as
+follows. A boundary that does not yet meet the rule is an internal workspace
+implementation contract, not a supported external crate API. Internal
+visibility does not permit a second delta definition or a source-specific
+ingestion contract in another crate.
+
+| Boundary                          | Kind                | Planned driving adapters                                   | Visibility | Graduation trigger                                                                  |
+| --------------------------------- | ------------------- | ---------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------- |
+| `ConversationPushIngestPort`      | Application command | Corbusier, Axinite transactional outbox, manual/MCP import | Public     | Designed to serve three distinct adapters.                                          |
+| `ConversationSourcePort`          | Driven source read  | Codex rollout, Claude transcript, Axinite pull mode        | Public     | Designed to serve three distinct adapters.                                          |
+| `CollectedConversationIngestPort` | Application command | `memoryd-collector` only                                   | Internal   | A second driving adapter, a second use case, or a roadmap-scheduled second adapter. |
+
+_Table 2: Conversation-ingestion port ledger._
+
+The collected-ingestion boundary is required even while it is internal: it
+separates collector trust, batch sequencing, and cursor preconditions from the
+authenticated push path. It must not be collapsed into the push command, and no
+second adapter is invented merely to satisfy the budget.
+
 ## Consequences
 
 - The roadmap must define domain types and ports before implementing provider,
@@ -93,6 +130,13 @@ transport-specific responses.
   dependency-graph checks with source-path checks. Cargo metadata catches
   forbidden crate edges; source-path checks catch intra-crate module leaks and
   direct infrastructure SDK imports while crates are still being extracted.
+- The port ledger is a living record. A boundary graduates or retreats by
+  evidence — a second adapter, a second use case, or a scheduled adapter — not
+  by the convenience of exposing it. Keeping the collected-ingestion boundary
+  internal is a visibility decision, not permission to duplicate its contract.
+- Collector orchestration sits in the application layer so that the collector
+  binary composes adapters without becoming one. A future second consumer of
+  the same orchestration is the evidence that would justify extracting it.
 
 ## References
 

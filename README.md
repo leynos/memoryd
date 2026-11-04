@@ -93,18 +93,20 @@ the core testable without running storage engines, model servers, vector
 indexes, graph stores, clustering runtimes, or MCP transports.
 
 Tenant isolation is a first-class part of the same boundary, as recorded in
-[ADR 006: Tenant isolation and Corbusier context][adr-006]. Tenant-owned use
-cases carry an authenticated request context, and the normative memory scope is
+[ADR 006: Tenant isolation and Corbusier context][adr-006]. This contract is
+accepted policy, not yet enforced: tenant-owned use cases will carry an
+authenticated request context, and the normative memory scope is
 `(tenant_id, workspace_id)`. Storage rows, Qdrant payload filters, Oxigraph
-named graphs, Chutoro checkpoints, audit records, and purge plans all preserve
-that scope so local single-user deployments and Corbusier-style multi-tenant
-deployments exercise the same isolation contract.
+named graphs, Chutoro checkpoints, audit records, and purge plans will all
+preserve that scope, so local single-user deployments and Corbusier-style
+multi-tenant deployments will exercise the same isolation contract.
 
 Conversation ingestion follows
-[ADR 007: Standard conversation ingestion port][adr-007]. All producers emit
-the same canonical conversation delta, but the application ports separate trust
-and sequencing semantics: `ConversationPushIngestPort` handles authenticated
-push producers such as Corbusier, Axinite outboxes, and manual MCP imports;
+[ADR 007: Standard conversation ingestion port][adr-007]. In the planned
+contract, all producers emit the same canonical conversation delta, but the
+application ports separate trust and sequencing semantics:
+`ConversationPushIngestPort` handles authenticated push producers such as
+Corbusier, Axinite outboxes, and manual MCP imports;
 `CollectedConversationIngestPort` handles worker-collected batches from
 filesystem or pull-mode sources; and `ConversationSourcePort` is the
 collector-facing discovery, tailing, snapshot, and replay contract for Codex,
