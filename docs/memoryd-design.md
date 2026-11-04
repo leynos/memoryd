@@ -625,6 +625,16 @@ though a content-free rejection audit may still be recorded. The collector
 partitions cross-workspace work before submission; cross-workspace atomicity
 has no first-value consumer.
 
+Record-level safety rejection and batch atomicity apply at different stages.
+ADR 015's per-record redaction, detector, and processing-ceiling checks run in
+the collector before submission: a failing record is not submitted, blocks
+advancement at its source position, surfaces a sanitized source-health error,
+and leaves committed neighbours intact, while later records wait for a
+disposition. Only an admissible set is submitted, and the daemon commits that
+batch atomically. A daemon-side invalid member or storage failure therefore
+commits nothing, and the collector resubmits the whole batch after resolving
+the cause.
+
 Operation identity is namespaced by tenant, operation kind, and authenticated
 producer or collector-stream identity. A push request's identity is bound to
 the logical payload; its cursor metadata is provenance and contributes no
@@ -639,10 +649,11 @@ and advances only on accepted fresh batches.
 Cursors are bound to tenant, workspace, source identity, and source generation,
 and provider checkpoint tokens are opaque. A cursor advances only past
 committed complete items or durable dispositions; a partial trailing record is
-not consumed, an empty read does not advance, and source truncation, rotation,
-or a fingerprint mismatch triggers generation reconciliation rather than a
-silent offset reset. Corrections and tombstones are new versioned operations,
-not retries that overwrite.
+not consumed, an empty read does not advance unless it carries an explicit
+valid source checkpoint or disposition, and source truncation, rotation, or a
+fingerprint mismatch triggers generation reconciliation rather than a silent
+offset reset. Corrections and tombstones are new versioned operations, not
+retries that overwrite.
 
 Configured limits bound encoded input bytes, events per delta, deltas per
 batch, and source page size. Oversized input is rejected before acceptance

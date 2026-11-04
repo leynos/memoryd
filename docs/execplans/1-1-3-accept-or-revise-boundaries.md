@@ -98,6 +98,15 @@ adapter tests before claiming implementation correctness.
   as not implemented. Five gates passed on the same Rust tree: `check-fmt`,
   `markdownlint`, `nixie`, `lint`, and `test` (150 tests, zero skipped). The
   Markdown gates were re-run after the review corrections.
+- [x] (2026-11-04) Assessment follow-up: the hosted completeness assessment
+  (`memoryd-64-20261104-a1`) identified three in-scope gaps. EP-M2 now carries
+  five independently specified producer fixture blocks, each naming provenance,
+  input, expected shared projection, provider-only fields, rejection
+  expectation, and owner. ADR 007 and the design define the collector-stage
+  per-record rejection and the daemon-stage atomic commit as distinct stages.
+  ADR 007, the design, the developers' guide, and the users' guide qualify the
+  empty-read rule with the explicit-checkpoint exception, and the guide adds
+  the permitted checkpoint case. Markdown gates passed after these corrections.
 - [x] (2026-11-03) EP-M3: Reconcile evidence, mark 1.1.3 done, and deliver.
   Review findings from all six expert lenses were resolved in the ADRs, design,
   terms of reference, and guides. Roadmap 1.1.3 is checked with its decision
@@ -180,6 +189,16 @@ than the simplified commands in generic guidance.
   count noun. The ExecPlan records the draft PR and approval gate as historical
   steps instead of current requirements. These are wording corrections within
   the approved scope; no contract or runtime scope changed.
+- 2026-11-04: The hosted completeness assessment
+  (`memoryd-64-20261104-a1`) raised three in-scope gaps. ADR 007's atomic batch
+  rule appeared to contradict ADR 015's per-record rejection; they are resolved
+  as different stages, with ADR 015 applying in the collector before submission
+  and ADR 007 governing the daemon commit unit. This reads ADR 015 as written
+  rather than changing its policy, so the tolerance on ADR 013/015 meaning
+  holds. The empty-read rule now states the explicit-checkpoint exception in
+  every derived summary. EP-M2 gained the five producer fixture specifications
+  the guide's tables implied but did not define. No runtime work, dependency,
+  or transport format was added.
 
 ## Outcomes & retrospective
 

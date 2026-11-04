@@ -173,6 +173,26 @@ cross-workspace atomicity has no demonstrated first-value consumer.
 Acknowledgement follows durable commit. A lost acknowledgement permits the
 collector to replay the identical batch with no duplicate effects.
 
+### Rejection stages
+
+Per-record safety rejection and collected-batch atomicity apply at different
+stages and do not conflict. The collector applies ADR 015's per-record
+redaction, detector, and processing-ceiling checks before submission. A record
+that fails those checks is not submitted, its source cursor does not advance
+past it, a sanitized source-health error identifies the blocked record, and
+records already committed from earlier batches in the same pass stand. Later
+records wait until the operator repairs the source or records an audited
+disposition. Valid neighbours are therefore never discarded: they remain
+pending or committed rather than being silently dropped.
+
+Only an admissible set of records becomes a collected batch. The daemon then
+accepts that batch atomically, so an invalid member or storage failure at the
+daemon boundary commits no member and leaves cursor transitions unchanged. A
+daemon rejection is not a per-record partial commit; the collector resolves the
+cause and resubmits the whole batch. ADR 015's "same submission" rule is read
+at the collector stage, where the offending record is separated from its valid
+neighbours, while this ADR's atomic rule governs the daemon commit unit.
+
 ### Operation identity and retry
 
 Operation identity is namespaced by tenant, operation kind, and authenticated
@@ -242,20 +262,21 @@ Table 3 works the acceptance, retry, and cursor rules through accept and reject
 cases. These are documentation examples, not runnable fixtures; the executable
 conformance corpus belongs to roadmap 1.2.6 and 2.2.1–2.2.2.
 
-| Case                          | Prior state                      | Request                                 | Outcome                                                          |
-| ----------------------------- | -------------------------------- | --------------------------------------- | ---------------------------------------------------------------- |
-| Identical push retry          | Request R committed              | Same R, same payload                    | Accepted as identical retry; counts already-seen; no new effects |
-| Changed payload under same ID | Request R committed              | Same R, changed event content           | Conflict; no acceptance effects                                  |
-| Lost acknowledgement          | Batch B committed, cursor C      | Identical B replayed                    | No duplicate evidence or jobs; cursor stays C                    |
-| Competing stale batch         | Cursor C0 committed              | Two batches both expecting C0           | First commits; second is rejected as stale                       |
-| Partial trailing record       | Cursor before a partial record   | Read after the last complete record     | Cursor remains before the partial record                         |
-| Malformed complete record     | Cursor before a malformed record | Read continues                          | Advancement blocked until an audited disposition exists          |
-| Mandatory safety exclusion    | Cursor before an excluded record | Read continues                          | Advances only with a durable content-free disposition            |
-| Source rotation               | Cursor bound to generation G1    | Source now reports generation G2        | Reconciliation required; no silent offset reset                  |
-| Ordinary append               | Cursor bound to generation G1    | File grows; content digest changes      | Same generation; cursor advances normally                        |
-| Empty read                    | Cursor C                         | Read returns no items and no checkpoint | Cursor stays C                                                   |
-| Correction                    | Event E accepted                 | New versioned operation referencing E   | Correction accepted; E is not overwritten                        |
-| Push cursor injection         | Collector cursor C               | Push delta carries a cursor field       | Provenance only; collector cursor stays C                        |
+| Case                          | Prior state                      | Request                                        | Outcome                                                          |
+| ----------------------------- | -------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| Identical push retry          | Request R committed              | Same R, same payload                           | Accepted as identical retry; counts already-seen; no new effects |
+| Changed payload under same ID | Request R committed              | Same R, changed event content                  | Conflict; no acceptance effects                                  |
+| Lost acknowledgement          | Batch B committed, cursor C      | Identical B replayed                           | No duplicate evidence or jobs; cursor stays C                    |
+| Competing stale batch         | Cursor C0 committed              | Two batches both expecting C0                  | First commits; second is rejected as stale                       |
+| Partial trailing record       | Cursor before a partial record   | Read after the last complete record            | Cursor remains before the partial record                         |
+| Malformed complete record     | Cursor before a malformed record | Read continues                                 | Advancement blocked until an audited disposition exists          |
+| Mandatory safety exclusion    | Cursor before an excluded record | Read continues                                 | Advances only with a durable content-free disposition            |
+| Source rotation               | Cursor bound to generation G1    | Source now reports generation G2               | Reconciliation required; no silent offset reset                  |
+| Ordinary append               | Cursor bound to generation G1    | File grows; content digest changes             | Same generation; cursor advances normally                        |
+| Empty read                    | Cursor C                         | Read returns no items and no checkpoint        | Cursor stays C                                                   |
+| Empty read with checkpoint    | Cursor C                         | Read returns no items and a valid checkpoint D | Cursor advances to D; no evidence is invented                    |
+| Correction                    | Event E accepted                 | New versioned operation referencing E          | Correction accepted; E is not overwritten                        |
+| Push cursor injection         | Collector cursor C               | Push delta carries a cursor field              | Provenance only; collector cursor stays C                        |
 
 _Table 3: Worked retry and cursor examples._
 
@@ -316,7 +337,8 @@ The first implementation must provide these adapter shapes:
   replay silently change accepted evidence.
 - Cursor progress is evidence-backed. A cursor may pass an item only when that
   item has accepted evidence or a durable disposition, so an empty read does
-  not advance, and a partial record is not consumed.
+  not advance without an explicit valid checkpoint, and a partial record is not
+  consumed.
 - One-workspace batch atomicity is the first-value contract. Cross-workspace
   atomicity is deliberately deferred until a consumer demonstrates the need;
   the collector partitions work instead.

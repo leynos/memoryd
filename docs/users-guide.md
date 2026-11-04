@@ -186,7 +186,9 @@ Accepting a collector batch is atomic within one tenant and one authorized
 workspace. If an acknowledgement is lost, replaying the identical batch adds no
 duplicate evidence or jobs. A batch built on an outdated cursor is rejected, so
 two collectors cannot both advance the same source. Acknowledgement follows
-durable commit, never precedes it.
+durable commit, never precedes it. A record that fails a safety check is
+rejected at the collector before the batch is submitted, so valid neighbours
+are not lost and later records wait for a disposition.
 
 ### Stalled, truncated, and unreadable sources
 
@@ -195,12 +197,13 @@ record to complete. A malformed complete record blocks progress until an
 operator-visible disposition records the decision without retaining payload
 text; that disposition is the audited explicit-skip path described in
 [What is excluded and redacted](#what-is-excluded-and-redacted), and skipping
-is never automatic. An empty read does not move the cursor. If a source file is
-truncated, replaced, or no longer matches its recorded identity, Memoryd
-reconciles the source generation instead of silently restarting from offset
-zero. Reconciliation either confirms the same source generation and resumes
-from a verified offset, or registers a new source generation and re-reads under
-that identity; the outcome is audited and reported through source health, never
+is never automatic. An empty read does not move the cursor unless it carries an
+explicit valid source checkpoint or disposition. If a source file is truncated,
+replaced, or no longer matches its recorded identity, Memoryd reconciles the
+source generation instead of silently restarting from offset zero.
+Reconciliation either confirms the same source generation and resumes from a
+verified offset, or registers a new source generation and re-reads under that
+identity; the outcome is audited and reported through source health, never
 applied silently. Source health reporting for lag, parse errors, and stale
 cursors is planned for roadmap 2.3.3.
 

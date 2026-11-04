@@ -512,7 +512,8 @@ counterexamples later suites must include, not optional hardening.
 - Treating an event-key collision with different content as an identical retry.
 - Implementing a correction as an overwrite that reuses the original event key.
 - Resetting a file offset silently when a source is truncated or rotated.
-- Consuming a partial trailing record, or advancing on an empty read.
+- Consuming a partial trailing record, or advancing on an empty read without an
+  explicit valid source checkpoint or disposition.
 - Deriving ingestion identity from redacted bytes or from a detector version.
 - Merging two tenants that reuse the same workspace label and provider keys.
 - Duplicating evidence or jobs after a lost acknowledgement is replayed.
@@ -546,6 +547,100 @@ one synthetic canonical input that every family must project identically; it
 tests the contract, while each family's provider envelope remains a separate
 fixture.
 
+The five specifications below instantiate that rule independently for each
+producer family. They are documentation inputs and expectations, not executable
+fixtures, and none claims provider compatibility until captured provenance and
+an adapter run support it.
+
+**Corbusier push.**
+
+- **Provenance.** Synthetic Corbusier push envelope. A captured fixture must
+  record the Corbusier service version and the capture date.
+- **Input.** One push delta for a two-message conversation: a user text message
+  and an assistant text message carrying repository metadata. The payload names
+  a tenant and workspace that the fixture also supplies as authenticated
+  context.
+- **Expected shared projection.** Tenant and workspace come from context;
+  principal or service identity, conversation ID, message sequence, role,
+  content part, timestamp, and source fingerprint project into the canonical
+  delta. The payload tenant and workspace remain provenance.
+- **Provider-only fields.** Repository metadata, model, tool metadata, file
+  edits, parent conversation, and Corbusier identifiers outside the canonical
+  scope.
+- **Rejection expectation.** A payload claiming a tenant or workspace outside
+  the authenticated context is denied with no acceptance effects; reusing the
+  request ID with changed content is a conflict (owner 1.2.8, 2.2.2).
+- **Owner.** 5.3.5 and 5.3.6 for the adapter; 2.2.2 for acceptance evidence.
+
+**Axinite push.**
+
+- **Provenance.** Synthetic outbox row. A captured fixture must record the
+  Axinite commit, schema version, and capture date.
+- **Input.** One outbox record with conversation ID, message role, content,
+  timestamp, channel, source fingerprint, outbox ID, workspace document
+  revision, and a projection sink hint.
+- **Expected shared projection.** Conversation ID, role, content, timestamp,
+  channel where present, source fingerprint, and context-derived tenant and
+  workspace. A carried cursor field is provenance only.
+- **Provider-only fields.** Outbox ID, workspace document revision, model,
+  branch, repository metadata, and projection sink hints.
+- **Rejection expectation.** Reusing the operation identity with a changed
+  payload or cursor vector is a conflict; a push token is not collector
+  authority (owner 1.2.5, 2.2.2).
+- **Owner.** 5.3.2 for the outbox adapter; 2.2.2 for acceptance evidence.
+
+**Codex rollout source.**
+
+- **Provenance.** Synthetic rollout JSONL. A captured fixture must record the
+  Codex CLI version, capture command, and capture date.
+- **Input.** A rollout with a session-meta line and two response items: an
+  assistant message and a matching tool call and result pair. One line omits
+  the timestamp.
+- **Expected shared projection.** Source path, line or byte offset, line hash,
+  rollout item kind, ordinal, actor or role, timestamp where present, and
+  redaction state. The tool call and result remain two ordered content parts
+  with their linkage preserved, and the absent timestamp stays absent.
+- **Provider-only fields.** Git branch, Git SHA, origin URL, model provider, CLI
+  version, tool metadata, file edits, and compaction context.
+- **Rejection expectation.** A partial trailing line leaves the cursor before
+  it; a malformed complete line blocks advancement until an audited disposition
+  exists (owner 2.2.1, 2.3.1).
+- **Owner.** 2.3.1 for the source adapter; 2.2.2 for acceptance evidence.
+
+**Claude transcript source.**
+
+- **Provenance.** Synthetic transcript and hook-event pair. A captured fixture
+  must record the Claude CLI version, capture command, and capture date.
+- **Input.** A transcript with a user message and an assistant message
+  containing a tool-use block, plus a hook event identifying one transcript
+  line. The assistant message omits the model field.
+- **Expected shared projection.** Transcript path, offset, hook event or
+  transcript line identity, actor or role, timestamp where present, and
+  redaction state. The omitted model stays absent.
+- **Provider-only fields.** Model, working directory, stop reason, compaction
+  summary, tool metadata, and subagent metadata.
+- **Rejection expectation.** A partial trailing record is not consumed; a
+  malformed line blocks advancement until disposition; a missing optional field
+  is not a rejection (owner 2.2.1, 2.3.2).
+- **Owner.** 2.3.2 for the source adapter; 2.2.2 for acceptance evidence.
+
+**Manual import.**
+
+- **Provenance.** Synthetic import file under a configured root. A captured
+  fixture must record the exporter name and version and the capture date.
+- **Input.** One imported conversation file with a declared import request ID,
+  content hash, timestamp, and provider provenance notes; the payload also
+  names a tenant and workspace.
+- **Expected shared projection.** Tenant and workspace from context, configured
+  import root, source path, import request ID, content hash, timestamp, and
+  redaction state. The payload scope is provenance.
+- **Provider-only fields.** Provider-specific metadata, model, branch, and
+  explicit provenance notes.
+- **Rejection expectation.** A path outside the configured import root is
+  denied before acceptance; reusing the import request ID with changed content
+  is a conflict (owner 2.2.5, 2.2.2).
+- **Owner.** 2.2.5 for the import adapter; 2.2.2 for acceptance evidence.
+
 | Case                     | Producers and provenance                                 | Input                                               | Expected shared semantics                                                         | Provider-only expectations                      | Owner               |
 | ------------------------ | -------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------- |
 | Canonical common message | One synthetic canonical input; provider envelopes follow | One human message with role, text, and timestamp    | Same conversation identity, event kind, order, role, text, and timestamp          | Provider IDs, paths, and metadata differ        | 1.2.6, 2.2.2        |
@@ -559,24 +654,30 @@ fixture.
 
 _Table 3: Acceptance fixture specifications._
 
-| Case                      | Producers and provenance    | Input                                                 | Expected outcome                                        | Owner                      |
-| ------------------------- | --------------------------- | ----------------------------------------------------- | ------------------------------------------------------- | -------------------------- |
-| Unauthorized scope        | Push producers              | Delta claims a tenant or workspace outside authority  | Denied before the use case; no acceptance effects       | 1.2.8, 2.2.2               |
-| Missing context           | Corbusier mode              | No credential; delta claims a tenant                  | Denied; no fallback to the local tenant                 | 1.2.8                      |
-| Token substitution        | Push and collected paths    | Push token submitted to the collected command         | Denied; a push token is not collector authority         | 1.2.5, 2.2.2               |
-| Same ID, changed payload  | Push producers              | Committed request ID with different content           | Conflict; no acceptance effects                         | 2.2.2                      |
-| Same ID, changed cursor   | Collected batch             | Committed operation ID with a different cursor vector | Conflict; never treated as an identical retry           | 2.2.2                      |
-| Competing stale batch     | Collected batch             | Two batches expecting the same prior cursor           | First commits; second is rejected as stale              | 2.2.2                      |
-| Partial trailing record   | Codex, Claude               | Read ending in an incomplete record                   | Cursor stays before the partial record                  | 2.2.1, 2.3.1, 2.3.2        |
-| Malformed complete record | Codex, Claude               | Read encountering a malformed complete record         | Advancement blocked until an audited disposition exists | 2.2.1, 2.3.1, 2.3.2        |
-| Deny-pattern exclusion    | All producers               | Record matched by a mandatory deny pattern            | Advances only with a durable content-free disposition   | 2.2.3                      |
-| Lost acknowledgement      | Collected batch             | Identical committed batch replayed                    | No duplicate evidence or jobs; cursor unchanged         | 2.2.2                      |
-| Invalid batch member      | Collected batch             | Batch containing one invalid delta                    | No member accepted; prior cursor retained               | 2.2.2                      |
-| Source rotation           | Codex, Claude, Axinite pull | Source reports a different generation                 | Reconciliation required; no silent offset reset         | 2.2.1, 2.3.1, 2.3.2        |
-| Source truncation         | Codex, Claude, Axinite pull | Source shortens below a committed offset              | Generation reconciliation; no silent reset or data loss | 2.2.1, 2.2.2, 2.3.1, 2.3.2 |
-| Empty read                | Codex, Claude, Axinite pull | No items and no valid checkpoint                      | Cursor unchanged                                        | 2.2.1                      |
+| Case                       | Producers and provenance    | Input                                                           | Expected outcome                                                                              | Owner                      |
+| -------------------------- | --------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------- |
+| Unauthorized scope         | Push producers              | Delta claims a tenant or workspace outside authority            | Denied before the use case; no acceptance effects                                             | 1.2.8, 2.2.2               |
+| Missing context            | Corbusier mode              | No credential; delta claims a tenant                            | Denied; no fallback to the local tenant                                                       | 1.2.8                      |
+| Token substitution         | Push and collected paths    | Push token submitted to the collected command                   | Denied; a push token is not collector authority                                               | 1.2.5, 2.2.2               |
+| Same ID, changed payload   | Push producers              | Committed request ID with different content                     | Conflict; no acceptance effects                                                               | 2.2.2                      |
+| Same ID, changed cursor    | Collected batch             | Committed operation ID with a different cursor vector           | Conflict; never treated as an identical retry                                                 | 2.2.2                      |
+| Competing stale batch      | Collected batch             | Two batches expecting the same prior cursor                     | First commits; second is rejected as stale                                                    | 2.2.2                      |
+| Partial trailing record    | Codex, Claude               | Read ending in an incomplete record                             | Cursor stays before the partial record                                                        | 2.2.1, 2.3.1, 2.3.2        |
+| Malformed complete record  | Codex, Claude               | Read encountering a malformed complete record                   | Advancement blocked until an audited disposition exists                                       | 2.2.1, 2.3.1, 2.3.2        |
+| Deny-pattern exclusion     | All producers               | Record matched by a mandatory deny pattern                      | Advances only with a durable content-free disposition                                         | 2.2.3                      |
+| Lost acknowledgement       | Collected batch             | Identical committed batch replayed                              | No duplicate evidence or jobs; cursor unchanged                                               | 2.2.2                      |
+| Invalid batch member       | Collected batch             | Batch containing one invalid delta                              | No member accepted; prior cursor retained                                                     | 2.2.2                      |
+| Source rotation            | Codex, Claude, Axinite pull | Source reports a different generation                           | Reconciliation required; no silent offset reset                                               | 2.2.1, 2.3.1, 2.3.2        |
+| Source truncation          | Codex, Claude, Axinite pull | Source shortens below a committed offset                        | Generation reconciliation; no silent reset or data loss                                       | 2.2.1, 2.2.2, 2.3.1, 2.3.2 |
+| Record fails safety check  | All producers               | Record exceeds a redaction, detector, or processing ceiling     | Not submitted; cursor blocked at that record; committed neighbours stand; source-health error | 2.2.1, 2.2.3               |
+| Empty read                 | Codex, Claude, Axinite pull | No items and no valid checkpoint                                | Cursor unchanged                                                                              | 2.2.1                      |
+| Empty read with checkpoint | Codex, Claude, Axinite pull | No items but an explicit valid source checkpoint or disposition | Cursor advances to the checkpoint; no evidence invented                                       | 2.2.1                      |
 
 _Table 4: Rejection and recovery fixture specifications._
+
+The record-safety row is the collector-stage per-record rejection required by
+ADR 015; the invalid-batch-member row is the daemon-stage atomic rejection
+required by ADR 007. They describe different stages, not competing outcomes.
 
 Wrong event order and dropped tool-result linkage are required negative
 controls for the acceptance fixtures. A fixture must not claim compatibility
