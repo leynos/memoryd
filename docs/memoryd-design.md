@@ -1425,9 +1425,11 @@ without evidence or disposition.
    discovery, source health, cursor persistence, redaction, raw event
    normalization, session listing, and health checks. The ownership,
    tenant-authority, and conversation-ingestion boundaries this step depends on
-   are ratified by
-   [ADR 005](adrs/adr-0005-hexagonal-architecture-boundary.md), [ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md),
-   and [ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md).
+   are ratified by:
+
+   - [ADR 005](adrs/adr-0005-hexagonal-architecture-boundary.md)
+   - [ADR 006](adrs/adr-0006-tenant-isolation-and-corbusier-context.md)
+   - [ADR 007](adrs/adr-0007-standard-conversation-ingestion-port.md)
 2. **Dear Diary parity through the daemon.** Add curated writes, flat recall,
    durable recall audit modes, retraction, Qdrant indexing, and audit records
    without exposing collection names through MCP. This is the release 0.1
