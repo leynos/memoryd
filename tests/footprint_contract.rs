@@ -10,25 +10,22 @@
 
 use std::process::Command;
 
-/// Profile overrides that the environment can carry; removed so the
-/// repository's own settings are what is measured.
-const PROFILE_VARIABLES: &[&str] = &[
-    "CARGO_INCREMENTAL",
-    "CARGO_PROFILE_DEV_DEBUG",
-    "CARGO_PROFILE_DEV_INCREMENTAL",
-    "CARGO_PROFILE_TEST_DEBUG",
-    "CARGO_PROFILE_TEST_INCREMENTAL",
-];
-
 /// Runs the Cargo that built this test in the crate directory and returns its
 /// standard output.
 fn cargo(args: &[&str]) -> Result<String, String> {
-    let mut command = Command::new(env!("CARGO"));
-    command.args(args).current_dir(env!("CARGO_MANIFEST_DIR"));
-    for name in PROFILE_VARIABLES {
-        command.env_remove(name);
-    }
-    let output = command
+    // One chain, offline: `make test` fetches first, so nothing here needs the
+    // network, and the estate's nested-cargo rule can see that.
+    // The removed variables are the profile overrides the environment can carry,
+    // so the repository's own settings are what is measured.
+    let output = Command::new(env!("CARGO"))
+        .args(args)
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .env("CARGO_NET_OFFLINE", "true")
+        .env_remove("CARGO_INCREMENTAL")
+        .env_remove("CARGO_PROFILE_DEV_DEBUG")
+        .env_remove("CARGO_PROFILE_DEV_INCREMENTAL")
+        .env_remove("CARGO_PROFILE_TEST_DEBUG")
+        .env_remove("CARGO_PROFILE_TEST_INCREMENTAL")
         .output()
         .map_err(|error| format!("running cargo {args:?}: {error}"))?;
     if !output.status.success() {

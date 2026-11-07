@@ -1,11 +1,12 @@
 //! Reads the shell lines `make -n` prints: which commands a logical line runs, and which of them
 //! compile or run code, so the contract can ask each one to assign `RUSTFLAGS`.
 
-/// Cargo subcommands that inspect or install and compile nothing, so a recipe running
+/// Cargo subcommands that inspect, install or fetch and compile nothing, so a recipe running
 /// one needs no `RUSTFLAGS`. Every other Cargo subcommand, and Whitaker, compiles or runs
 /// code, and a development or held-out recipe must assign the flags it takes there.
 const INSPECTION_SUBCOMMANDS: &[&str] = &[
     "fmt", "metadata", "doc", "install", "binstall", "audit", "deny", "machete", "version", "help",
+    "fetch",
 ];
 
 /// Returns whether a command runs a tool that compiles or runs code: Whitaker, or Cargo with a
@@ -28,8 +29,13 @@ pub fn compiles(command: &str) -> bool {
         .position(|word| word.rsplit('/').next() == Some("cargo"))
         .and_then(|at| words.get(at + 1..))
         .and_then(|rest| {
-            rest.iter()
-                .find(|word| !word.starts_with('+') && !word.starts_with('-'))
+            // `--config FILE` takes a value, which is not the subcommand.
+            let mut after_config = false;
+            rest.iter().find(|word| {
+                let is_value = after_config;
+                after_config = **word == "--config";
+                !is_value && !word.starts_with('+') && !word.starts_with('-')
+            })
         })
         .is_some_and(|sub| !INSPECTION_SUBCOMMANDS.contains(sub));
     cargo_subcommand
