@@ -50,11 +50,6 @@ omits build output such as `target/`.
 - `docs/adrs/`: Contains accepted and proposed Architecture Decision Records.
 - `.cargo/config.toml`: Configures Cargo defaults for local development,
   including the Linux linker.
-- `tools/dev-fast/config.toml`: Cargo configuration fragment that selects the
-  Cranelift codegen backend for the standard make targets and `make dev-build`/
-  `make dev-test`. Passed explicitly with `--config` rather than placed under
-  `.cargo/`, because the release builds on stable, which refuses a backend key
-  there; it never affects release, coverage, or verification builds.
 - `.github/dependabot.yml`: Configures automated dependency update checks.
 - `.github/workflows/ci.yml`: Runs Memoryd's continuous integration checks.
 - `.github/workflows/coverage-main.yml`: Publishes coverage from `main`,
