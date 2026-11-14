@@ -223,23 +223,27 @@ project:
     coverage for `tests/`, and then executes:
 
     ```sh
+    # The -fuse-ld=mold link argument is added only on Linux.
     RUSTDOCFLAGS="-D warnings" \
       RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Zthreads=8 -Clink-arg=-fuse-ld=mold" \
       cargo doc --no-deps
     RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Zthreads=8 -Clink-arg=-fuse-ld=mold" \
       cargo clippy --all-targets --all-features -- -D warnings
-    RUSTFLAGS="-D warnings" CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm \
-      whitaker --all -- --all-targets --all-features
+    # USER_BIN_PATH is $HOME/.cargo/bin:$HOME/.local/bin:$HOME/.bun/bin
+    PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$USER_BIN_PATH:$PATH" \
+      CARGO_UNSTABLE_CODEGEN_BACKEND=true CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm \
+      RUSTFLAGS="-D warnings" whitaker --all -- --all-targets --all-features
     ```
 
     building documentation, linting every target with all features enabled,
     and running the Whitaker checks. Documentation warnings, Clippy warnings,
     and Whitaker findings fail the command. The `cargo doc` and `cargo clippy`
-    recipes add the build-standard flags (`-Zthreads=8` and, on Linux,
+    recipes add the build-standard flags (`-Zthreads=8` and, on Linux only,
     `-Clink-arg=-fuse-ld=mold`) to any inherited `RUSTFLAGS`. The Whitaker
-    recipe sets `RUSTFLAGS="-D warnings"` without them and pins the LLVM
-    codegen backend.
-  - `make test` runs `cargo fetch --locked`, then the test suite with
+    recipe sets `RUSTFLAGS="-D warnings"` without them, puts the user tool
+    directories on `PATH`, and pins the LLVM codegen backend.
+  - `make test` runs `cargo fetch --locked --target
+    "${CARGO_BUILD_TARGET:-host-tuple}"`, then the test suite with
     `--all-targets --all-features` by default (`TEST_FLAGS`). It uses
     `cargo nextest run` when cargo-nextest is installed and falls back to
     `cargo test` otherwise. Rust warnings are denied, and the build-standard
@@ -480,6 +484,6 @@ internally facing conventions or practices in `docs/developers-guide.md`.
 
 Development builds compile with the default LLVM backend, the parallel frontend
 and, on Linux, the `mold` linker, set in `.cargo/config.toml`, which every
-`cargo` invocation discovers. They require the pinned nightly toolchain and a
-`mold` binary on the `PATH`. `make coverage` selects LLVM explicitly. See
-`docs/developers-guide.md`, "Cranelift".
+`cargo` invocation discovers. They require the pinned nightly toolchain and, on
+Linux, a `mold` binary on the `PATH`. `make coverage` selects LLVM explicitly.
+See `docs/developers-guide.md`, "Cranelift".
