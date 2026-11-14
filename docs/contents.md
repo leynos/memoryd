@@ -22,6 +22,9 @@ set.
   records roadmap 1.1.3: the accepted hexagonal ownership, tenant authority,
   canonical delta, and separate push and collected-ingestion contracts, plus
   their conformance and verification handoffs.
+- [Source-health foundation plan](execplans/1-1-5-confirm-source-health-foundation.md)
+  proposes the roadmap 1.1.5 observation, freshness, tenant, and health-report
+  contracts, with verification handoffs; execution awaits approval.
 - [Users' guide](users-guide.md) explains how to use Memoryd, the planned local
   safety defaults for workspace identity, redaction, and purge, the planned
   conversation-ingestion behaviour, and its public build and test commands.
