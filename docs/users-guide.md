@@ -236,8 +236,8 @@ The generated `Makefile` exposes these public targets:
 - `make build` builds the debug target.
 - `make release` builds the release target.
 - `make coverage` writes `lcov.info` using `cargo llvm-cov` and `lld`.
-- Development builds use the Cranelift backend, `-Zthreads=8` and, on Linux,
-  the `mold` linker, all set in `.cargo/config.toml`; see the
+- Development builds use the default LLVM backend, `-Zthreads=8` and, on
+  Linux, the `mold` linker, set in `.cargo/config.toml`; see the
   [developers' guide](developers-guide.md) for details.
 - `make markdownlint` checks Markdown files.
 - `make nixie` validates Mermaid diagrams.
