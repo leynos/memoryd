@@ -9,6 +9,17 @@ Use `make all` as the public entrypoint for formatting, linting, and tests.
 `cargo nextest run` and falls back to `cargo test` when cargo-nextest is not
 available. `make coverage` uses `cargo llvm-cov` with `lld`.
 
+Cognitive complexity is not gated by Clippy. Clippy's `cognitive_complexity`
+scores code after macro expansion, so it counts branching a macro generated,
+and neither `Cargo.toml` nor `clippy.toml` enables it. Whitaker's experimental
+`macro_aware_cognitive_complexity` gates it at `max_complexity = 9`,
+CodeScene's ceiling. `dylint.toml` opts in with
+`[whitaker] experimental = ["macro_aware_cognitive_complexity"]`. Fix a finding
+by extracting named helpers, never by raising the threshold. A Whitaker suite
+installed before the lint existed (v0.2.12 or earlier) does not register it and
+silently leaves the gate inactive, so rerun `whitaker-installer` to refresh the
+suite after updating a checkout.
+
 ## Tooling
 
 Development builds use the build standard described below: `-Zthreads=8` and,
@@ -109,11 +120,11 @@ scheduled deferral, annotate the site with
 site is fixed, the unfulfilled expectation itself becomes a warning, so the
 backlog announces its own shrinkage instead of rotting silently.
 
-`clippy.toml` carries the numeric thresholds (cognitive complexity, argument
-count, function length, nesting depth) and the `disallowed-methods` list that
-forbids direct `std::env::var`/`set_var`/ `remove_var` calls and their `_os`/
-`vars` siblings; inject an environment reader instead so environment access
-stays testable.
+`clippy.toml` carries the numeric thresholds (argument count, function length,
+nesting depth; cognitive complexity lives in `dylint.toml`) and the
+`disallowed-methods` list that forbids direct `std::env::var`/`set_var`/
+`remove_var` calls and their `_os`/ `vars` siblings; inject an environment
+reader instead so environment access stays testable.
 
 The pinned nightly toolchain in `rust-toolchain.toml` supplies the `rustfmt`,
 `clippy`, and `rust-analyzer` components the lint and formatting gates depend
