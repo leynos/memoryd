@@ -120,11 +120,11 @@ scheduled deferral, annotate the site with
 site is fixed, the unfulfilled expectation itself becomes a warning, so the
 backlog announces its own shrinkage instead of rotting silently.
 
-`clippy.toml` carries the numeric thresholds (cognitive complexity, argument
-count, function length, nesting depth) and the `disallowed-methods` list that
-forbids direct `std::env::var`/`set_var`/ `remove_var` calls and their `_os`/
-`vars` siblings; inject an environment reader instead so environment access
-stays testable.
+`clippy.toml` carries the numeric thresholds (argument count, function length,
+nesting depth; cognitive complexity lives in `dylint.toml`) and the
+`disallowed-methods` list that forbids direct `std::env::var`/`set_var`/
+`remove_var` calls and their `_os`/ `vars` siblings; inject an environment
+reader instead so environment access stays testable.
 
 The pinned nightly toolchain in `rust-toolchain.toml` supplies the `rustfmt`,
 `clippy`, and `rust-analyzer` components the lint and formatting gates depend
