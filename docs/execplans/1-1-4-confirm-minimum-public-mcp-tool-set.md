@@ -86,6 +86,8 @@ boundary. Do not select an MCP SDK in this decision task.
 - [x] (2026-11-04) Planning checks passed sequentially: formatting, Markdown,
   Mermaid, Rustdoc, Clippy, Whitaker, and all 150 tests (none skipped).
   Publication receipts are recorded in the draft PR and delivery handoff.
+- [x] (2026-11-26) Record `mcp` and `mcp-tester` as local harnesses for the
+  runtime handoff; documentation gates only.
 - [ ] Obtain explicit plan approval before EP-M1.
 - [ ] EP-M1: Ratify the tool matrix and reconcile upstream documents.
 - [ ] EP-M2: Document conformance cases and verification ownership.
@@ -120,6 +122,10 @@ The plan is self-contained and does not depend on that temporary pack.
 - 2026-11-04: Propose explicit discovery and rejection contracts, with finite
   truth-table testing rather than speculative Verus scaffolding. No new
   unbounded business algorithm is introduced by this decision.
+- 2026-11-26: Name the `mcp` command-line client and the `mcp-tester` crate
+  as the available local harnesses for the “real MCP client” evidence in the
+  runtime handoff. They supplement the repository-owned suites; adopting either
+  as a dependency or gate stays with the MCP crate's owner.
 
 ## Outcomes & retrospective
 
@@ -333,6 +339,31 @@ application/ingestion contracts under ADR 007/015. Exercise repository-owned
 mapping against a real MCP client and daemon. Do not claim to verify SDK,
 filesystem, database, or model-provider internals.
 
+Two local harnesses are available to the runtime owners as that real client.
+Neither replaces the repository-owned `rstest`, `proptest`, `rstest-bdd`, or
+`insta` suites, and neither can be exercised by 1.1.4, which ships no server.
+
+- [`mcp`][mcp-cli] is a command-line MCP client, installed on the development
+  host as `~/.cargo/bin/mcp` (0.6.2 at the time of writing). Register the
+  daemon as a stdio (`command`, `args`, `env`) or HTTP (`url`, `headers`) entry
+  under `mcpServers`, in a task-local file selected with `MCP_CONFIG_PATH` so
+  the operator's `~/.config/mcp/servers.json` is left untouched.
+  `mcp <server> --list` and `mcp <server> --info` observe V1/V2 discovery and
+  input schemas; `mcp <server> <tool> [json]` observes V3 refusal of a deferred
+  or unknown name and a V4 valid call; `--json` gives scriptable output. Use it
+  for manual and scripted smoke evidence.
+- [`mcp-tester`][mcp-tester] is a Rust MCP server testing library and
+  `mcp-tester` command (0.8.0 at the time of writing). It generates scenario
+  files from a server's advertised capabilities, runs them, and carries a
+  protocol conformance suite. Use it for repeatable scenario and conformance
+  runs over the real transport. Regenerated scenarios mirror whatever the
+  server advertises, so they cannot witness an omitted tool: keep the
+  independent catalogue oracle as the authority for V1–V3.
+
+Adopting `mcp-tester` as a development dependency, or either tool as a gate, is
+a decision for the owner of the MCP crate (1.2.2 onwards); record it there with
+a caret requirement. This plan adds no dependency.
+
 Verus is not warranted for this documentation-only decision or the finite
 catalogue/mode truth table. No new unbounded algorithm or semantic lemma is
 introduced here. Existing tenant noninterference, ingestion idempotency, and
@@ -534,6 +565,14 @@ Consult these repository guides when executing the handoff:
 - [Documentation style](../documentation-style-guide.md): ADR format, British
   Oxford spelling, captions, and wrapping.
 
+Local MCP harnesses for the runtime handoff, described under “Methods,
+evidence, and non-vacuity”:
+
+- [`mcp` configuration guide][mcp-cli]: server entries, `MCP_CONFIG_PATH`, and
+  environment substitution for the command-line client.
+- [`mcp-tester` crate documentation][mcp-tester]: scenario generation and
+  execution, and the conformance runner.
+
 Use skills `execplans`, `codegraph-mcp`, `hexagonal-architecture`, and
 `rust-router`; route verification questions through `rust-verification`, finite
 test design through `rust-unit-testing`, and new proof work through `verus`
@@ -567,5 +606,11 @@ Buzzy Bee and Doggylump added bounded diagnostics and successful degraded
 health; Dinolump made gate commands fail fast. These changes refine E2/E3 and
 do not expand implementation scope.
 
+Revision 2026-11-26: Record `mcp` and `mcp-tester` as available local harnesses
+for runtime V1–V4 evidence. Scope, tool selection, and the approval requirement
+are unchanged.
+
 [rfc6]: ../rfcs/rfc-0006-epistemic-health-empiricism-falsification-and-semirings.md
 [mcp-tools]: https://modelcontextprotocol.io/specification/2025-11-25/server/tools
+[mcp-cli]: https://github.com/avelino/mcp/blob/main/docs/guides/configuration.md
+[mcp-tester]: https://docs.rs/mcp-tester/latest/mcp_tester/
