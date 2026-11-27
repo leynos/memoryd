@@ -22,6 +22,9 @@ set.
   records roadmap 1.1.3: the accepted hexagonal ownership, tenant authority,
   canonical delta, and separate push and collected-ingestion contracts, plus
   their conformance and verification handoffs.
+- [Minimum public MCP tool set plan](execplans/1-1-4-confirm-minimum-public-mcp-tool-set.md)
+  proposes roadmap 1.1.4's release-0.1 tool selection, deliberate rejection
+  contracts, and verification handoffs; execution awaits approval.
 - [Users' guide](users-guide.md) explains how to use Memoryd, the planned local
   safety defaults for workspace identity, redaction, and purge, the planned
   conversation-ingestion behaviour, and its public build and test commands.
