@@ -222,7 +222,7 @@ project:
     validating Rust formatting across the workspace and Markdown table and
     wrapping format, without modifying files.
   - `make lint` runs `make interrogate`, which enforces Python docstring
-    coverage for `tests/`, and then executes:
+    coverage for `scripts/` and `tests/`, and then executes:
 
     ```sh
     # The -fuse-ld=mold link argument is added only on Linux.
